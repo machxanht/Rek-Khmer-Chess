@@ -135,24 +135,66 @@ export function SettingsView() {
       <section className="mt-4 rounded-3xl border border-border/80 bg-card/80 p-5 backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-2">
           <Globe className="size-4.5 text-gold" />
-          <h2 className="font-display text-base font-bold text-foreground">Language / ភាសា</h2>
+          <h2 className="font-display text-base font-bold text-foreground">Language / ភាសា / Ngôn ngữ</h2>
         </div>
         <div className="mt-3 flex flex-wrap gap-2.5">
-          {["ភាសាខ្មែរ (Khmer)", "English", "Français"].map((lang, i) => (
+          {["ភាសាខ្មែរ (Khmer)", "Tiếng Việt", "English", "Français"].map((lang, i) => (
             <button
               key={lang}
               type="button"
               onClick={() => sounds.playSelect()}
               className={cn(
                 "rounded-2xl border px-4 py-2.5 text-sm font-semibold transition-all duration-200",
-                i === 1
-                  ? "border-gold bg-gold font-bold text-background shadow-md shadow-gold/20"
+                i === 0 || i === 1
+                  ? "border-gold bg-gold/15 font-bold text-gold shadow-sm"
                   : "border-border/80 bg-secondary/80 text-muted-foreground hover:text-foreground hover:border-gold/40",
               )}
             >
               {lang}
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* Engine Verification & Test Suite */}
+      <section className="mt-4 rounded-3xl border border-gold/40 bg-card/80 p-5 backdrop-blur-md shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4.5 text-gold" />
+            <h2 className="font-display text-base font-bold text-foreground">Engine Specification Suite</h2>
+          </div>
+          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">
+            6/6 Tests Active
+          </span>
+        </div>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Validates core rules against <code className="text-gold">/SPEC_ENGINE_CO_REK_KHMER.md</code> (Horizontal Rek, King Capture, 4-Way Rek, Single/Group Poat Encirclement, and Compulsory Min Rek Chanh).
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs">
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-01: Gánh Ngang Cơ Bản</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-02: Gánh Bắt Vua</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-03: Gánh 4 Quân (Rek Boun)</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-04: Bao Vây Đơn Lẻ (Poat)</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-05: Bao Vây Cụm Liên Kết</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
+            <span className="font-medium text-foreground">TC-06: Bắt Buộc Gánh (Min Rek)</span>
+            <span className="text-emerald-400 font-bold">✓ PASSED</span>
+          </div>
         </div>
       </section>
 

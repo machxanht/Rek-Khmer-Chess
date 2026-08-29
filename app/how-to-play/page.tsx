@@ -133,6 +133,34 @@ export default function HowToPlayPage() {
           </div>
         </section>
 
+        {/* Authentic Game Modes & Cultural Insights */}
+        <section className="mt-10">
+          <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">
+            Authentic Khmer Game Modes
+          </h2>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-2xl border border-gold/40 bg-card/90 p-5 shadow-lg shadow-gold/5">
+              <div className="flex items-center gap-2 text-gold font-bold">
+                <Sparkles className="size-4.5" />
+                <h3 className="font-display text-base text-foreground">1. Rek Poat (រែកព័ទ្ធ) — Standard Mode</h3>
+              </div>
+              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+                The strategic freeplay mode. The Royal King moves freely like a warrior across the board. Flanking captures (Rek) and encirclement (Poat) are optional tactical choices.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-cyan-500/40 bg-card/90 p-5 shadow-lg shadow-cyan-500/5">
+              <div className="flex items-center gap-2 text-cyan-400 font-bold">
+                <Crown className="size-4.5" />
+                <h3 className="font-display text-base text-foreground">2. Min Rek Chanh (មិនរែកចាញ់) — Palace King</h3>
+              </div>
+              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
+                The classical palace format. The King stays anchored on the throne (d1/d8). When baited with <strong className="text-gold">Hao Rek</strong>, the defender is compulsory forced to capture; skipping forfeits the game!
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* CTA */}
         <div className="mt-10 flex flex-col items-center gap-4 rounded-3xl border border-gold/35 bg-gradient-to-b from-gold/15 to-card/60 p-6 sm:p-8 text-center shadow-xl backdrop-blur-md">
           <div className="flex size-14 items-center justify-center rounded-2xl bg-gold text-background shadow-lg shadow-gold/30">

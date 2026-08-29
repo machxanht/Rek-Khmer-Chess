@@ -104,9 +104,10 @@ Khi giao việc cho một AI Agent khác trong dự án này, Agent cần tuân 
 
 ---
 
-## 5. CHECKLIST BẮT ĐẦU NGAY (ACTION ITEMS)
+## 5. CHECKLIST BẮT ĐẦU NGAY (ACTION ITEMS - ĐÃ HOÀN THÀNH)
 
-- [ ] **Bước 1:** Khởi tạo thư mục `lib/rek-engine/` và tách mã nguồn từ `/SPEC_ENGINE_CO_REK_KHMER.md` vào các file TypeScript sạch.
-- [ ] **Bước 2:** Viết file unit test kiểm tra 6 tình huống then chốt.
-- [ ] **Bước 3:** Tạo component `GameBoard` kết nối với `RekEngine` để người chơi có thể click di chuyển quân thử nghiệm trực quan.
-- [ ] **Bước 4:** Bổ sung thanh chọn Game Mode (`Rek Poat` vs `Min Rek Chanh`) và âm thanh hiệu ứng.
+- [x] **Bước 1:** Khởi tạo thư mục `lib/rek-engine/` và tách mã nguồn từ `/SPEC_ENGINE_CO_REK_KHMER.md` vào các file TypeScript sạch (`types.ts`, `captures.ts`, `engine.ts`, `ai.ts`, `puzzles.ts`, `tests.ts`, `index.ts`).
+- [x] **Bước 2:** Viết file unit test kiểm tra 6 tình huống then chốt (TC-01 đến TC-06 trong SPEC_ENGINE_CO_REK_KHMER.md) và tích hợp vào Test Suite.
+- [x] **Bước 3:** Tạo component `GameBoard` kết nối với `RekEngine` để người chơi có thể click di chuyển quân thử nghiệm trực quan với hiệu ứng và animation.
+- [x] **Bước 4:** Bổ sung thanh chọn Game Mode (`Rek Poat` vs `Min Rek Chanh`) và âm thanh hiệu ứng synthesizer Web Audio API.
+
