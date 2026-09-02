@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { AppShell } from '@/components/shell/app-shell'
 import { MiniBoard, buildCells } from '@/components/learn/mini-board'
-import { Button } from '@/components/ui/button'
 import { PieceToken } from '@/components/game/piece-token'
 import { ArrowRight, Crown, Swords, Shield, Target, BookOpen, Sparkles, Zap } from 'lucide-react'
 
@@ -172,16 +171,13 @@ export default function HowToPlayPage() {
           <p className="max-w-md text-xs sm:text-sm leading-relaxed text-muted-foreground text-pretty">
             Play against the AI Bot, solve King Defense Puzzles, or challenge a friend in Pass &amp; Play.
           </p>
-          <Button
-            asChild
-            size="lg"
-            className="mt-1 h-12 rounded-2xl bg-gold px-8 font-bold text-background shadow-lg shadow-gold/30 ring-2 ring-gold/60 transition-all hover:-translate-y-0.5"
+          <Link
+            href="/play/ai"
+            className="mt-1 flex h-12 items-center gap-2 rounded-2xl bg-gold px-8 font-bold text-background shadow-lg shadow-gold/30 ring-2 ring-gold/60 transition-all hover:-translate-y-0.5 hover:opacity-95"
           >
-            <Link href="/play/ai" className="flex items-center gap-2">
-              <span>Play vs AI Grandmaster</span>
-              <ArrowRight className="size-4" />
-            </Link>
-          </Button>
+            <span>Play vs AI Grandmaster</span>
+            <ArrowRight className="size-4" />
+          </Link>
         </div>
       </div>
     </AppShell>

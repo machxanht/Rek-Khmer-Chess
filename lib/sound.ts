@@ -1,34 +1,152 @@
-// Enhanced Web Audio API Synthesizer for Authentic Khmer Rek Game
-// 100% offline, zero external dependencies, ultra-responsive audio engine.
+// Procedural audio system for Rek Khmer.
+// 100% offline: Web Audio only, no remote samples or runtime dependencies.
 
 class SoundManager {
   private ctx: AudioContext | null = null
-  private muted: boolean = false
-  private voiceEnabled: boolean = true
+  private master: GainNode | null = null
+  private compressor: DynamicsCompressorNode | null = null
+  private muted = false
+  private voiceEnabled = true
 
   constructor() {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('rek_sound_muted')
-      this.muted = saved === 'true'
-      const savedVoice = localStorage.getItem('rek_voice_enabled')
-      this.voiceEnabled = savedVoice !== 'false'
+      this.muted = localStorage.getItem('rek_sound_muted') === 'true'
+      this.voiceEnabled = localStorage.getItem('rek_voice_enabled') !== 'false'
     }
   }
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null
+
     if (!this.ctx) {
       const AudioCtx =
         window.AudioContext ||
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      if (AudioCtx) {
-        this.ctx = new AudioCtx()
-      }
+
+      if (!AudioCtx) return null
+
+      this.ctx = new AudioCtx()
+      this.compressor = this.ctx.createDynamicsCompressor()
+      this.master = this.ctx.createGain()
+
+      this.compressor.threshold.value = -18
+      this.compressor.knee.value = 18
+      this.compressor.ratio.value = 3.2
+      this.compressor.attack.value = 0.003
+      this.compressor.release.value = 0.2
+      this.master.gain.value = 0.72
+
+      this.compressor.connect(this.master)
+      this.master.connect(this.ctx.destination)
     }
-    if (this.ctx && this.ctx.state === 'suspended') {
+
+    if (this.ctx.state === 'suspended') {
       this.ctx.resume().catch(() => {})
     }
+
     return this.ctx
+  }
+
+  private connect(node: AudioNode): void {
+    if (this.compressor) {
+      node.connect(this.compressor)
+    } else {
+      node.connect((node.context as AudioContext).destination)
+    }
+  }
+
+  private noiseBurst(
+    ctx: AudioContext,
+    start: number,
+    duration: number,
+    volume: number,
+    frequency: number,
+    q = 0.8,
+  ): void {
+    const length = Math.max(1, Math.floor(ctx.sampleRate * duration))
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
+    const data = buffer.getChannelData(0)
+
+    for (let i = 0; i < length; i++) {
+      const envelope = 1 - i / length
+      data[i] = (Math.random() * 2 - 1) * envelope
+    }
+
+    const source = ctx.createBufferSource()
+    const filter = ctx.createBiquadFilter()
+    const gain = ctx.createGain()
+
+    source.buffer = buffer
+    filter.type = 'bandpass'
+    filter.frequency.setValueAtTime(frequency, start)
+    filter.Q.setValueAtTime(q, start)
+    gain.gain.setValueAtTime(Math.max(0.0001, volume), start)
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+
+    source.connect(filter)
+    filter.connect(gain)
+    this.connect(gain)
+    source.start(start)
+    source.stop(start + duration + 0.01)
+  }
+
+  private woodHit(
+    ctx: AudioContext,
+    start: number,
+    strength = 1,
+    pitch = 170,
+  ): void {
+    const body = ctx.createOscillator()
+    const bodyGain = ctx.createGain()
+    const resonance = ctx.createBiquadFilter()
+
+    body.type = 'triangle'
+    body.frequency.setValueAtTime(pitch * 1.75, start)
+    body.frequency.exponentialRampToValueAtTime(pitch, start + 0.055)
+
+    resonance.type = 'lowpass'
+    resonance.frequency.setValueAtTime(920, start)
+    resonance.Q.setValueAtTime(0.75, start)
+
+    bodyGain.gain.setValueAtTime(0.22 * strength, start)
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.09)
+
+    body.connect(resonance)
+    resonance.connect(bodyGain)
+    this.connect(bodyGain)
+    body.start(start)
+    body.stop(start + 0.1)
+
+    this.noiseBurst(ctx, start, 0.045, 0.08 * strength, 1450, 0.65)
+  }
+
+  private bronzeBell(
+    ctx: AudioContext,
+    start: number,
+    fundamental: number,
+    duration: number,
+    volume = 0.16,
+  ): void {
+    const partials = [1, 2.01, 2.67, 4.15]
+    const weights = [1, 0.42, 0.25, 0.13]
+
+    partials.forEach((partial, index) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      const startVolume = volume * weights[index]
+
+      osc.type = index === 0 ? 'sine' : 'triangle'
+      osc.frequency.setValueAtTime(fundamental * partial, start)
+      osc.detune.setValueAtTime(index % 2 === 0 ? -3 : 4, start)
+
+      gain.gain.setValueAtTime(Math.max(0.0001, startVolume), start)
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration)
+
+      osc.connect(gain)
+      this.connect(gain)
+      osc.start(start)
+      osc.stop(start + duration + 0.02)
+    })
   }
 
   public isMuted(): boolean {
@@ -59,30 +177,18 @@ class SoundManager {
     return this.voiceEnabled
   }
 
-  // Soft teak wood piece select tap
   public playSelect(): void {
     if (this.muted) return
     const ctx = this.getContext()
     if (!ctx) return
 
     try {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'sine'
-      osc.frequency.setValueAtTime(520, ctx.currentTime)
-      osc.frequency.exponentialRampToValueAtTime(780, ctx.currentTime + 0.04)
-
-      gain.gain.setValueAtTime(0.12, ctx.currentTime)
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05)
-
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start()
-      osc.stop(ctx.currentTime + 0.06)
+      const now = ctx.currentTime
+      this.woodHit(ctx, now, 0.48, 225)
+      this.bronzeBell(ctx, now + 0.008, 610, 0.12, 0.035)
     } catch {}
   }
 
-  // Teak wood slide & solid placement clack
   public playMove(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -90,24 +196,11 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      // Wood transient impact
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'triangle'
-      osc.frequency.setValueAtTime(320, now)
-      osc.frequency.exponentialRampToValueAtTime(110, now + 0.07)
-
-      gain.gain.setValueAtTime(0.3, now)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08)
-
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start()
-      osc.stop(now + 0.09)
+      this.noiseBurst(ctx, now, 0.07, 0.045, 980, 0.5)
+      this.woodHit(ctx, now + 0.035, 0.9, 145)
     } catch {}
   }
 
-  // Standard capture snap
   public playCapture(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -115,21 +208,12 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const osc1 = ctx.createOscillator()
-      const gain1 = ctx.createGain()
-      osc1.type = 'sawtooth'
-      osc1.frequency.setValueAtTime(380, now)
-      osc1.frequency.exponentialRampToValueAtTime(70, now + 0.14)
-      gain1.gain.setValueAtTime(0.3, now)
-      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15)
-      osc1.connect(gain1)
-      gain1.connect(ctx.destination)
-      osc1.start()
-      osc1.stop(now + 0.16)
+      this.woodHit(ctx, now, 1.05, 128)
+      this.woodHit(ctx, now + 0.055, 0.72, 178)
+      this.bronzeBell(ctx, now + 0.015, 155, 0.42, 0.08)
     } catch {}
   }
 
-  // Glorious "REK" Flanking Chime (Golden harmonic arpeggio + deep bronze resonance)
   public playRek(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -137,40 +221,17 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const notes = [523.25, 659.25, 783.99, 1046.5, 1318.5] // C5, E5, G5, C6, E6
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(freq, now + i * 0.05)
+      this.woodHit(ctx, now, 0.95, 138)
 
-        gain.gain.setValueAtTime(0.2, now + i * 0.05)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.05 + 0.45)
-
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now + i * 0.05)
-        osc.stop(now + i * 0.05 + 0.46)
+      ;[523.25, 659.25, 783.99, 1046.5].forEach((frequency, index) => {
+        this.bronzeBell(ctx, now + 0.045 + index * 0.052, frequency, 0.42, 0.085)
       })
 
-      // Deep gong undertone
-      const gongOsc = ctx.createOscillator()
-      const gongGain = ctx.createGain()
-      gongOsc.type = 'triangle'
-      gongOsc.frequency.setValueAtTime(160, now)
-      gongOsc.frequency.exponentialRampToValueAtTime(80, now + 0.5)
-      gongGain.gain.setValueAtTime(0.25, now)
-      gongGain.gain.exponentialRampToValueAtTime(0.001, now + 0.55)
-      gongOsc.connect(gongGain)
-      gongGain.connect(ctx.destination)
-      gongOsc.start(now)
-      gongOsc.stop(now + 0.56)
-
+      this.bronzeBell(ctx, now, 112, 0.72, 0.16)
       this.speakVoice('រែក!')
     } catch {}
   }
 
-  // "POAT" Encirclement Harmonic Cascade
   public playPoat(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -178,25 +239,17 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const notes = [880, 783.99, 659.25, 523.25, 440] // A5 down to A4 cascade
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'triangle'
-        osc.frequency.setValueAtTime(freq, now + i * 0.06)
-        gain.gain.setValueAtTime(0.18, now + i * 0.06)
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.4)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(now + i * 0.06)
-        osc.stop(now + i * 0.06 + 0.42)
+      this.woodHit(ctx, now, 0.8, 150)
+
+      ;[880, 739.99, 622.25, 523.25].forEach((frequency, index) => {
+        this.bronzeBell(ctx, now + 0.035 + index * 0.06, frequency, 0.4, 0.075)
       })
 
+      this.bronzeBell(ctx, now + 0.02, 132, 0.6, 0.12)
       this.speakVoice('ព័ទ្ធ!')
     } catch {}
   }
 
-  // "HAO REK" Warning Alert Gong
   public playHaoRek(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -204,23 +257,13 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'sawtooth'
-      osc.frequency.setValueAtTime(440, now)
-      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2)
-      gain.gain.setValueAtTime(0.25, now)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(now)
-      osc.stop(now + 0.42)
-
+      this.bronzeBell(ctx, now, 440, 0.36, 0.12)
+      this.bronzeBell(ctx, now + 0.18, 660, 0.42, 0.12)
+      this.woodHit(ctx, now + 0.17, 0.6, 165)
       this.speakVoice('ហៅរែក!')
     } catch {}
   }
 
-  // Royal Victory Fanfare
   public playVictory(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -228,31 +271,16 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const melody = [
-        { f: 523.25, d: 0.15 }, // C5
-        { f: 659.25, d: 0.15 }, // E5
-        { f: 783.99, d: 0.18 }, // G5
-        { f: 1046.5, d: 0.45 }, // C6
-        { f: 1318.5, d: 0.6 },  // E6
-      ]
-      let t = now
-      melody.forEach((note) => {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.setValueAtTime(note.f, t)
-        gain.gain.setValueAtTime(0.28, t)
-        gain.gain.exponentialRampToValueAtTime(0.001, t + note.d)
-        osc.connect(gain)
-        gain.connect(ctx.destination)
-        osc.start(t)
-        osc.stop(t + note.d + 0.02)
-        t += note.d * 0.8
+      const melody = [523.25, 659.25, 783.99, 1046.5, 1318.5]
+
+      melody.forEach((frequency, index) => {
+        this.bronzeBell(ctx, now + index * 0.12, frequency, index === melody.length - 1 ? 0.95 : 0.62, 0.12)
       })
+
+      this.bronzeBell(ctx, now + 0.02, 98, 1.1, 0.15)
     } catch {}
   }
 
-  // Defeat / Temple Bell Tone
   public playDefeat(): void {
     if (this.muted) return
     const ctx = this.getContext()
@@ -260,28 +288,27 @@ class SoundManager {
 
     try {
       const now = ctx.currentTime
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.type = 'sawtooth'
-      osc.frequency.setValueAtTime(260, now)
-      osc.frequency.linearRampToValueAtTime(90, now + 0.5)
-      gain.gain.setValueAtTime(0.2, now)
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.55)
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.start(now)
-      osc.stop(now + 0.56)
+      this.bronzeBell(ctx, now, 196, 0.72, 0.13)
+      this.bronzeBell(ctx, now + 0.18, 146.83, 0.82, 0.11)
+      this.woodHit(ctx, now + 0.22, 0.45, 105)
     } catch {}
   }
 
-  // Khmer Voiceover Announcer (Fallback to Web Speech if supported)
   private speakVoice(text: string): void {
     if (!this.voiceEnabled || typeof window === 'undefined' || !window.speechSynthesis) return
+
     try {
+      const voices = window.speechSynthesis.getVoices()
+      const khmerVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith('km'))
+      if (!khmerVoice) return
+
       const utterance = new SpeechSynthesisUtterance(text)
-      utterance.rate = 1.1
-      utterance.pitch = 1.2
-      utterance.volume = 0.6
+      utterance.lang = khmerVoice.lang
+      utterance.voice = khmerVoice
+      utterance.rate = 0.94
+      utterance.pitch = 1
+      utterance.volume = 0.48
+      window.speechSynthesis.cancel()
       window.speechSynthesis.speak(utterance)
     } catch {}
   }
