@@ -1,15 +1,72 @@
-// Automated Test Suite for Rek Khmer Game Engine
-// Validates TC-01 to TC-06 from /SPEC_ENGINE_CO_REK_KHMER.md
+// Executable regression suite for the Rek Khmer core engine.
+// The first six cases track the repository specification, with TC-02/TC-03
+// guarded against impossible geometry under the documented rook-like movement.
 
-import { BOARD_SIZE, Cell, TestResult } from './types'
-import { idx, rc } from './captures'
 import {
+  BOARD_SIZE,
+  Cell,
+  GameMode,
+  GameState,
+  PlayerColor,
+  TestResult,
+} from './types'
+import { checkRekCaptures } from './captures'
+import {
+  RekEngine,
   coordToIdx,
-  getLegalMoves,
-  previewMove,
-  executeMove,
   createInitialState,
+  executeMove,
+  getAllRekOpportunities,
+  getLegalMoves,
+  getMoveResults,
+  previewMove,
 } from './engine'
+
+function emptyBoard(): Cell[] {
+  return Array(BOARD_SIZE * BOARD_SIZE).fill(null)
+}
+
+function put(
+  board: Cell[],
+  coord: string,
+  player: PlayerColor,
+  king = false,
+  id = `${player}_${coord}`
+): void {
+  board[coordToIdx(coord)] = { player, king, id }
+}
+
+function makeState(
+  board: Cell[],
+  turn: PlayerColor = 'you',
+  mode: GameMode = 'REK_POAT'
+): GameState {
+  return {
+    board,
+    turn,
+    status: 'playing',
+    winner: null,
+    winReason: null,
+    mode,
+    lastMove: null,
+    lastCaptured: [],
+    lastRek: false,
+    lastPoat: false,
+    captured: { you: [], opp: [] },
+    moveCount: 0,
+    availableRekMovesCount: getAllRekOpportunities(board, turn, mode).length,
+  }
+}
+
+function expect(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message)
+}
+
+function sameMembers(actual: number[], expected: number[]): boolean {
+  if (actual.length !== expected.length) return false
+  const set = new Set(actual)
+  return expected.every((value) => set.has(value))
+}
 
 export function runAllUnitTests(): {
   total: number
@@ -19,237 +76,301 @@ export function runAllUnitTests(): {
 } {
   const results: TestResult[] = []
 
-  // TC-01: Gánh Ngang Cơ Bản (Horizontal Rek)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const c1 = coordToIdx('c1')
-    const c4 = coordToIdx('c4')
-    const b4 = coordToIdx('b4')
-    const d4 = coordToIdx('d4')
-
-    board[c1] = { player: 'you', king: false, id: 'u_c1' }
-    board[b4] = { player: 'opp', king: false, id: 'o_b4' }
-    board[d4] = { player: 'opp', king: false, id: 'o_d4' }
-
-    const res = previewMove(board, c1, c4, 'you', 'REK_POAT')
-    const capturedSet = new Set(res.captures)
-    const pass =
-      res.rek &&
-      capturedSet.has(b4) &&
-      capturedSet.has(d4) &&
-      res.captures.length === 2
-
-    results.push({
-      id: 'TC-01',
-      title: 'Gánh Ngang Cơ Bản (Horizontal Rek)',
-      passed: pass,
-      details: `Slid c1 → c4, captured b4 and d4. Captured count = ${res.captures.length}`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-01',
-      title: 'Gánh Ngang Cơ Bản (Horizontal Rek)',
-      passed: false,
-      details: 'Exception encountered during execution',
-      error: e.message,
-    })
+  const run = (id: string, title: string, fn: () => string) => {
+    try {
+      const details = fn()
+      results.push({ id, title, passed: true, details })
+    } catch (error) {
+      results.push({
+        id,
+        title,
+        passed: false,
+        details: 'Regression assertion failed',
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
   }
 
-  // TC-02: Gánh Bắt Vua (Direct King capture via Rek)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const a4 = coordToIdx('a4')
-    const d4 = coordToIdx('d4')
-    const d2 = coordToIdx('d2') // Opponent King
-    const d6 = coordToIdx('d6') // Opponent Man
+  run('TC-01', 'Gánh ngang 2 quân (Horizontal Rek)', () => {
+    const board = emptyBoard()
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
 
-    board[a4] = { player: 'you', king: false, id: 'u_a4' }
-    board[d2] = { player: 'opp', king: true, id: 'o_king' }
-    board[d6] = { player: 'opp', king: false, id: 'o_man' }
+    const from = coordToIdx('c1')
+    const to = coordToIdx('c4')
+    const expected = [coordToIdx('b4'), coordToIdx('d4')]
+    const res = previewMove(board, from, to, 'you', 'REK_POAT')
 
-    const res = previewMove(board, a4, d4, 'you', 'REK_POAT')
-    const capturedSet = new Set(res.captures)
-    const pass =
-      res.rek &&
-      capturedSet.has(d2) &&
-      capturedSet.has(d6) &&
-      res.captures.length === 2
+    expect(res.rek, 'c1 -> c4 must trigger horizontal Rek')
+    expect(sameMembers(res.rekCaptures, expected), 'Rek must capture b4 and d4 only')
+    return 'Legal vertical approach into c4 captures the adjacent b4/d4 pair.'
+  })
 
-    results.push({
-      id: 'TC-02',
-      title: 'Gánh Bắt Vua Trực Tiếp (Royal King Rek Assassination)',
-      passed: pass,
-      details: `Slid a4 → d4, captured King at d2 and Man at d6`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-02',
-      title: 'Gánh Bắt Vua Trực Tiếp (Royal King Rek Assassination)',
-      passed: false,
-      details: 'Exception encountered',
-      error: e.message,
-    })
-  }
+  run('TC-02', 'Gánh dọc bắt Vua (legal intervention geometry)', () => {
+    const board = emptyBoard()
+    put(board, 'h1', 'you', true, 'you_king')
+    put(board, 'a4', 'you')
+    // Rek victims must be adjacent to the landing square d4.
+    put(board, 'd3', 'opp', true, 'opp_king')
+    put(board, 'd5', 'opp')
 
-  // TC-03: Gánh 4 Quân (Rek Boun / Rek Troat)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const a4 = coordToIdx('a4')
-    const d4 = coordToIdx('d4')
-    const c4 = coordToIdx('c4')
-    const e4 = coordToIdx('e4')
-    const d5 = coordToIdx('d5')
-    const d3 = coordToIdx('d3')
+    const state = makeState(board)
+    const next = executeMove(state, coordToIdx('a4'), coordToIdx('d4'))
 
-    board[a4] = { player: 'you', king: false, id: 'u_a4' }
-    board[c4] = { player: 'opp', king: false, id: 'o_c4' }
-    board[e4] = { player: 'opp', king: false, id: 'o_e4' }
-    board[d5] = { player: 'opp', king: false, id: 'o_d5' }
-    board[d3] = { player: 'opp', king: false, id: 'o_d3' }
+    expect(next.status === 'won', 'Capturing the opponent King must end the game')
+    expect(next.winner === 'you', 'The mover must win after Rek captures the King')
+    expect(next.board[coordToIdx('d3')] === null, 'Opponent King at d3 must be removed')
+    expect(next.board[coordToIdx('d5')] === null, 'Paired man at d5 must be removed')
+    return 'Corrected the impossible d2/d6 table geometry to adjacent d3/d5 victims.'
+  })
 
-    const res = previewMove(board, a4, d4, 'you', 'REK_POAT')
-    const capturedSet = new Set(res.captures)
-    const pass =
-      res.rek &&
-      capturedSet.has(c4) &&
-      capturedSet.has(e4) &&
-      capturedSet.has(d5) &&
-      capturedSet.has(d3) &&
-      res.captures.length === 4
+  run('TC-03', 'Rek Boun primitive cannot bypass movement legality', () => {
+    const landed = emptyBoard()
+    put(landed, 'd4', 'you')
+    put(landed, 'c4', 'opp')
+    put(landed, 'e4', 'opp')
+    put(landed, 'd3', 'opp')
+    put(landed, 'd5', 'opp')
 
-    results.push({
-      id: 'TC-03',
-      title: 'Gánh 4 Quân Đồng Thời (Rek Boun / Rek Troat)',
-      passed: pass,
-      details: `Slid a4 → d4, captured all 4 cross enemies (c4, e4, d5, d3)`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-03',
-      title: 'Gánh 4 Quân Đồng Thời (Rek Boun / Rek Troat)',
-      passed: false,
-      details: 'Exception encountered',
-      error: e.message,
-    })
-  }
+    const primitive = checkRekCaptures(landed, coordToIdx('d4'), 'you')
+    expect(primitive.length === 4, 'Capture primitive should recognize a four-way cross if it exists')
 
-  // TC-04: Bao Vây Đơn Lẻ (Single Piece Poat)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const a5 = coordToIdx('a5')
-    const a7 = coordToIdx('a7')
-    const a8 = coordToIdx('a8') // Opponent piece at corner
-    const b8 = coordToIdx('b8') // White piece sealing right side
+    const board = emptyBoard()
+    put(board, 'a4', 'you')
+    put(board, 'c4', 'opp')
+    put(board, 'e4', 'opp')
+    put(board, 'd3', 'opp')
+    put(board, 'd5', 'opp')
 
-    board[a5] = { player: 'you', king: false, id: 'u_a5' }
-    board[b8] = { player: 'you', king: false, id: 'u_b8' }
-    board[a8] = { player: 'opp', king: false, id: 'o_a8' }
+    const impossible = previewMove(board, coordToIdx('a4'), coordToIdx('d4'), 'you', 'REK_POAT')
+    expect(!impossible.rek, 'Preview must not simulate a4 -> d4 through occupied c4')
+    expect(impossible.captures.length === 0, 'Illegal movement must never generate captures')
+    return 'Cross capture math remains isolated, while the engine rejects the blocked a4 -> d4 scenario.'
+  })
 
-    const res = previewMove(board, a5, a7, 'you', 'REK_POAT')
-    const capturedSet = new Set(res.captures)
-    const pass = res.poat && capturedSet.has(a8) && res.captures.length === 1
+  run('TC-04', 'Bao vây Poat ở góc', () => {
+    const board = emptyBoard()
+    put(board, 'a6', 'you')
+    put(board, 'b8', 'you')
+    put(board, 'a8', 'opp')
 
-    results.push({
-      id: 'TC-04',
-      title: 'Bao Vây Đơn Lẻ Góc (Corner Single Poat)',
-      passed: pass,
-      details: `Slid a5 → a7, sealing a8 with 0 liberties. Poat triggered successfully`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-04',
-      title: 'Bao Vây Đơn Lẻ Góc (Corner Single Poat)',
-      passed: false,
-      details: 'Exception encountered',
-      error: e.message,
-    })
-  }
+    const res = previewMove(board, coordToIdx('a6'), coordToIdx('a7'), 'you', 'REK_POAT')
+    expect(res.poat, 'Closing a7 with b8 occupied must Poat a8')
+    expect(sameMembers(res.poatCaptures, [coordToIdx('a8')]), 'Only a8 should be Poat-captured')
+    return 'Board edges count as walls; a8 has zero liberties after a6 -> a7.'
+  })
 
-  // TC-05: Bao Vây Cụm Liên Kết (Group Encirclement Poat)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const e7 = coordToIdx('e7')
-    const b7 = coordToIdx('b7')
-    const a6 = coordToIdx('a6')
-    const c8 = coordToIdx('c8')
+  run('TC-05', 'Min Rek Chanh - compulsory Rek forfeit', () => {
+    const board = emptyBoard()
+    put(board, 'd1', 'you', true, 'you_king')
+    put(board, 'd8', 'opp', true, 'opp_king')
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
 
-    // White pieces
-    board[e7] = { player: 'you', king: false, id: 'u_e7' }
-    board[a6] = { player: 'you', king: false, id: 'u_a6' }
-    board[c8] = { player: 'you', king: false, id: 'u_c8' }
+    const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    const from = coordToIdx('c1')
+    const illegalChoice = coordToIdx('c2')
+    const next = executeMove(state, from, illegalChoice)
 
-    // Opponent 3-piece connected cluster: a8, a7, b8
-    const a8 = coordToIdx('a8')
-    const a7 = coordToIdx('a7')
-    const b8 = coordToIdx('b8')
-    board[a8] = { player: 'opp', king: false, id: 'o_a8' }
-    board[a7] = { player: 'opp', king: false, id: 'o_a7' }
-    board[b8] = { player: 'opp', king: false, id: 'o_b8' }
+    expect(next.status === 'won', 'Ignoring a compulsory Rek must end Min Rek Chanh')
+    expect(next.winner === 'opp', 'The player who ignores compulsory Rek must lose')
+    expect(next.board[from]?.id === board[from]?.id, 'Forfeit must not execute the illegal move')
+    expect(next.board[illegalChoice] === null, 'Forfeit destination must remain empty')
+    return 'A geometrically valid non-Rek attempt is adjudicated as an immediate forfeit.'
+  })
 
-    const res = previewMove(board, e7, b7, 'you', 'REK_POAT')
-    const capturedSet = new Set(res.captures)
-    const pass =
-      res.poat &&
-      capturedSet.has(a8) &&
-      capturedSet.has(a7) &&
-      capturedSet.has(b8) &&
-      res.captures.length === 3
+  run('TC-06', 'Khối liên thông Poat', () => {
+    const board = emptyBoard()
+    put(board, 'e7', 'you')
+    put(board, 'a6', 'you')
+    put(board, 'c8', 'you')
+    put(board, 'a8', 'opp')
+    put(board, 'a7', 'opp')
+    put(board, 'b8', 'opp')
 
-    results.push({
-      id: 'TC-05',
-      title: 'Bao Vây Cụm Liên Kết (Group Poat Encirclement)',
-      passed: pass,
-      details: `Slid e7 → b7, all 3 connected pieces at a8, a7, b8 captured via Flood-Fill (0 liberties)`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-05',
-      title: 'Bao Vây Cụm Liên Kết (Group Poat Encirclement)',
-      passed: false,
-      details: 'Exception encountered',
-      error: e.message,
-    })
-  }
+    const res = previewMove(board, coordToIdx('e7'), coordToIdx('b7'), 'you', 'REK_POAT')
+    const expected = [coordToIdx('a8'), coordToIdx('a7'), coordToIdx('b8')]
 
-  // TC-06: Bắt Buộc Gánh Trong Min Rek Chanh (Compulsory Hao Rek)
-  try {
-    const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
-    const c1 = coordToIdx('c1')
-    const c4 = coordToIdx('c4') // Rek move
-    const c2 = coordToIdx('c2') // Non-rek move
-    const b4 = coordToIdx('b4')
-    const d4 = coordToIdx('d4')
+    expect(res.poat, 'Closing b7 must Poat the connected corner group')
+    expect(sameMembers(res.poatCaptures, expected), 'All three connected opponent pieces must be removed')
+    return 'Flood-fill treats a7/a8/b8 as one group and captures it at zero liberties.'
+  })
 
-    board[c1] = { player: 'you', king: false, id: 'u_c1' }
-    board[b4] = { player: 'opp', king: false, id: 'o_b4' }
-    board[d4] = { player: 'opp', king: false, id: 'o_d4' }
+  run('REG-01', 'Initial movement is rook-like and blocked by the enemy front', () => {
+    const state = createInitialState('REK_POAT')
+    const moves = getLegalMoves(state.board, coordToIdx('a2'), state.mode)
+    const expected = ['a3', 'a4', 'a5', 'a6'].map(coordToIdx)
 
-    // When playing in Min Rek Chanh, trying to make non-rek move c1 -> c2 must be rejected
-    const nonRekRes = previewMove(board, c1, c2, 'you', 'MIN_REK_CHANH')
-    const rekRes = previewMove(board, c1, c4, 'you', 'MIN_REK_CHANH')
+    expect(sameMembers(moves, expected), 'a2 should slide only through a3-a6 at the initial position')
+    return 'Initial a2 has exactly four unobstructed forward destinations.'
+  })
 
-    const pass =
-      nonRekRes.isHaoRekViolation === true &&
-      rekRes.isHaoRekViolation !== true &&
-      rekRes.rek === true
+  run('REG-02', 'Pieces cannot jump over blockers', () => {
+    const board = emptyBoard()
+    put(board, 'a1', 'you')
+    put(board, 'a3', 'you')
 
-    results.push({
-      id: 'TC-06',
-      title: 'Bắt Buộc Gánh (Min Rek Chanh / Hao Rek Enforcement)',
-      passed: pass,
-      details: `Non-rek move blocked with isHaoRekViolation=true, Rek move accepted`,
-    })
-  } catch (e: any) {
-    results.push({
-      id: 'TC-06',
-      title: 'Bắt Buộc Gánh (Min Rek Chanh / Hao Rek Enforcement)',
-      passed: false,
-      details: 'Exception encountered',
-      error: e.message,
-    })
-  }
+    const moves = getLegalMoves(board, coordToIdx('a1'))
+    expect(moves.includes(coordToIdx('a2')), 'a2 must remain legal')
+    expect(!moves.includes(coordToIdx('a3')), 'Occupied a3 must not be legal')
+    expect(!moves.includes(coordToIdx('a4')), 'Squares beyond a3 must not be reachable')
+    return 'The first occupied square terminates sliding in that direction.'
+  })
 
-  const passedCount = results.filter((r) => r.passed).length
+  run('REG-03', 'Pieces cannot capture by landing on an occupied square', () => {
+    const board = emptyBoard()
+    put(board, 'a1', 'you')
+    put(board, 'a3', 'opp')
+
+    const moves = getLegalMoves(board, coordToIdx('a1'))
+    expect(moves.includes(coordToIdx('a2')), 'a2 must be legal before the blocker')
+    expect(!moves.includes(coordToIdx('a3')), 'Enemy-occupied a3 must not be a destination')
+    return 'Rek captures by intervention/encirclement, never by replacement capture.'
+  })
+
+  run('REG-04', 'Rek remains optional in REK_POAT', () => {
+    const board = emptyBoard()
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+
+    const moves = getMoveResults(board, coordToIdx('c1'), 'REK_POAT')
+    expect(moves.has(coordToIdx('c2')), 'Ordinary c1 -> c2 must remain legal in REK_POAT')
+    expect(moves.has(coordToIdx('c4')), 'Rek c1 -> c4 must also remain legal')
+    return 'Standard Rek Poat exposes both tactical Rek and ordinary movement.'
+  })
+
+  run('REG-05', 'MIN_REK_CHANH exposes only compulsory Rek destinations', () => {
+    const board = emptyBoard()
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+
+    const moves = getMoveResults(board, coordToIdx('c1'), 'MIN_REK_CHANH')
+    expect(!moves.has(coordToIdx('c2')), 'Non-Rek c2 must be filtered while Rek exists')
+    expect(moves.has(coordToIdx('c4')), 'The actual Rek destination must remain available')
+    return 'UI-facing legal moves match the compulsory Hao Rek rule.'
+  })
+
+  run('REG-06', 'King mobility differs by game mode', () => {
+    const board = emptyBoard()
+    put(board, 'd1', 'you', true)
+
+    const standard = getLegalMoves(board, coordToIdx('d1'), 'REK_POAT')
+    const palace = getLegalMoves(board, coordToIdx('d1'), 'MIN_REK_CHANH')
+    expect(standard.length > 0, 'King must move like a rook in REK_POAT')
+    expect(palace.length === 0, 'King must be stationary in MIN_REK_CHANH')
+    return 'Mode-specific King behavior is enforced by the core move generator.'
+  })
+
+  run('REG-07', 'Rek is resolved before Poat', () => {
+    const board = emptyBoard()
+    put(board, 'c6', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+    put(board, 'b3', 'opp')
+    put(board, 'a3', 'you')
+    put(board, 'c3', 'you')
+    put(board, 'b2', 'you')
+    put(board, 'a4', 'you')
+    put(board, 'b5', 'you')
+
+    const res = previewMove(board, coordToIdx('c6'), coordToIdx('c4'), 'you', 'REK_POAT')
+    expect(res.rek, 'c6 -> c4 must Rek b4/d4')
+    expect(res.rekCaptures.includes(coordToIdx('b4')), 'b4 must be removed by Rek first')
+    expect(!res.poatCaptures.includes(coordToIdx('b3')), 'b3 must survive because removed b4 becomes a liberty')
+    return 'Post-Rek emptiness is visible to the subsequent Poat flood-fill.'
+  })
+
+  run('REG-08', 'Preview and execute reject impossible movement', () => {
+    const board = emptyBoard()
+    put(board, 'a1', 'you')
+    put(board, 'a2', 'you')
+    put(board, 'h8', 'opp', true)
+    put(board, 'h1', 'you', true)
+
+    const diagonal = previewMove(board, coordToIdx('a1'), coordToIdx('b2'), 'you', 'REK_POAT')
+    expect(diagonal.captures.length === 0 && !diagonal.rek && !diagonal.poat, 'Diagonal preview must be empty')
+
+    const state = makeState(board)
+    const next = executeMove(state, coordToIdx('a1'), coordToIdx('a3'))
+    expect(next === state, 'executeMove must return the original state when a2 blocks a1 -> a3')
+    return 'Both preview and execution share the same geometric safety boundary.'
+  })
+
+  run('REG-09', 'RekEngine class cannot move the opponent on the wrong turn', () => {
+    const engine = new RekEngine('REK_POAT')
+    const before = engine.getState()
+    const accepted = engine.makeMove(coordToIdx('a7'), coordToIdx('a6'))
+    const after = engine.getState()
+
+    expect(accepted === false, 'Wrong-turn move must return false')
+    expect(after === before, 'Wrong-turn move must not mutate class state')
+    expect(after.moveCount === 0, 'Wrong-turn move must not increment move count')
+    return 'The stateful wrapper now enforces turn ownership before recording history.'
+  })
+
+  run('REG-10', 'Captured piece bookkeeping belongs to the side that lost pieces', () => {
+    const board = emptyBoard()
+    put(board, 'h1', 'you', true, 'you_king')
+    put(board, 'h8', 'opp', true, 'opp_king')
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+
+    const next = executeMove(makeState(board), coordToIdx('c1'), coordToIdx('c4'))
+    expect(next.captured.opp.length === 2, 'Two lost opponent men must be stored in captured.opp')
+    expect(next.captured.you.length === 0, 'The mover must not be credited as having lost those pieces')
+    return 'Capture trays track ownership of the removed pieces, not the capturing player.'
+  })
+
+  run('REG-11', 'Three-argument preview remains backward compatible', () => {
+    const board = emptyBoard()
+    put(board, 'c1', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+
+    const from = coordToIdx('c1')
+    const to = coordToIdx('c4')
+    const legacy = previewMove(board, from, to)
+    const explicit = previewMove(board, from, to, 'you', 'REK_POAT')
+
+    expect(sameMembers(legacy.captures, explicit.captures), 'Legacy and explicit previews must agree')
+    expect(legacy.rek === explicit.rek && legacy.poat === explicit.poat, 'Legacy preview flags must match')
+    return 'The modular refactor compatibility path is covered against regression.'
+  })
+
+  run('REG-12', 'Multiple compulsory Rek choices remain selectable', () => {
+    const board = emptyBoard()
+    put(board, 'c1', 'you')
+    put(board, 'h4', 'you')
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
+    put(board, 'f3', 'opp')
+    put(board, 'f5', 'opp')
+
+    const reks = getAllRekOpportunities(board, 'you', 'MIN_REK_CHANH')
+    const first = reks.some((m) => m.from === coordToIdx('c1') && m.to === coordToIdx('c4'))
+    const second = reks.some((m) => m.from === coordToIdx('h4') && m.to === coordToIdx('f4'))
+
+    expect(first && second, 'Both independent Rek choices must be available')
+    return 'Min Rek Chanh requires a Rek but does not arbitrarily select one tactical option.'
+  })
+
+  run('REG-13', 'A Poat group with one remaining liberty survives', () => {
+    const board = emptyBoard()
+    put(board, 'h1', 'you')
+    put(board, 'b8', 'you')
+    put(board, 'a8', 'opp')
+
+    const res = previewMove(board, coordToIdx('h1'), coordToIdx('h2'), 'you', 'REK_POAT')
+    expect(!res.poatCaptures.includes(coordToIdx('a8')), 'a8 must survive while a7 is empty')
+    return 'Poat triggers only at zero liberties; a single escape square prevents capture.'
+  })
+
+  const passedCount = results.filter((result) => result.passed).length
   return {
     total: results.length,
     passed: passedCount,
