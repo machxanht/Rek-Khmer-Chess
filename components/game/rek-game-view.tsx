@@ -55,6 +55,9 @@ export function RekGameView({
   connections,
   exitHref = '/play',
   banner,
+  showUtilityBar = true,
+  showMatchControls = true,
+  showResultOverlay = true,
 }: {
   engine: Engine
   title: string
@@ -67,6 +70,9 @@ export function RekGameView({
   connections?: { you?: ConnectionState; opp?: ConnectionState }
   exitHref?: string
   banner?: React.ReactNode
+  showUtilityBar?: boolean
+  showMatchControls?: boolean
+  showResultOverlay?: boolean
 }) {
   const {
     game,
@@ -94,11 +100,14 @@ export function RekGameView({
     id: number
   } | null>(null)
 
-  const interactive = game.status === 'playing' && canControlTurn && !resigned
+  const modalOpen = pauseOpen || resignOpen || infoOpen || historyOpen
+  const interactive =
+    game.status === 'playing' && canControlTurn && !resigned && !modalOpen
 
   const winner = resigned ? (resigned === 'you' ? 'opp' : 'you') : game.winner
-  const winReason = resigned ? 'Opponent resigned' : game.winReason
-  const gameOver = game.status === 'won' || resigned !== null
+  const resignedName = resigned === 'you' ? youName : resigned === 'opp' ? oppName : null
+  const winReason = resignedName ? `${resignedName} resigned` : game.winReason
+  const gameOver = game.status !== 'playing' || resigned !== null
   const winnerKing = winner && winner !== 'draw' ? kingIndex(game.board, winner) : null
 
   const handlePlayAgain = () => {
@@ -123,7 +132,6 @@ export function RekGameView({
 
   return (
     <div className="flex min-h-dvh flex-col bg-temple selection:bg-gold/30 relative overflow-x-hidden">
-      {/* Floating alert banner for Hao Rek */}
       {bannerAlert && (
         <div className="fixed top-18 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-bounce">
           <div className="flex items-center gap-2 rounded-full border border-gold bg-background/95 px-5 py-2.5 shadow-2xl shadow-gold/40 backdrop-blur-xl ring-4 ring-gold/40">
@@ -135,7 +143,6 @@ export function RekGameView({
         </div>
       )}
 
-      {/* Floating emote effect */}
       {activeEmote && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-bounce">
           <div className="flex items-center gap-2 rounded-full border border-gold/50 bg-background/95 px-4 py-2 shadow-2xl backdrop-blur-xl ring-2 ring-gold/40">
@@ -148,26 +155,25 @@ export function RekGameView({
         </div>
       )}
 
-      {/* Top action header */}
-      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 bg-background/85 px-4 py-3 backdrop-blur-xl shadow-md">
+      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 py-3 sm:px-4 backdrop-blur-xl shadow-md">
         <Link
           href={exitHref}
-          className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground active:scale-95"
+          className="flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground active:scale-95"
         >
           <ChevronLeft className="size-4.5" />
-          <span>Exit</span>
+          <span className="hidden min-[380px]:inline">Exit</span>
         </Link>
 
-        <div className="flex items-center gap-2">
-          <span className="font-display text-sm font-bold tracking-wider text-gold uppercase drop-shadow-[0_0_8px_var(--gold-soft)]">
+        <div className="flex min-w-0 items-center justify-center gap-1.5 sm:gap-2">
+          <span className="max-w-[44vw] truncate font-display text-xs font-bold tracking-wider text-gold uppercase drop-shadow-[0_0_8px_var(--gold-soft)] sm:max-w-none sm:text-sm">
             {title}
           </span>
-          <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[0.65rem] font-bold text-gold ring-1 ring-gold/30 font-mono">
+          <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[0.6rem] font-bold text-gold ring-1 ring-gold/30 font-mono sm:text-[0.65rem]">
             Turn {game.moveCount + 1}
           </span>
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
           <button
             onClick={handleToggleSound}
             aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
@@ -182,6 +188,7 @@ export function RekGameView({
           </button>
           <button
             onClick={() => setHistoryOpen(true)}
+            aria-label="Open move history"
             className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-accent hover:text-gold active:scale-95"
             title="Move History"
           >
@@ -189,18 +196,18 @@ export function RekGameView({
           </button>
           <button
             onClick={() => setInfoOpen(true)}
-            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-gold active:scale-95"
+            aria-label="Open rules"
+            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-gold active:scale-95 sm:w-auto sm:px-2.5"
           >
             <BookOpen className="size-4" />
-            <span className="hidden sm:inline">Rules</span>
+            <span className="hidden sm:inline sm:ml-1">Rules</span>
           </button>
         </div>
       </header>
 
       {banner}
 
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 px-4 pt-2 pb-8 animate-fade-rise">
-        {/* Opponent */}
+      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 px-3 pt-2 pb-8 sm:px-4 animate-fade-rise">
         <PlayerCard
           player={perspective === 'opp' ? 'you' : 'opp'}
           name={oppName}
@@ -213,7 +220,6 @@ export function RekGameView({
           connection={connections?.opp}
         />
 
-        {/* Turn indicator */}
         <TurnIndicator
           turn={game.turn}
           youName={youName}
@@ -221,7 +227,6 @@ export function RekGameView({
           rekAvailable={rekAvailable && !gameOver}
         />
 
-        {/* Board */}
         <div className="flex justify-center py-1">
           <Board
             board={game.board}
@@ -237,7 +242,6 @@ export function RekGameView({
           />
         </div>
 
-        {/* You */}
         <PlayerCard
           player={perspective === 'opp' ? 'opp' : 'you'}
           name={youName}
@@ -250,44 +254,46 @@ export function RekGameView({
           connection={connections?.you}
         />
 
-        {/* Quick Reactions & Undo */}
-        <div className="flex items-center justify-between gap-1.5 rounded-2xl border border-border/80 bg-card/60 px-3 py-2 backdrop-blur-md">
-          <div className="flex items-center gap-1">
-            {EMOTES.map((em) => (
+        {showUtilityBar && (
+          <div className="flex items-center justify-between gap-1.5 rounded-2xl border border-border/80 bg-card/60 px-2.5 py-2 backdrop-blur-md sm:px-3">
+            <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
+              {EMOTES.map((em) => (
+                <button
+                  key={em.id}
+                  onClick={() => sendEmote(em)}
+                  aria-label={em.label}
+                  className="flex size-8 items-center justify-center rounded-xl bg-background/60 hover:bg-gold/20 hover:scale-110 active:scale-95 transition-all text-foreground touch-manipulation"
+                  title={em.label}
+                >
+                  <em.icon className={cn('size-4', em.color)} />
+                </button>
+              ))}
+            </div>
+            {canUndo && !connections && (
               <button
-                key={em.id}
-                onClick={() => sendEmote(em)}
-                className="flex size-8 items-center justify-center rounded-xl bg-background/60 hover:bg-gold/20 hover:scale-110 active:scale-95 transition-all text-foreground"
-                title={em.label}
+                onClick={undo}
+                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-secondary/90 px-3 py-1.5 text-xs font-bold text-foreground hover:bg-gold hover:text-background transition-all active:scale-95 shadow-sm ring-1 ring-border touch-manipulation"
+                title="Undo last move"
               >
-                <em.icon className={cn('size-4', em.color)} />
+                <RotateCcw className="size-3.5" />
+                <span>Undo</span>
               </button>
-            ))}
+            )}
           </div>
-          {canUndo && !connections && (
-            <button
-              onClick={undo}
-              className="flex items-center gap-1.5 rounded-xl bg-secondary/90 px-3 py-1.5 text-xs font-bold text-foreground hover:bg-gold hover:text-background transition-all active:scale-95 shadow-sm ring-1 ring-border"
-              title="Undo last move"
-            >
-              <RotateCcw className="size-3.5" />
-              <span>Undo</span>
-            </button>
-          )}
-        </div>
+        )}
 
-        {/* Controls */}
-        <div className="mt-0.5">
-          <GameControls
-            onPause={() => setPauseOpen(true)}
-            onInfo={() => setInfoOpen(true)}
-            onRestart={perspective === 'neutral' || !connections ? handlePlayAgain : undefined}
-            onResign={() => setResignOpen(true)}
-          />
-        </div>
+        {showMatchControls && (
+          <div className="mt-0.5">
+            <GameControls
+              onPause={() => setPauseOpen(true)}
+              onInfo={() => setInfoOpen(true)}
+              onRestart={perspective === 'neutral' || !connections ? handlePlayAgain : undefined}
+              onResign={() => setResignOpen(true)}
+            />
+          </div>
+        )}
       </div>
 
-      {/* Move History */}
       <Modal open={historyOpen} onClose={() => setHistoryOpen(false)}>
         <div className="flex items-center justify-between pb-3 border-b border-border/70">
           <div className="flex items-center gap-2">
@@ -306,23 +312,23 @@ export function RekGameView({
             </p>
           ) : (
             history.map((m, i) => (
-              <div key={i} className="pt-2 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
+              <div key={i} className="pt-2 flex items-center justify-between gap-2 text-xs">
+                <div className="flex min-w-0 items-center gap-2">
                   <span className="font-mono text-muted-foreground w-6 font-bold">
                     #{history.length - i}
                   </span>
                   <span
                     className={cn(
-                      'size-2 rounded-full',
+                      'size-2 shrink-0 rounded-full',
                       m.player === 'you' ? 'bg-you' : 'bg-opp',
                     )}
                   />
-                  <span className="font-bold text-foreground">{m.pieceName}</span>
-                  <span className="font-mono text-gold bg-gold/10 px-1.5 py-0.5 rounded border border-gold/30 font-semibold">
+                  <span className="truncate font-bold text-foreground">{m.pieceName}</span>
+                  <span className="shrink-0 font-mono text-gold bg-gold/10 px-1.5 py-0.5 rounded border border-gold/30 font-semibold">
                     {m.fromCoord} → {m.toCoord}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-1.5">
                   {m.rek && (
                     <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-extrabold text-background shadow-sm">
                       REK!
@@ -335,10 +341,12 @@ export function RekGameView({
                   )}
                   {m.captures > 0 && !m.rek && !m.poat && (
                     <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 text-[10px] font-bold">
-                      +{m.captures} captured
+                      +{m.captures}
                     </span>
                   )}
-                  <span className="text-[10px] text-muted-foreground font-mono">{m.timestamp}</span>
+                  <span className="hidden text-[10px] text-muted-foreground font-mono sm:inline">
+                    {m.timestamp}
+                  </span>
                 </div>
               </div>
             ))
@@ -346,7 +354,6 @@ export function RekGameView({
         </div>
       </Modal>
 
-      {/* Pause */}
       <Modal open={pauseOpen} onClose={() => setPauseOpen(false)} className="text-center">
         <h2 className="font-display text-2xl font-bold">Game Paused</h2>
         <p className="mt-1 text-sm text-muted-foreground">Match paused. Ready when you are.</p>
@@ -359,14 +366,13 @@ export function RekGameView({
         </button>
       </Modal>
 
-      {/* Resign */}
       <Modal open={resignOpen} onClose={() => setResignOpen(false)}>
         <div className="flex items-center gap-2 text-destructive mb-1">
           <AlertTriangle className="size-5" />
           <h2 className="font-display text-2xl font-bold">Resign Match?</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Your opponent will immediately be awarded victory.
+          The player whose turn it is will resign and the opponent will be awarded victory.
         </p>
         <div className="mt-5 flex gap-2.5">
           <button
@@ -378,7 +384,7 @@ export function RekGameView({
           </button>
           <button
             onClick={() => {
-              setResigned(perspective === 'neutral' ? 'you' : (perspective as Player))
+              setResigned(perspective === 'neutral' ? game.turn : (perspective as Player))
               setResignOpen(false)
             }}
             className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-destructive/20 font-bold text-destructive ring-1 ring-destructive/40 transition-colors hover:bg-destructive/30"
@@ -388,7 +394,6 @@ export function RekGameView({
         </div>
       </Modal>
 
-      {/* Rules Quick Reference */}
       <Modal open={infoOpen} onClose={() => setInfoOpen(false)}>
         <h2 className="font-display text-2xl font-bold text-foreground">How Rek Works</h2>
         <ul className="mt-4 flex flex-col gap-3 text-sm">
@@ -419,16 +424,17 @@ export function RekGameView({
         </Link>
       </Modal>
 
-      {/* Result */}
-      <ResultOverlay
-        open={gameOver}
-        winner={winner}
-        reason={winReason}
-        youName={youName}
-        oppName={oppName}
-        perspective={perspective}
-        onPlayAgain={handlePlayAgain}
-      />
+      {showResultOverlay && (
+        <ResultOverlay
+          open={gameOver}
+          winner={winner}
+          reason={winReason}
+          youName={youName}
+          oppName={oppName}
+          perspective={perspective}
+          onPlayAgain={handlePlayAgain}
+        />
+      )}
     </div>
   )
 }
