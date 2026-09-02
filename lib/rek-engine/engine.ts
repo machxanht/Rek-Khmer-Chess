@@ -4,6 +4,7 @@
 
 import {
   BOARD_SIZE,
+  DEFAULT_LONE_KING_DRAW_LIMIT,
   Cell,
   PlayerColor,
   Piece,
@@ -39,6 +40,32 @@ export function idxToCoord(index: number): string {
   return `${file}${rank}`
 }
 
+/**
+ * A repetition position is defined by board occupancy/type, side to move and
+ * game mode. Piece IDs, move counters and UI metadata do not affect legality.
+ */
+export function createPositionKey(
+  board: Cell[],
+  turn: PlayerColor,
+  mode: GameMode
+): string {
+  const cells = board
+    .map((piece) => {
+      if (!piece) return '.'
+      const side = piece.player === 'you' ? 'y' : 'o'
+      return `${side}${piece.king ? 'K' : 'M'}`
+    })
+    .join(',')
+  return `${mode}|${turn}|${cells}`
+}
+
+export function hasLoneKing(board: Cell[]): boolean {
+  return (['you', 'opp'] as const).some((player) => {
+    const pieces = board.filter((piece) => piece?.player === player)
+    return pieces.length === 1 && pieces[0]?.king === true
+  })
+}
+
 export function createInitialBoard(mode: GameMode = 'REK_POAT'): Cell[] {
   pieceIdCounter = 0
   const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
@@ -60,9 +87,10 @@ export function createInitialBoard(mode: GameMode = 'REK_POAT'): Cell[] {
 
 export function createInitialState(mode: GameMode = 'REK_POAT'): GameState {
   const board = createInitialBoard(mode)
+  const turn: PlayerColor = 'you'
   return {
     board,
-    turn: 'you',
+    turn,
     status: 'playing',
     winner: null,
     winReason: null,
@@ -74,6 +102,9 @@ export function createInitialState(mode: GameMode = 'REK_POAT'): GameState {
     captured: { you: [], opp: [] },
     moveCount: 0,
     availableRekMovesCount: 0,
+    positionCounts: { [createPositionKey(board, turn, mode)]: 1 },
+    loneKingMoveCount: 0,
+    drawMoveLimit: DEFAULT_LONE_KING_DRAW_LIMIT,
   }
 }
 
@@ -317,6 +348,44 @@ export function executeMove(
     }
   }
 
+  // Draw bookkeeping is evaluated only after decisive win/forfeit conditions.
+  // Old/custom states may not carry these fields, so reconstruct a safe base.
+  const currentPositionKey = createPositionKey(state.board, state.turn, state.mode)
+  const positionCounts: Record<string, number> = state.positionCounts
+    ? { ...state.positionCounts }
+    : { [currentPositionKey]: 1 }
+  const nextPositionKey = createPositionKey(newBoard, nextTurn, state.mode)
+  positionCounts[nextPositionKey] = (positionCounts[nextPositionKey] ?? 0) + 1
+
+  const hadLoneKing = hasLoneKing(state.board)
+  const hasLoneKingNow = hasLoneKing(newBoard)
+  let loneKingMoveCount = state.loneKingMoveCount ?? 0
+  if (!hasLoneKingNow) {
+    loneKingMoveCount = 0
+  } else if (!hadLoneKing) {
+    // The move that creates a lone-King position starts the count; it is not
+    // itself counted as one of the survival plies.
+    loneKingMoveCount = 0
+  } else {
+    loneKingMoveCount += 1
+  }
+
+  const drawMoveLimit = state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT
+
+  if (status === 'playing' && positionCounts[nextPositionKey] >= 3) {
+    status = 'draw'
+    winner = 'draw'
+    winReason = 'Threefold Repetition'
+  } else if (
+    status === 'playing' &&
+    hasLoneKingNow &&
+    loneKingMoveCount >= drawMoveLimit
+  ) {
+    status = 'draw'
+    winner = 'draw'
+    winReason = `Lone King survived ${drawMoveLimit} counted moves`
+  }
+
   const availableReks =
     status === 'playing' ? getAllRekOpportunities(newBoard, nextTurn, state.mode).length : 0
 
@@ -334,6 +403,9 @@ export function executeMove(
     captured: newCaptured,
     moveCount: state.moveCount + 1,
     availableRekMovesCount: availableReks,
+    positionCounts,
+    loneKingMoveCount,
+    drawMoveLimit,
   }
 }
 
@@ -437,9 +509,10 @@ export class RekEngine {
   public loadCustomSetup(setupFn: (board: Cell[]) => void): void {
     const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
     setupFn(board)
+    const turn: PlayerColor = 'you'
     this.state = {
       board,
-      turn: 'you',
+      turn,
       status: 'playing',
       winner: null,
       winReason: null,
@@ -450,7 +523,10 @@ export class RekEngine {
       lastPoat: false,
       captured: { you: [], opp: [] },
       moveCount: 0,
-      availableRekMovesCount: getAllRekOpportunities(board, 'you', this.state.mode).length,
+      availableRekMovesCount: getAllRekOpportunities(board, turn, this.state.mode).length,
+      positionCounts: { [createPositionKey(board, turn, this.state.mode)]: 1 },
+      loneKingMoveCount: 0,
+      drawMoveLimit: this.state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT,
     }
     this.history = []
   }

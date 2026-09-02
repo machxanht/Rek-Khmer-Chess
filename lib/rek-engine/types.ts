@@ -2,6 +2,7 @@
 // Conforming to /HUONG_DAN_LUAT_CO_REK_KHMER.md and /SPEC_ENGINE_CO_REK_KHMER.md
 
 export const BOARD_SIZE = 8
+export const DEFAULT_LONE_KING_DRAW_LIMIT = 32
 
 export type PlayerColor = 'you' | 'opp' // you = White (bottom/rows 6-7), opp = Black (top/rows 0-1)
 
@@ -50,6 +51,26 @@ export interface GameState {
   captured: { you: Piece[]; opp: Piece[] }
   moveCount: number
   availableRekMovesCount: number
+
+  /**
+   * Threefold repetition bookkeeping. Optional for compatibility with older
+   * serialized/custom states; executeMove() reconstructs the current position
+   * count when it is absent.
+   */
+  positionCounts?: Record<string, number>
+
+  /**
+   * Number of completed plies after a side had already entered a lone-King
+   * state. The capture/move that first creates the lone-King state starts the
+   * clock at zero; subsequent legal plies increment it.
+   */
+  loneKingMoveCount?: number
+
+  /**
+   * Regional rules vary (the research guide records 24/32/44). The technical
+   * SPEC selects 32, so 32 is the engine default while remaining configurable.
+   */
+  drawMoveLimit?: number
 }
 
 export interface Direction {
