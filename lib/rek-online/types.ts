@@ -1,4 +1,4 @@
-import type { GameMode, GameState, PlayerColor } from '@/lib/rek-engine'
+import type { GameMode, GameState, PlayerColor } from '../rek-engine'
 
 export type OnlineRole = 'host' | 'guest'
 export type OnlineRoomPhase = 'waiting' | 'playing' | 'finished'
