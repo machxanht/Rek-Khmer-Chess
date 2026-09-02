@@ -34,6 +34,10 @@ async function waitForJson(url, attempts = 60) {
   throw lastError ?? new Error(`Timed out waiting for ${url}`)
 }
 
+function isIgnorableResource(url) {
+  return url.endsWith('/favicon.ico') || url.includes('/.well-known/appspecific/com.chrome.devtools.json')
+}
+
 class CdpPage {
   constructor(wsUrl) {
     this.ws = new WebSocket(wsUrl)
@@ -41,6 +45,7 @@ class CdpPage {
     this.pending = new Map()
     this.exceptions = []
     this.consoleErrors = []
+    this.resourceErrors = []
     this.opened = new Promise((resolve, reject) => {
       this.ws.addEventListener('open', resolve, { once: true })
       this.ws.addEventListener('error', reject, { once: true })
@@ -62,7 +67,22 @@ class CdpPage {
       }
 
       if (message.method === 'Log.entryAdded' && message.params?.entry?.level === 'error') {
-        this.consoleErrors.push(message.params.entry.text)
+        const text = message.params.entry.text || ''
+        if (!text.startsWith('Failed to load resource:')) this.consoleErrors.push(text)
+      }
+
+      if (message.method === 'Network.responseReceived') {
+        const response = message.params?.response
+        if (response?.status >= 400 && !isIgnorableResource(response.url)) {
+          this.resourceErrors.push(`${response.status} ${response.url}`)
+        }
+      }
+
+      if (message.method === 'Network.loadingFailed') {
+        const errorText = message.params?.errorText
+        if (errorText && errorText !== 'net::ERR_ABORTED') {
+          this.resourceErrors.push(errorText)
+        }
       }
     })
   }
@@ -89,12 +109,14 @@ async function createPage(port) {
   await page.send('Page.enable')
   await page.send('Runtime.enable')
   await page.send('Log.enable')
+  await page.send('Network.enable')
   return page
 }
 
 async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage) {
   page.exceptions = []
   page.consoleErrors = []
+  page.resourceErrors = []
 
   if (denyStorage) {
     await page.send('Page.addScriptToEvaluateOnNewDocument', {
@@ -123,7 +145,8 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   if (snapshot.htmlLength < 100) failures.push(`body HTML unexpectedly small (${snapshot.htmlLength})`)
   if (!snapshot.text.includes(expectedText)) failures.push(`missing expected text: ${expectedText}`)
   if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
-  if (page.consoleErrors.length) failures.push(`browser log errors: ${page.consoleErrors.join(' | ')}`)
+  if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
+  if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
 
   if (failures.length) {
     throw new Error(`${route}${denyStorage ? ' [storage denied]' : ''}: ${failures.join('; ')}`)
