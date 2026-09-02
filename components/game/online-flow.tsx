@@ -29,7 +29,7 @@ const OPP_NAME = 'Sokha'
 const YOU_NAME = 'You'
 
 export function OnlineFlow() {
-  const engine = useRekEngine((player) => player === 'you')
+  const engine = useRekEngine('REK_POAT', (player) => player === 'you')
   const { game, applyExternal } = engine
 
   const [phase, setPhase] = useState<Phase>('lobby')
