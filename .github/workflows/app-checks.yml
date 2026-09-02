@@ -7,7 +7,9 @@ on:
       - 'components/**'
       - 'hooks/**'
       - 'lib/**'
+      - 'scripts/browser-smoke.mjs'
       - 'public/rek-assets/**'
+      - 'next.config.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/app-checks.yml'
@@ -17,7 +19,9 @@ on:
       - 'components/**'
       - 'hooks/**'
       - 'lib/**'
+      - 'scripts/browser-smoke.mjs'
       - 'public/rek-assets/**'
+      - 'next.config.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - '.github/workflows/app-checks.yml'
@@ -25,7 +29,7 @@ on:
 jobs:
   app-checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -49,3 +53,56 @@ jobs:
 
       - name: Build production application
         run: pnpm build
+
+      - name: Start production application
+        run: |
+          pnpm start > /tmp/rek-next-prod.log 2>&1 &
+          echo $! > /tmp/rek-next-prod.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/rek-next-prod.log
+          exit 1
+
+      - name: Browser smoke test production offline routes
+        env:
+          REK_SMOKE_BASE_URL: http://127.0.0.1:3000
+          REK_CHROME_DEBUG_PORT: '9222'
+        run: node scripts/browser-smoke.mjs
+
+      - name: Stop production application
+        if: always()
+        run: |
+          if [ -f /tmp/rek-next-prod.pid ]; then
+            kill $(cat /tmp/rek-next-prod.pid) 2>/dev/null || true
+          fi
+
+      - name: Start development application
+        run: |
+          pnpm exec next dev -p 3001 > /tmp/rek-next-dev.log 2>&1 &
+          echo $! > /tmp/rek-next-dev.pid
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:3001/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/rek-next-dev.log
+          exit 1
+
+      - name: Browser smoke test development offline routes
+        env:
+          REK_SMOKE_BASE_URL: http://127.0.0.1:3001
+          REK_CHROME_DEBUG_PORT: '9223'
+        run: node scripts/browser-smoke.mjs
+
+      - name: Print application logs on failure
+        if: failure()
+        run: |
+          echo '--- production log ---'
+          cat /tmp/rek-next-prod.log || true
+          echo '--- development log ---'
+          cat /tmp/rek-next-dev.log || true
