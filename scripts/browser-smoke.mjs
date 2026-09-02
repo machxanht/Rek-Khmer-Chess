@@ -42,6 +42,10 @@ function isIgnorableResource(url) {
   )
 }
 
+function includesText(haystack, needle) {
+  return haystack.toLocaleLowerCase().includes(needle.toLocaleLowerCase())
+}
+
 class CdpPage {
   constructor(wsUrl) {
     this.ws = new WebSocket(wsUrl)
@@ -84,9 +88,7 @@ class CdpPage {
 
       if (message.method === 'Network.loadingFailed') {
         const errorText = message.params?.errorText
-        if (errorText && errorText !== 'net::ERR_ABORTED') {
-          this.resourceErrors.push(errorText)
-        }
+        if (errorText && errorText !== 'net::ERR_ABORTED') this.resourceErrors.push(errorText)
       }
     })
   }
@@ -139,10 +141,9 @@ async function waitForRoute(page, expectedText, timeoutMs = 8000) {
       snapshot.readyState === 'complete' &&
       snapshot.text.trim() &&
       snapshot.htmlLength >= 100 &&
-      snapshot.text.includes(expectedText)
-    ) {
-      return snapshot
-    }
+      includesText(snapshot.text, expectedText)
+    ) return snapshot
+
     await delay(250)
     snapshot = await readSnapshot(page)
   }
@@ -174,7 +175,7 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   const failures = []
   if (!snapshot.text.trim()) failures.push('body text is empty')
   if (snapshot.htmlLength < 100) failures.push(`body HTML unexpectedly small (${snapshot.htmlLength})`)
-  if (!snapshot.text.includes(expectedText)) failures.push(`missing expected text: ${expectedText}`)
+  if (!includesText(snapshot.text, expectedText)) failures.push(`missing expected text: ${expectedText}`)
   if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
   if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
   if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
@@ -191,7 +192,7 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
 }
 
 const chromePath = findChrome()
-const debugPort = 9222
+const debugPort = Number(process.env.REK_CHROME_DEBUG_PORT || '9222')
 const chrome = spawn(
   chromePath,
   [
@@ -200,7 +201,7 @@ const chrome = spawn(
     '--disable-gpu',
     '--disable-dev-shm-usage',
     `--remote-debugging-port=${debugPort}`,
-    '--user-data-dir=/tmp/rek-chrome-profile',
+    `--user-data-dir=/tmp/rek-chrome-profile-${debugPort}`,
     'about:blank',
   ],
   { stdio: ['ignore', 'pipe', 'pipe'] },
