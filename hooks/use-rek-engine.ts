@@ -4,10 +4,12 @@ import { useCallback, useMemo, useState, useEffect } from 'react'
 import {
   applyMove,
   createInitialState,
+  createPositionKey,
   getMoveResults,
   evaluateMove,
   rc,
   SIZE,
+  DEFAULT_LONE_KING_DRAW_LIMIT,
   type GameState,
   type MoveResult,
   type Player,
@@ -61,7 +63,6 @@ export function useRekEngine(
     return set
   }, [moveResults])
 
-  // Does current player have Rek available?
   const availableReks = useMemo(() => {
     if (game.status !== 'playing') return []
     return getAvailableRekMoves(game.board, game.turn, game.mode)
@@ -94,7 +95,6 @@ export function useRekEngine(
 
       const piece = game.board[index]
 
-      // Selecting one of your own movable pieces
       if (piece && piece.player === game.turn) {
         if (selected === index) {
           setSelected(null)
@@ -105,7 +105,6 @@ export function useRekEngine(
         return
       }
 
-      // Attempting to move the selected piece
       if (selected !== null) {
         const results = getMoveResults(game.board, selected, game.mode)
         if (results.has(index)) {
@@ -140,7 +139,6 @@ export function useRekEngine(
           }
 
           const next = applyMove(game, selected, index)
-          // Defensive: only record a move if the core engine actually accepted it.
           if (next === game) {
             setSelected(null)
             return
@@ -162,7 +160,6 @@ export function useRekEngine(
         }
       }
 
-      // Clicked empty / invalid: clear selection
       setSelected(null)
     },
     [game, selected, controllable],
@@ -171,12 +168,17 @@ export function useRekEngine(
   const undo = useCallback(() => {
     if (pastStates.length === 0) return
     const prev = pastStates[pastStates.length - 1]
+    const rollbackPlies = Math.max(1, game.moveCount - prev.moveCount)
+
     setPastStates((arr) => arr.slice(0, -1))
-    setHistory((arr) => arr.slice(1))
+    // Local play stores a snapshot every ply, while AI/remote moves are applied
+    // externally without an extra user-undo checkpoint. Remove exactly the
+    // history entries covered by the restored snapshot so board/history agree.
+    setHistory((arr) => arr.slice(Math.min(rollbackPlies, arr.length)))
     setGame(prev)
     setSelected(null)
     sounds.playSelect()
-  }, [pastStates])
+  }, [pastStates, game.moveCount])
 
   const reset = useCallback(
     (mode?: GameMode) => {
@@ -194,9 +196,10 @@ export function useRekEngine(
     const board = Array(SIZE * SIZE).fill(null)
     puzzle.setup(board)
     const mode: GameMode = 'REK_POAT'
+    const turn: Player = 'you'
     setGame({
       board,
-      turn: 'you',
+      turn,
       status: 'playing',
       winner: null,
       winReason: null,
@@ -207,7 +210,10 @@ export function useRekEngine(
       lastPoat: false,
       captured: { you: [], opp: [] },
       moveCount: 0,
-      availableRekMovesCount: getAvailableRekMoves(board, 'you', mode).length,
+      availableRekMovesCount: getAvailableRekMoves(board, turn, mode).length,
+      positionCounts: { [createPositionKey(board, turn, mode)]: 1 },
+      loneKingMoveCount: 0,
+      drawMoveLimit: DEFAULT_LONE_KING_DRAW_LIMIT,
     })
     setSelected(null)
     setHistory([])
@@ -215,7 +221,7 @@ export function useRekEngine(
     sounds.playSelect()
   }, [])
 
-  // Apply an externally-decided move (AI / remote opponent)
+  // Apply an externally-decided move (AI / remote opponent).
   const applyExternal = useCallback((from: number, to: number) => {
     setGame((g) => {
       const movingPiece = g.board[from]
@@ -225,10 +231,8 @@ export function useRekEngine(
       const next = applyMove(g, from, to)
       if (next === g) return g
 
-      // Some adjudications (for example a Min Rek Chanh forfeit) legitimately
-      // return a new terminal state while leaving the attempted move unplayed.
-      // Only produce move history/audio when the engine confirms that this move
-      // actually became the state's last executed move.
+      // A terminal adjudication such as a Min Rek Chanh forfeit can return a
+      // new state without actually executing the attempted piece movement.
       const moveExecuted =
         next.moveCount === g.moveCount + 1 &&
         next.lastMove?.from === from &&
