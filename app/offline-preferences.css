@@ -1,0 +1,44 @@
+html[data-rek-board-theme='ivory'] .rek-board-square-light {
+  background-color: oklch(0.86 0.03 85);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.96 0.02 90 / 0.42), transparent 56%);
+}
+
+html[data-rek-board-theme='ivory'] .rek-board-square-dark {
+  background-color: oklch(0.52 0.06 60);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.7 0.05 67 / 0.25), transparent 58%);
+}
+
+html[data-rek-board-theme='slate'] .rek-board-square-light {
+  background-color: oklch(0.6 0.02 220);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.78 0.02 215 / 0.3), transparent 56%);
+}
+
+html[data-rek-board-theme='slate'] .rek-board-square-dark {
+  background-color: oklch(0.42 0.03 235);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.55 0.025 225 / 0.24), transparent 58%);
+}
+
+html[data-rek-board-theme='jade'] .rek-board-square-light {
+  background-color: oklch(0.7 0.06 165);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.83 0.055 160 / 0.32), transparent 56%);
+}
+
+html[data-rek-board-theme='jade'] .rek-board-square-dark {
+  background-color: oklch(0.46 0.07 168);
+  background-image: radial-gradient(circle at 28% 20%, oklch(0.6 0.065 168 / 0.25), transparent 58%);
+}
+
+html[data-rek-motion='off'] .rek-piece,
+html[data-rek-motion='off'] .rek-piece-floor-shadow,
+html[data-rek-motion='off'] .rek-piece-flight,
+html[data-rek-motion='off'] .rek-capture-burst,
+html[data-rek-motion='off'] .rek-legal-dot,
+html[data-rek-motion='off'] .rek-tactical-target {
+  animation: none !important;
+  transition: none !important;
+}
+
+html[data-rek-hints='off'] .rek-legal-dot,
+html[data-rek-hints='off'] .rek-tactical-target {
+  display: none !important;
+}

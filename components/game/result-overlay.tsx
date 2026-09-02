@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
-import { Trophy, RotateCcw, Home, Sparkles, Award } from 'lucide-react'
+import { Trophy, RotateCcw, Home, Sparkles, Award, Scale } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { Modal } from '@/components/ui/modal'
 import type { Player } from '@/lib/rek/engine'
@@ -44,7 +44,7 @@ export function ResultOverlay({
   const didWin = perspective !== 'neutral' && perspective === winner
 
   const outcome = isDraw
-    ? 'Stalemate Peace'
+    ? 'Honorable Draw'
     : perspective === 'neutral'
       ? `${winnerName} Victory!`
       : didWin
@@ -57,14 +57,19 @@ export function ResultOverlay({
         <div
           className="relative flex size-20 items-center justify-center rounded-3xl shadow-xl animate-bounce"
           style={{
-            background:
-              winner === 'you'
+            background: isDraw
+              ? 'linear-gradient(135deg, oklch(0.78 0.08 80), oklch(0.58 0.05 70))'
+              : winner === 'you'
                 ? 'linear-gradient(135deg, oklch(0.85 0.22 85), oklch(0.7 0.22 45))'
                 : 'linear-gradient(135deg, oklch(0.86 0.18 175), oklch(0.65 0.18 180))',
             boxShadow: '0 0 30px var(--gold-glow)',
           }}
         >
-          <Trophy className="size-10 text-background drop-shadow-md" />
+          {isDraw ? (
+            <Scale className="size-10 text-background drop-shadow-md" />
+          ) : (
+            <Trophy className="size-10 text-background drop-shadow-md" />
+          )}
           <Sparkles
             className="absolute -top-2 -right-2 size-6 text-gold animate-spin"
             style={{ animationDuration: '6s' }}
@@ -85,6 +90,11 @@ export function ResultOverlay({
               <span className="text-foreground/90 font-medium">{loserName}</span>
             </p>
           )}
+          {isDraw && (
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Neither side takes the match. Start a fresh battle or choose another mode.
+            </p>
+          )}
           {reason && (
             <span className="mt-3 inline-block rounded-xl bg-card border border-border px-3.5 py-1.5 text-xs font-semibold text-foreground/90 shadow-sm">
               {reason}
@@ -101,11 +111,11 @@ export function ResultOverlay({
             <span>Play Again</span>
           </button>
           <Link
-            href="/"
+            href="/play"
             className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-border/80 bg-card/80 font-semibold text-foreground backdrop-blur-sm transition-all duration-200 hover:bg-accent hover:border-gold/40"
           >
             <Home className="size-4.5" />
-            <span>Return to Lobby</span>
+            <span>Choose Another Mode</span>
           </Link>
         </div>
       </div>

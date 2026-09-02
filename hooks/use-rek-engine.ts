@@ -52,6 +52,25 @@ export function useRekEngine(
     [canControl],
   )
 
+  const playTerminalOutcome = useCallback(
+    (next: GameState) => {
+      if (next.status === 'draw') {
+        setTimeout(() => sounds.playDraw(), 200)
+        return
+      }
+      if (next.status !== 'won' || !next.winner || next.winner === 'draw') return
+
+      // Pass-and-play controls both colors, so any decisive finish is a shared
+      // match conclusion. Solo modes use canControl to distinguish win/loss.
+      const wonByControlledSide = !canControl || controllable(next.winner)
+      setTimeout(() => {
+        if (wonByControlledSide) sounds.playVictory()
+        else sounds.playDefeat()
+      }, 200)
+    },
+    [canControl, controllable],
+  )
+
   const moveResults = useMemo<Map<number, MoveResult>>(() => {
     if (selected === null) return new Map()
     return getMoveResults(game.board, selected, game.mode)
@@ -70,8 +89,6 @@ export function useRekEngine(
 
   const rekAvailable = availableReks.length > 0
 
-  // Hao Rek is legally compulsory only in MIN_REK_CHANH. In REK_POAT a Rek
-  // opportunity remains optional, so the generic REK READY indicator is enough.
   useEffect(() => {
     if (
       game.status !== 'playing' ||
@@ -148,21 +165,14 @@ export function useRekEngine(
           setHistory((prev) => [entry, ...prev])
           setGame(next)
           setSelected(null)
-
-          if (next.status === 'won') {
-            if (next.winner === 'you') {
-              setTimeout(() => sounds.playVictory(), 200)
-            } else {
-              setTimeout(() => sounds.playDefeat(), 200)
-            }
-          }
+          playTerminalOutcome(next)
           return
         }
       }
 
       setSelected(null)
     },
-    [game, selected, controllable],
+    [game, selected, controllable, playTerminalOutcome],
   )
 
   const undo = useCallback(() => {
@@ -171,9 +181,6 @@ export function useRekEngine(
     const rollbackPlies = Math.max(1, game.moveCount - prev.moveCount)
 
     setPastStates((arr) => arr.slice(0, -1))
-    // Local play stores a snapshot every ply, while AI/remote moves are applied
-    // externally without an extra user-undo checkpoint. Remove exactly the
-    // history entries covered by the restored snapshot so board/history agree.
     setHistory((arr) => arr.slice(Math.min(rollbackPlies, arr.length)))
     setGame(prev)
     setSelected(null)
@@ -187,6 +194,7 @@ export function useRekEngine(
       setSelected(null)
       setHistory([])
       setPastStates([])
+      setBannerAlert(null)
       sounds.playSelect()
     },
     [game.mode],
@@ -218,67 +226,62 @@ export function useRekEngine(
     setSelected(null)
     setHistory([])
     setPastStates([])
+    setBannerAlert(null)
     sounds.playSelect()
   }, [])
 
-  // Apply an externally-decided move (AI / remote opponent).
-  const applyExternal = useCallback((from: number, to: number) => {
-    setGame((g) => {
-      const movingPiece = g.board[from]
-      if (!movingPiece || movingPiece.player !== g.turn) return g
+  const applyExternal = useCallback(
+    (from: number, to: number) => {
+      setGame((g) => {
+        const movingPiece = g.board[from]
+        if (!movingPiece || movingPiece.player !== g.turn) return g
 
-      const results = evaluateMove(g.board, from, to, movingPiece.player, g.mode)
-      const next = applyMove(g, from, to)
-      if (next === g) return g
+        const results = evaluateMove(g.board, from, to, movingPiece.player, g.mode)
+        const next = applyMove(g, from, to)
+        if (next === g) return g
 
-      // A terminal adjudication such as a Min Rek Chanh forfeit can return a
-      // new state without actually executing the attempted piece movement.
-      const moveExecuted =
-        next.moveCount === g.moveCount + 1 &&
-        next.lastMove?.from === from &&
-        next.lastMove?.to === to
+        const moveExecuted =
+          next.moveCount === g.moveCount + 1 &&
+          next.lastMove?.from === from &&
+          next.lastMove?.to === to
 
-      if (moveExecuted) {
-        if (results.rek) {
-          sounds.playRek()
-        } else if (results.poat) {
-          sounds.playPoat()
-        } else if (results.captures.length > 0) {
-          sounds.playCapture()
-        } else {
-          sounds.playMove()
+        if (moveExecuted) {
+          if (results.rek) {
+            sounds.playRek()
+          } else if (results.poat) {
+            sounds.playPoat()
+          } else if (results.captures.length > 0) {
+            sounds.playCapture()
+          } else {
+            sounds.playMove()
+          }
+
+          const entry: MoveHistoryEntry = {
+            from,
+            to,
+            player: movingPiece.player,
+            pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
+            fromCoord: coord(from),
+            toCoord: coord(to),
+            captures: results.captures.length,
+            rek: results.rek,
+            poat: results.poat,
+            timestamp: new Date().toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }),
+          }
+          setHistory((prev) => [entry, ...prev])
         }
 
-        const entry: MoveHistoryEntry = {
-          from,
-          to,
-          player: movingPiece.player,
-          pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
-          fromCoord: coord(from),
-          toCoord: coord(to),
-          captures: results.captures.length,
-          rek: results.rek,
-          poat: results.poat,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-        }
-        setHistory((prev) => [entry, ...prev])
-      }
-
-      if (next.status === 'won') {
-        if (next.winner === 'you') {
-          setTimeout(() => sounds.playVictory(), 200)
-        } else {
-          setTimeout(() => sounds.playDefeat(), 200)
-        }
-      }
-      return next
-    })
-    setSelected(null)
-  }, [])
+        playTerminalOutcome(next)
+        return next
+      })
+      setSelected(null)
+    },
+    [playTerminalOutcome],
+  )
 
   return {
     game,
