@@ -13,7 +13,6 @@ import {
   type Player,
   type GameMode,
   type PuzzleSetup,
-  KHMER_PUZZLES,
   getAvailableRekMoves,
 } from '@/lib/rek/engine'
 import { sounds } from '@/lib/sound'
@@ -106,7 +105,6 @@ export function useRekEngine(
           const movingPiece = game.board[selected]!
           const pieceName = movingPiece.king ? 'Sdech (King)' : 'Pol (Man)'
 
-          // Play appropriate sound
           if (moveRes.rek) {
             sounds.playRek()
           } else if (moveRes.poat) {
@@ -134,6 +132,12 @@ export function useRekEngine(
           }
 
           const next = applyMove(game, selected, index)
+          // Defensive: only record a move if the core engine actually accepted it.
+          if (next === game) {
+            setSelected(null)
+            return
+          }
+
           setPastStates((prev) => [...prev, game])
           setHistory((prev) => [entry, ...prev])
           setGame(next)
@@ -206,7 +210,12 @@ export function useRekEngine(
   const applyExternal = useCallback((from: number, to: number) => {
     setGame((g) => {
       const movingPiece = g.board[from]
-      const results = evaluateMove(g.board, from, to)
+      if (!movingPiece || movingPiece.player !== g.turn) return g
+
+      const results = evaluateMove(g.board, from, to, movingPiece.player, g.mode)
+      const next = applyMove(g, from, to)
+      if (next === g) return g
+
       if (results.rek) {
         sounds.playRek()
       } else if (results.poat) {
@@ -217,27 +226,24 @@ export function useRekEngine(
         sounds.playMove()
       }
 
-      if (movingPiece) {
-        const entry: MoveHistoryEntry = {
-          from,
-          to,
-          player: movingPiece.player,
-          pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
-          fromCoord: coord(from),
-          toCoord: coord(to),
-          captures: results.captures.length,
-          rek: results.rek,
-          poat: results.poat,
-          timestamp: new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-        }
-        setHistory((prev) => [entry, ...prev])
+      const entry: MoveHistoryEntry = {
+        from,
+        to,
+        player: movingPiece.player,
+        pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
+        fromCoord: coord(from),
+        toCoord: coord(to),
+        captures: results.captures.length,
+        rek: results.rek,
+        poat: results.poat,
+        timestamp: new Date().toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        }),
       }
+      setHistory((prev) => [entry, ...prev])
 
-      const next = applyMove(g, from, to)
       if (next.status === 'won') {
         if (next.winner === 'you') {
           setTimeout(() => sounds.playVictory(), 200)
