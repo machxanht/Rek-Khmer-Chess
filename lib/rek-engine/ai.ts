@@ -15,7 +15,7 @@ import {
   DIRS,
 } from './captures'
 import {
-  getLegalMoves,
+  getMoveResults,
   previewMove,
   hasKing,
   countPieces,
@@ -59,11 +59,9 @@ export function evaluateBoard(
     const { row, col } = rc(i)
     const multiplier = piece.player === aiColor ? 1 : -1
 
-    // Center board presence bonus
     const distCenter = Math.abs(row - 3.5) + Math.abs(col - 3.5)
     score += multiplier * Math.max(0, 6 - distCenter) * 8
 
-    // Count direct orthogonal liberties
     let liberties = 0
     for (const { dr, dc } of DIRS) {
       const nr = row + dr
@@ -74,16 +72,13 @@ export function evaluateBoard(
     }
 
     if (liberties === 0) {
-      score -= multiplier * 45 // Severe penalty for zero liberties (vulnerable to Poat)
+      score -= multiplier * 45
     } else {
       score += multiplier * liberties * 4
     }
 
-    // King protection penalty if King is isolated
-    if (piece.king) {
-      if (liberties <= 1) {
-        score -= multiplier * 250 // King in danger of enclosure
-      }
+    if (piece.king && liberties <= 1) {
+      score -= multiplier * 250
     }
   }
 
@@ -91,7 +86,11 @@ export function evaluateBoard(
 }
 
 /**
- * Collects all legal moves for a given player with basic tactical metadata.
+ * Collects all rule-legal moves for a player with tactical metadata.
+ *
+ * The engine's getMoveResults() is the single legality boundary here. AI must
+ * not re-implement compulsory Rek, King immobility, path blocking, or other
+ * move rules on its own.
  */
 export function getAllLegalMoves(
   board: Cell[],
@@ -104,19 +103,16 @@ export function getAllLegalMoves(
     const piece = board[from]
     if (!piece || piece.player !== player) continue
 
-    const legal = getLegalMoves(board, from, mode)
-    for (const to of legal) {
-      const res = previewMove(board, from, to, player, mode)
-      if (res.isHaoRekViolation) continue
+    const legalResults = getMoveResults(board, from, mode)
+    for (const [to, result] of legalResults) {
       moves.push({
         from,
         to,
-        capturesCount: res.captures.length,
+        capturesCount: result.captures.length,
       })
     }
   }
 
-  // Move ordering: Prioritize moves that capture pieces (Rek & Poat)
   return moves.sort((a, b) => b.capturesCount - a.capturesCount)
 }
 
@@ -141,7 +137,6 @@ export function minimax(
 
   const moves = getAllLegalMoves(board, currentTurn, mode)
   if (moves.length === 0) {
-    // Zero legal moves is a loss for current turn
     return isMaximizing ? -50000 : 50000
   }
 
@@ -159,27 +154,27 @@ export function minimax(
       const evaluation = minimax(nextBoard, depth - 1, alpha, beta, false, aiColor, mode)
       maxEval = Math.max(maxEval, evaluation)
       alpha = Math.max(alpha, evaluation)
-      if (beta <= alpha) break // Alpha-Beta cut-off
+      if (beta <= alpha) break
     }
     return maxEval
-  } else {
-    let minEval = Infinity
-    for (const move of moves) {
-      const res = previewMove(board, move.from, move.to, oppColor, mode)
-      const nextBoard = [...board]
-      nextBoard[move.to] = nextBoard[move.from]
-      nextBoard[move.from] = null
-      for (const cap of res.captures) {
-        nextBoard[cap] = null
-      }
-
-      const evaluation = minimax(nextBoard, depth - 1, alpha, beta, true, aiColor, mode)
-      minEval = Math.min(minEval, evaluation)
-      beta = Math.min(beta, evaluation)
-      if (beta <= alpha) break // Alpha-Beta cut-off
-    }
-    return minEval
   }
+
+  let minEval = Infinity
+  for (const move of moves) {
+    const res = previewMove(board, move.from, move.to, oppColor, mode)
+    const nextBoard = [...board]
+    nextBoard[move.to] = nextBoard[move.from]
+    nextBoard[move.from] = null
+    for (const cap of res.captures) {
+      nextBoard[cap] = null
+    }
+
+    const evaluation = minimax(nextBoard, depth - 1, alpha, beta, true, aiColor, mode)
+    minEval = Math.min(minEval, evaluation)
+    beta = Math.min(beta, evaluation)
+    if (beta <= alpha) break
+  }
+  return minEval
 }
 
 /**
@@ -194,7 +189,6 @@ export function chooseAiMove(
   const moves = getAllLegalMoves(board, aiColor, mode)
   if (moves.length === 0) return null
 
-  // 1. Easy: Random or simple single-ply capture priority with slight noise
   if (difficulty === 'easy') {
     const capturingMoves = moves.filter((m) => m.capturesCount > 0)
     if (capturingMoves.length > 0 && Math.random() < 0.65) {
@@ -203,7 +197,6 @@ export function chooseAiMove(
     return moves[Math.floor(Math.random() * moves.length)]
   }
 
-  // 2. Medium (Depth = 2) & Hard (Depth = 3 with Alpha-Beta)
   const searchDepth = difficulty === 'medium' ? 2 : 3
 
   let bestMove: AiMove | null = null
