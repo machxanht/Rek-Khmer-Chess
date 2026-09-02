@@ -11,10 +11,15 @@ const sourceFiles = [
   'lib/rek-engine/captures.ts',
   'lib/rek-engine/engine.ts',
   'lib/rek-engine/ai.ts',
+  'lib/rek-engine/puzzles.ts',
   'lib/rek-engine/tests.ts',
   'lib/rek-engine/spec-lock-tests.ts',
   'lib/rek-engine/ai-boundary-tests.ts',
   'lib/rek-engine/state-contract-tests.ts',
+  'lib/rek-engine/draw-tests.ts',
+  'lib/rek-engine/puzzle-tests.ts',
+  'lib/rek-engine/simulation-tests.ts',
+  'lib/rek-engine/ai-quality-tests.ts',
 ]
 
 function printReport(label, report) {
@@ -55,31 +60,30 @@ try {
     { cwd: root, stdio: 'inherit' }
   )
 
-  const compiledTests = path.join(outDir, 'lib', 'rek-engine', 'tests.js')
-  const compiledSpecLockTests = path.join(outDir, 'lib', 'rek-engine', 'spec-lock-tests.js')
-  const compiledAiBoundaryTests = path.join(outDir, 'lib', 'rek-engine', 'ai-boundary-tests.js')
-  const compiledStateContractTests = path.join(outDir, 'lib', 'rek-engine', 'state-contract-tests.js')
-  const { runAllUnitTests } = require(compiledTests)
-  const { runSpecLockTests } = require(compiledSpecLockTests)
-  const { runAiBoundaryTests } = require(compiledAiBoundaryTests)
-  const { runStateContractTests } = require(compiledStateContractTests)
+  const load = (name) => require(path.join(outDir, 'lib', 'rek-engine', name))
+  const { runAllUnitTests } = load('tests.js')
+  const { runSpecLockTests } = load('spec-lock-tests.js')
+  const { runAiBoundaryTests } = load('ai-boundary-tests.js')
+  const { runStateContractTests } = load('state-contract-tests.js')
+  const { runDrawTests } = load('draw-tests.js')
+  const { runPuzzleTests } = load('puzzle-tests.js')
+  const { runSimulationTests } = load('simulation-tests.js')
+  const { runAiQualityTests } = load('ai-quality-tests.js')
 
-  const coreReport = runAllUnitTests()
-  const specReport = runSpecLockTests()
-  const aiReport = runAiBoundaryTests()
-  const stateReport = runStateContractTests()
+  const reports = [
+    ['Rek core engine', runAllUnitTests()],
+    ['Rek specification lock', runSpecLockTests()],
+    ['Rek AI legality boundary', runAiBoundaryTests()],
+    ['Rek GameState contract', runStateContractTests()],
+    ['Rek draw adjudication', runDrawTests()],
+    ['Rek published puzzles', runPuzzleTests()],
+    ['Rek long-run simulations', runSimulationTests()],
+    ['Rek AI tactical quality', runAiQualityTests()],
+  ]
 
-  printReport('Rek core engine', coreReport)
-  printReport('Rek specification lock', specReport)
-  printReport('Rek AI legality boundary', aiReport)
-  printReport('Rek GameState contract', stateReport)
+  for (const [label, report] of reports) printReport(label, report)
 
-  if (
-    coreReport.failed > 0 ||
-    specReport.failed > 0 ||
-    aiReport.failed > 0 ||
-    stateReport.failed > 0
-  ) {
+  if (reports.some(([, report]) => report.failed > 0)) {
     process.exitCode = 1
   }
 } finally {
