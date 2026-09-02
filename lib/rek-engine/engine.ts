@@ -151,7 +151,7 @@ export function previewMove(
   board: Cell[],
   from: number,
   to: number,
-  moverPlayer: PlayerColor,
+  moverPlayer?: PlayerColor,
   mode: GameMode = 'REK_POAT'
 ): MoveResult {
   const piece = board[from]
@@ -167,9 +167,26 @@ export function previewMove(
     }
   }
 
+  // Backward compatibility: callers from the pre-refactor UI passed only
+  // (board, from, to). The piece itself is the authoritative mover color.
+  const mover = moverPlayer ?? piece.player
+
+  // Reject malformed previews that try to move an opponent piece as another color.
+  if (piece.player !== mover) {
+    return {
+      from,
+      to,
+      rekCaptures: [],
+      poatCaptures: [],
+      captures: [],
+      rek: false,
+      poat: false,
+    }
+  }
+
   // Check Hao Rek obligation in Min Rek Chanh mode
   if (mode === 'MIN_REK_CHANH') {
-    const rekMoves = getAllRekOpportunities(board, moverPlayer, mode)
+    const rekMoves = getAllRekOpportunities(board, mover, mode)
     if (rekMoves.length > 0) {
       const isRekMove = rekMoves.some((m) => m.from === from && m.to === to)
       if (!isRekMove) {
@@ -193,13 +210,13 @@ export function previewMove(
   tempBoard[from] = null
 
   // 2. Step 1 of capture: Rek (Gánh)
-  const rekCaptures = checkRekCaptures(tempBoard, to, moverPlayer)
+  const rekCaptures = checkRekCaptures(tempBoard, to, mover)
   for (const v of rekCaptures) {
     tempBoard[v] = null
   }
 
   // 3. Step 2 of capture: Poat (Bao Vây Flood-Fill)
-  const opp = opponent(moverPlayer)
+  const opp = opponent(mover)
   const poatCaptures = checkPoatCaptures(tempBoard, opp)
 
   const allCaptures = Array.from(new Set([...rekCaptures, ...poatCaptures]))
@@ -233,9 +250,16 @@ export function executeMove(
   from: number,
   to: number
 ): GameState {
+  if (state.status !== 'playing') return state
+
   const mover = state.turn
   const piece = state.board[from]
   if (!piece || piece.player !== mover) return state
+
+  // Core engine must validate the destination itself; UI previews are not a
+  // security boundary and external/AI callers may invoke applyMove directly.
+  const legal = getLegalMoves(state.board, from, state.mode)
+  if (!legal.includes(to)) return state
 
   const result = previewMove(state.board, from, to, mover, state.mode)
   if (result.isHaoRekViolation) return state
@@ -255,8 +279,8 @@ export function executeMove(
   const nextTurn = opp
 
   const newCaptured = {
-    you: [...state.captured.you, ...(mover === 'opp' ? lostPieces : [])],
-    opp: [...state.captured.opp, ...(mover === 'you' ? lostPieces : [])],
+    you: [...state.captured.you, ...(lostPieces.filter((p) => p.player === 'you'))],
+    opp: [...state.captured.opp, ...(lostPieces.filter((p) => p.player === 'opp'))],
   }
 
   // Check victory conditions:
@@ -438,8 +462,10 @@ export function getMoveResults(
   const destinations = getLegalMoves(board, from, mode)
   for (const to of destinations) {
     const res = previewMove(board, from, to, piece.player, mode)
+    // In Min Rek Chanh, non-Rek moves are illegal when a Rek opportunity exists.
+    // Do not expose them as clickable legal destinations in the UI.
+    if (res.isHaoRekViolation) continue
     map.set(to, res)
   }
   return map
 }
-
