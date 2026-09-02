@@ -10,8 +10,10 @@ class SoundManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      this.muted = localStorage.getItem('rek_sound_muted') === 'true'
-      this.voiceEnabled = localStorage.getItem('rek_voice_enabled') !== 'false'
+      try {
+        this.muted = localStorage.getItem('rek_sound_muted') === 'true'
+        this.voiceEnabled = localStorage.getItem('rek_voice_enabled') !== 'false'
+      } catch {}
     }
   }
 
@@ -156,7 +158,9 @@ class SoundManager {
   public setMuted(muted: boolean): void {
     this.muted = muted
     if (typeof window !== 'undefined') {
-      localStorage.setItem('rek_sound_muted', muted ? 'true' : 'false')
+      try {
+        localStorage.setItem('rek_sound_muted', muted ? 'true' : 'false')
+      } catch {}
     }
   }
 
@@ -172,7 +176,9 @@ class SoundManager {
   public toggleVoice(): boolean {
     this.voiceEnabled = !this.voiceEnabled
     if (typeof window !== 'undefined') {
-      localStorage.setItem('rek_voice_enabled', this.voiceEnabled ? 'true' : 'false')
+      try {
+        localStorage.setItem('rek_voice_enabled', this.voiceEnabled ? 'true' : 'false')
+      } catch {}
     }
     return this.voiceEnabled
   }
@@ -274,7 +280,13 @@ class SoundManager {
       const melody = [523.25, 659.25, 783.99, 1046.5, 1318.5]
 
       melody.forEach((frequency, index) => {
-        this.bronzeBell(ctx, now + index * 0.12, frequency, index === melody.length - 1 ? 0.95 : 0.62, 0.12)
+        this.bronzeBell(
+          ctx,
+          now + index * 0.12,
+          frequency,
+          index === melody.length - 1 ? 0.95 : 0.62,
+          0.12,
+        )
       })
 
       this.bronzeBell(ctx, now + 0.02, 98, 1.1, 0.15)
@@ -291,6 +303,20 @@ class SoundManager {
       this.bronzeBell(ctx, now, 196, 0.72, 0.13)
       this.bronzeBell(ctx, now + 0.18, 146.83, 0.82, 0.11)
       this.woodHit(ctx, now + 0.22, 0.45, 105)
+    } catch {}
+  }
+
+  public playDraw(): void {
+    if (this.muted) return
+    const ctx = this.getContext()
+    if (!ctx) return
+
+    try {
+      const now = ctx.currentTime
+      this.bronzeBell(ctx, now, 392, 0.65, 0.09)
+      this.bronzeBell(ctx, now + 0.16, 392, 0.7, 0.07)
+      this.bronzeBell(ctx, now + 0.32, 293.66, 0.82, 0.08)
+      this.woodHit(ctx, now + 0.31, 0.38, 132)
     } catch {}
   }
 
