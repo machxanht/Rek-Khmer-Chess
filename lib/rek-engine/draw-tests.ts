@@ -54,7 +54,7 @@ function makeState(
   }
 }
 
-function expect(condition: unknown, message: string): asserts condition {
+function expect(condition: unknown, message: string): void {
   if (!condition) throw new Error(message)
 }
 
