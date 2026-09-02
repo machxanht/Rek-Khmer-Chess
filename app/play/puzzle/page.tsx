@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRekEngine } from '@/hooks/use-rek-engine'
 import { RekGameView } from '@/components/game/rek-game-view'
-import { KHMER_PUZZLES } from '@/lib/rek/engine'
-import { Sparkles, HelpCircle, ChevronRight, CheckCircle2, RotateCcw } from 'lucide-react'
+import { KHMER_PUZZLES, coordToIdx } from '@/lib/rek/engine'
+import { HelpCircle, ChevronRight, CheckCircle2, RotateCcw, XCircle } from 'lucide-react'
 
 export default function PuzzleGamePage() {
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -12,9 +12,9 @@ export default function PuzzleGamePage() {
   const puzzle = KHMER_PUZZLES[currentIdx]
 
   const engine = useRekEngine('REK_POAT', (p) => p === 'you')
-  const { game, loadPuzzle, reset } = engine
+  const { game, loadPuzzle } = engine
 
-  // Load first puzzle on initial mount
+  // Load first puzzle on initial mount.
   useEffect(() => {
     loadPuzzle(KHMER_PUZZLES[0])
   }, [loadPuzzle])
@@ -30,11 +30,24 @@ export default function PuzzleGamePage() {
     handleSelectPuzzle(nextIdx)
   }
 
-  const isSolved = game.status === 'won' && game.winner === 'you'
+  const solution = useMemo(
+    () => ({
+      from: coordToIdx(puzzle.solution.fromCoord),
+      to: coordToIdx(puzzle.solution.toCoord),
+    }),
+    [puzzle],
+  )
+
+  // A puzzle is solved by executing its published engine-legal target move.
+  // Defensive formations (levels 1/2) are intentionally not required to end
+  // the whole game, while tactical checkmates may do so naturally.
+  const isSolved =
+    game.lastMove?.from === solution.from && game.lastMove?.to === solution.to
+  const attempted = game.moveCount > 0 || game.status !== 'playing'
+  const isWrongAttempt = attempted && !isSolved
 
   const banner = (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-2 px-4 py-2 text-xs">
-      {/* Puzzle switcher header */}
       <div className="flex items-center justify-between gap-2 rounded-2xl bg-card/90 p-3 border border-border/80 shadow-md">
         <div className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-xl bg-gold text-background font-black font-mono">
@@ -84,13 +97,23 @@ export default function PuzzleGamePage() {
         </div>
       )}
 
+      {isWrongAttempt && (
+        <button
+          type="button"
+          onClick={() => handleSelectPuzzle(currentIdx)}
+          className="flex items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 font-bold text-destructive transition-colors hover:bg-destructive/15"
+        >
+          <XCircle className="size-4" />
+          <span>Not the target move — reset and try again</span>
+        </button>
+      )}
+
       {showHint && !isSolved && (
         <div className="rounded-xl bg-gold/15 p-2.5 border border-gold/40 text-gold font-medium animate-fade-rise">
           💡 <strong>Tactical Hint:</strong> {puzzle.hint}
         </div>
       )}
 
-      {/* Level selector tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto py-1">
         {KHMER_PUZZLES.map((p, i) => (
           <button
