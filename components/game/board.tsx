@@ -33,7 +33,7 @@ export function Board({
   const cells = flipped ? [...order].reverse() : order
 
   return (
-    <div className="relative aspect-square w-full max-w-[min(92vw,36rem)] select-none">
+    <div className="relative aspect-square w-full max-w-[min(94vw,36rem)] select-none touch-manipulation">
       <div className="rek-board-shell h-full w-full">
         <span className="rek-board-corner rek-board-corner-tl" aria-hidden="true" />
         <span className="rek-board-corner rek-board-corner-tr" aria-hidden="true" />
@@ -68,6 +68,12 @@ export function Board({
               } as CSSProperties
             }
 
+            const coord = `${String.fromCharCode(97 + col)}${SIZE - row}`
+            const pieceLabel = piece
+              ? `${piece.player === 'you' ? 'White' : 'Black'} ${piece.king ? 'King' : 'piece'}`
+              : 'empty'
+            const actionLabel = isLegal ? ', legal destination' : ''
+
             const pieceToken = piece ? (
               <PieceToken
                 piece={piece}
@@ -82,9 +88,10 @@ export function Board({
                 type="button"
                 disabled={!interactive}
                 onClick={() => onSelect(index)}
-                aria-label={`Square ${String.fromCharCode(97 + col)}${SIZE - row}`}
+                aria-label={`${coord}, ${pieceLabel}${actionLabel}`}
+                aria-pressed={isSelected || undefined}
                 className={cn(
-                  'rek-board-square relative flex aspect-square items-center justify-center overflow-visible outline-none select-none',
+                  'rek-board-square relative flex aspect-square items-center justify-center overflow-visible outline-none select-none touch-manipulation',
                   isDark ? 'rek-board-square-dark' : 'rek-board-square-light',
                   interactive ? 'cursor-pointer' : 'cursor-default',
                   'focus-visible:z-20 focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-inset',
