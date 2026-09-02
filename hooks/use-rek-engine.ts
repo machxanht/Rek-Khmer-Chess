@@ -69,15 +69,23 @@ export function useRekEngine(
 
   const rekAvailable = availableReks.length > 0
 
-  // Sound & notification triggers when turn changes
+  // Hao Rek is legally compulsory only in MIN_REK_CHANH. In REK_POAT a Rek
+  // opportunity remains optional, so the generic REK READY indicator is enough.
   useEffect(() => {
-    if (game.status === 'playing' && rekAvailable) {
-      sounds.playHaoRek()
-      setBannerAlert('ហៅរែក! HAO REK AVAILABLE!')
-      const timer = setTimeout(() => setBannerAlert(null), 2500)
-      return () => clearTimeout(timer)
+    if (
+      game.status !== 'playing' ||
+      game.mode !== 'MIN_REK_CHANH' ||
+      !rekAvailable
+    ) {
+      setBannerAlert(null)
+      return
     }
-  }, [game.turn, rekAvailable, game.status])
+
+    sounds.playHaoRek()
+    setBannerAlert('ហៅរែក! HAO REK — REK IS COMPULSORY!')
+    const timer = setTimeout(() => setBannerAlert(null), 2500)
+    return () => clearTimeout(timer)
+  }, [game.turn, game.mode, rekAvailable, game.status])
 
   const select = useCallback(
     (index: number) => {
