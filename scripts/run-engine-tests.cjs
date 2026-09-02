@@ -20,6 +20,9 @@ const sourceFiles = [
   'lib/rek-engine/puzzle-tests.ts',
   'lib/rek-engine/simulation-tests.ts',
   'lib/rek-engine/ai-quality-tests.ts',
+  'lib/rek-online/types.ts',
+  'lib/rek-online/room-store.ts',
+  'lib/rek-online/room-tests.ts',
 ]
 
 function printReport(label, report) {
@@ -60,15 +63,17 @@ try {
     { cwd: root, stdio: 'inherit' }
   )
 
-  const load = (name) => require(path.join(outDir, 'lib', 'rek-engine', name))
-  const { runAllUnitTests } = load('tests.js')
-  const { runSpecLockTests } = load('spec-lock-tests.js')
-  const { runAiBoundaryTests } = load('ai-boundary-tests.js')
-  const { runStateContractTests } = load('state-contract-tests.js')
-  const { runDrawTests } = load('draw-tests.js')
-  const { runPuzzleTests } = load('puzzle-tests.js')
-  const { runSimulationTests } = load('simulation-tests.js')
-  const { runAiQualityTests } = load('ai-quality-tests.js')
+  const loadEngine = (name) => require(path.join(outDir, 'lib', 'rek-engine', name))
+  const loadOnline = (name) => require(path.join(outDir, 'lib', 'rek-online', name))
+  const { runAllUnitTests } = loadEngine('tests.js')
+  const { runSpecLockTests } = loadEngine('spec-lock-tests.js')
+  const { runAiBoundaryTests } = loadEngine('ai-boundary-tests.js')
+  const { runStateContractTests } = loadEngine('state-contract-tests.js')
+  const { runDrawTests } = loadEngine('draw-tests.js')
+  const { runPuzzleTests } = loadEngine('puzzle-tests.js')
+  const { runSimulationTests } = loadEngine('simulation-tests.js')
+  const { runAiQualityTests } = loadEngine('ai-quality-tests.js')
+  const { runOnlineRoomTests } = loadOnline('room-tests.js')
 
   const reports = [
     ['Rek core engine', runAllUnitTests()],
@@ -79,6 +84,7 @@ try {
     ['Rek published puzzles', runPuzzleTests()],
     ['Rek long-run simulations', runSimulationTests()],
     ['Rek AI tactical quality', runAiQualityTests()],
+    ['Rek online room protocol', runOnlineRoomTests()],
   ]
 
   for (const [label, report] of reports) printReport(label, report)
