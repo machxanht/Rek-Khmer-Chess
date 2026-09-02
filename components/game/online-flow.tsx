@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import {
   AlertTriangle,
@@ -16,7 +16,6 @@ import {
   RefreshCw,
   Server,
   ShieldCheck,
-  Swords,
   Wifi,
   X,
 } from 'lucide-react'
@@ -478,7 +477,8 @@ function OnlineMatch({
     onError: setNotice,
   })
 
-  const { game, playerColor } = room
+  const game = room.state
+  const { playerColor } = room
   const opponentColor = opponent(playerColor)
   const ownName = playerColor === 'you' ? room.hostName : room.guestName ?? 'Guest'
   const opponentName = opponentColor === 'you' ? room.hostName : room.guestName ?? 'Opponent'
