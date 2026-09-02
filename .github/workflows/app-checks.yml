@@ -1,0 +1,51 @@
+name: Rek Application Checks
+
+on:
+  push:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'public/rek-assets/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/app-checks.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'components/**'
+      - 'hooks/**'
+      - 'lib/**'
+      - 'public/rek-assets/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/app-checks.yml'
+
+jobs:
+  app-checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      # main currently has package/lock drift, so do not make UI validation
+      # depend on unrelated lockfile housekeeping.
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Type-check application
+        run: pnpm exec tsc --noEmit --pretty false
+
+      - name: Build production application
+        run: pnpm build
