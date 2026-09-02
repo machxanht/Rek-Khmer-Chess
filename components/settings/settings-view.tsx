@@ -14,6 +14,25 @@ const BOARD_THEMES = [
   { id: "jade", label: "Jade Court", light: "oklch(0.7 0.06 165)", dark: "oklch(0.46 0.07 168)" },
 ]
 
+const ENGINE_SUITES = [
+  {
+    title: "Core regressions",
+    desc: "Movement, Rek, Poat, King behavior, captures, and compulsory Min Rek safeguards.",
+  },
+  {
+    title: "Specification lock",
+    desc: "Unambiguous rules are locked directly to the repository rule specification.",
+  },
+  {
+    title: "AI legality boundary",
+    desc: "Every AI difficulty is constrained to moves returned by the core engine.",
+  },
+  {
+    title: "GameState contract",
+    desc: "Turn, move metadata, captures, immutability, and terminal-state bookkeeping stay synchronized.",
+  },
+]
+
 export function SettingsView() {
   const [theme, setTheme] = useState("temple")
   const [toggles, setToggles] = useState<Toggle[]>([
@@ -158,43 +177,31 @@ export function SettingsView() {
 
       {/* Engine Verification & Test Suite */}
       <section className="mt-4 rounded-3xl border border-gold/40 bg-card/80 p-5 backdrop-blur-md shadow-lg">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Sparkles className="size-4.5 text-gold" />
-            <h2 className="font-display text-base font-bold text-foreground">Engine Specification Suite</h2>
+            <h2 className="font-display text-base font-bold text-foreground">Engine Verification</h2>
           </div>
-          <span className="rounded-full bg-emerald-500/15 border border-emerald-500/40 px-2.5 py-0.5 text-[11px] font-bold text-emerald-400">
-            6/6 Tests Active
+          <span className="shrink-0 rounded-full border border-gold/40 bg-gold/10 px-2.5 py-0.5 text-[11px] font-bold text-gold">
+            CI-GATED
           </span>
         </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Validates core rules against <code className="text-gold">/SPEC_ENGINE_CO_REK_KHMER.md</code> (Horizontal Rek, King Capture, 4-Way Rek, Single/Group Poat Encirclement, and Compulsory Min Rek Chanh).
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+          Engine verification runs in GitHub Actions against the repository source of truth. This settings screen does not execute tests and therefore does not claim a live pass/fail result.
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Rule source: <code className="text-gold">/HUONG_DAN_LUAT_CO_REK_KHMER.md</code> and <code className="text-gold">/SPEC_ENGINE_CO_REK_KHMER.md</code>.
         </p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs">
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-01: Gánh Ngang Cơ Bản</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-02: Gánh Bắt Vua</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-03: Gánh 4 Quân (Rek Boun)</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-04: Bao Vây Đơn Lẻ (Poat)</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-05: Bao Vây Cụm Liên Kết</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
-          <div className="flex items-center justify-between rounded-xl bg-background/60 p-2.5 border border-border/70">
-            <span className="font-medium text-foreground">TC-06: Bắt Buộc Gánh (Min Rek)</span>
-            <span className="text-emerald-400 font-bold">✓ PASSED</span>
-          </div>
+          {ENGINE_SUITES.map((suite) => (
+            <div key={suite.title} className="rounded-xl border border-border/70 bg-background/60 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-foreground">{suite.title}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wide text-gold">Automated</span>
+              </div>
+              <p className="mt-1 leading-relaxed text-muted-foreground">{suite.desc}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -210,5 +217,3 @@ export function SettingsView() {
     </div>
   )
 }
-
-
