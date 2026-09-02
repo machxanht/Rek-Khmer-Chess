@@ -44,12 +44,14 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const analyticsEnabled = process.env.VERCEL === '1'
+
   return (
     <html lang="en" className={`${inter.variable} ${kanit.variable} bg-background`}>
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
         <PreferencesHydrator />
         {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        {analyticsEnabled && <Analytics />}
       </body>
     </html>
   )
