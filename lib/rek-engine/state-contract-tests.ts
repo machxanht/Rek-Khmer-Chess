@@ -215,11 +215,11 @@ export function runStateContractTests(): {
   run('STATE-08', 'Terminal capture zeroes cached future Rek opportunities', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true, 'you_king')
-    put(board, 'c1', 'you', false, 'you_attacker')
+    put(board, 'a4', 'you', false, 'you_attacker')
     put(board, 'c3', 'opp', false, 'opp_c3')
     put(board, 'c5', 'opp', true, 'opp_king')
 
-    const next = executeMove(makeState(board), coordToIdx('c1'), coordToIdx('c4'))
+    const next = executeMove(makeState(board), coordToIdx('a4'), coordToIdx('c4'))
 
     expect(next.status === 'won' && next.winner === 'you', 'Fixture must end by Rek capture of the opponent King')
     expect(next.availableRekMovesCount === 0, 'Terminal state must expose zero future Rek opportunities')
