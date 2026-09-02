@@ -193,20 +193,21 @@ export function useRekEngine(
   const loadPuzzle = useCallback((puzzle: PuzzleSetup) => {
     const board = Array(SIZE * SIZE).fill(null)
     puzzle.setup(board)
+    const mode: GameMode = 'REK_POAT'
     setGame({
       board,
       turn: 'you',
       status: 'playing',
       winner: null,
       winReason: null,
-      mode: 'REK_POAT',
+      mode,
       lastMove: null,
       lastCaptured: [],
       lastRek: false,
       lastPoat: false,
       captured: { you: [], opp: [] },
       moveCount: 0,
-      availableRekMovesCount: 0,
+      availableRekMovesCount: getAvailableRekMoves(board, 'you', mode).length,
     })
     setSelected(null)
     setHistory([])
@@ -224,33 +225,44 @@ export function useRekEngine(
       const next = applyMove(g, from, to)
       if (next === g) return g
 
-      if (results.rek) {
-        sounds.playRek()
-      } else if (results.poat) {
-        sounds.playPoat()
-      } else if (results.captures.length > 0) {
-        sounds.playCapture()
-      } else {
-        sounds.playMove()
-      }
+      // Some adjudications (for example a Min Rek Chanh forfeit) legitimately
+      // return a new terminal state while leaving the attempted move unplayed.
+      // Only produce move history/audio when the engine confirms that this move
+      // actually became the state's last executed move.
+      const moveExecuted =
+        next.moveCount === g.moveCount + 1 &&
+        next.lastMove?.from === from &&
+        next.lastMove?.to === to
 
-      const entry: MoveHistoryEntry = {
-        from,
-        to,
-        player: movingPiece.player,
-        pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
-        fromCoord: coord(from),
-        toCoord: coord(to),
-        captures: results.captures.length,
-        rek: results.rek,
-        poat: results.poat,
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-        }),
+      if (moveExecuted) {
+        if (results.rek) {
+          sounds.playRek()
+        } else if (results.poat) {
+          sounds.playPoat()
+        } else if (results.captures.length > 0) {
+          sounds.playCapture()
+        } else {
+          sounds.playMove()
+        }
+
+        const entry: MoveHistoryEntry = {
+          from,
+          to,
+          player: movingPiece.player,
+          pieceName: movingPiece.king ? 'Sdech (King)' : 'Pol (Man)',
+          fromCoord: coord(from),
+          toCoord: coord(to),
+          captures: results.captures.length,
+          rek: results.rek,
+          poat: results.poat,
+          timestamp: new Date().toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+        }
+        setHistory((prev) => [entry, ...prev])
       }
-      setHistory((prev) => [entry, ...prev])
 
       if (next.status === 'won') {
         if (next.winner === 'you') {
