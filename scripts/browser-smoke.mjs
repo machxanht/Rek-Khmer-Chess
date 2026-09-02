@@ -35,7 +35,11 @@ async function waitForJson(url, attempts = 60) {
 }
 
 function isIgnorableResource(url) {
-  return url.endsWith('/favicon.ico') || url.includes('/.well-known/appspecific/com.chrome.devtools.json')
+  return (
+    url.endsWith('/favicon.ico') ||
+    url.includes('/.well-known/appspecific/com.chrome.devtools.json') ||
+    url.includes('/_vercel/insights/')
+  )
 }
 
 class CdpPage {
@@ -113,6 +117,39 @@ async function createPage(port) {
   return page
 }
 
+async function readSnapshot(page) {
+  const result = await page.send('Runtime.evaluate', {
+    expression: `JSON.stringify({
+      text: document.body?.innerText || '',
+      htmlLength: document.body?.innerHTML?.length || 0,
+      readyState: document.readyState,
+      href: location.href
+    })`,
+    returnByValue: true,
+  })
+  return JSON.parse(result.result.value)
+}
+
+async function waitForRoute(page, expectedText, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs
+  let snapshot = await readSnapshot(page)
+
+  while (Date.now() < deadline) {
+    if (
+      snapshot.readyState === 'complete' &&
+      snapshot.text.trim() &&
+      snapshot.htmlLength >= 100 &&
+      snapshot.text.includes(expectedText)
+    ) {
+      return snapshot
+    }
+    await delay(250)
+    snapshot = await readSnapshot(page)
+  }
+
+  return snapshot
+}
+
 async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage) {
   page.exceptions = []
   page.consoleErrors = []
@@ -132,13 +169,7 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   }
 
   await page.send('Page.navigate', { url: `${baseUrl}${route}` })
-  await delay(1800)
-
-  const result = await page.send('Runtime.evaluate', {
-    expression: `JSON.stringify({ text: document.body?.innerText || '', htmlLength: document.body?.innerHTML?.length || 0 })`,
-    returnByValue: true,
-  })
-  const snapshot = JSON.parse(result.result.value)
+  const snapshot = await waitForRoute(page, expectedText)
 
   const failures = []
   if (!snapshot.text.trim()) failures.push('body text is empty')
@@ -149,7 +180,11 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
 
   if (failures.length) {
-    throw new Error(`${route}${denyStorage ? ' [storage denied]' : ''}: ${failures.join('; ')}`)
+    const bodyPreview = snapshot.text.replace(/\s+/g, ' ').trim().slice(0, 700)
+    throw new Error(
+      `${route}${denyStorage ? ' [storage denied]' : ''}: ${failures.join('; ')}; ` +
+        `readyState=${snapshot.readyState}; href=${snapshot.href}; body=${JSON.stringify(bodyPreview)}`,
+    )
   }
 
   console.log(`✓ ${route}${denyStorage ? ' [storage denied]' : ''}`)
