@@ -24,8 +24,10 @@ export function ResultOverlay({
   perspective?: Player | 'neutral'
   onPlayAgain: () => void
 }) {
+  const effectiveOpen = open || winner === 'draw'
+
   useEffect(() => {
-    if (open && winner && winner !== 'draw') {
+    if (effectiveOpen && winner && winner !== 'draw') {
       try {
         confetti({
           particleCount: 80,
@@ -35,7 +37,7 @@ export function ResultOverlay({
         })
       } catch {}
     }
-  }, [open, winner])
+  }, [effectiveOpen, winner])
 
   if (!winner) return null
   const isDraw = winner === 'draw'
@@ -44,7 +46,7 @@ export function ResultOverlay({
   const didWin = perspective !== 'neutral' && perspective === winner
 
   const outcome = isDraw
-    ? 'Stalemate Peace'
+    ? 'Draw'
     : perspective === 'neutral'
       ? `${winnerName} Victory!`
       : didWin
@@ -52,7 +54,7 @@ export function ResultOverlay({
         : 'Game Over'
 
   return (
-    <Modal open={open} dismissable={false} className="text-center">
+    <Modal open={effectiveOpen} dismissable={false} className="text-center">
       <div className="flex flex-col items-center gap-4 py-2">
         <div
           className="relative flex size-20 items-center justify-center rounded-3xl shadow-xl animate-bounce"
