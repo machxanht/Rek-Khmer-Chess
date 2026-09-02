@@ -7,6 +7,7 @@ on:
       - 'components/**'
       - 'hooks/**'
       - 'lib/**'
+      - 'scripts/browser-smoke.mjs'
       - 'public/rek-assets/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -17,6 +18,7 @@ on:
       - 'components/**'
       - 'hooks/**'
       - 'lib/**'
+      - 'scripts/browser-smoke.mjs'
       - 'public/rek-assets/**'
       - 'package.json'
       - 'pnpm-lock.yaml'
@@ -49,3 +51,23 @@ jobs:
 
       - name: Build production application
         run: pnpm build
+
+      - name: Start production application
+        run: |
+          pnpm start > /tmp/rek-next.log 2>&1 &
+          echo $! > /tmp/rek-next.pid
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:3000/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/rek-next.log
+          exit 1
+
+      - name: Browser smoke test offline routes
+        run: node scripts/browser-smoke.mjs
+
+      - name: Print application log on failure
+        if: failure()
+        run: cat /tmp/rek-next.log || true
