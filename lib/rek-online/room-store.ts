@@ -1,5 +1,3 @@
-import 'server-only'
-
 import { randomBytes, randomUUID } from 'node:crypto'
 import {
   createInitialState,
@@ -9,7 +7,7 @@ import {
   type GameMode,
   type GameState,
   type PlayerColor,
-} from '@/lib/rek-engine'
+} from '../rek-engine'
 import type {
   OnlineMoveRecord,
   OnlineRole,
@@ -305,7 +303,7 @@ export function requestRematch(code: string, token: string): {
   return { room: snapshot(room, token), restarted }
 }
 
-/** Test-only helpers for deterministic protocol tests. */
+/** Test-only helper used by the protocol regression suite. */
 export function __resetRoomStoreForTests(): void {
   rooms.clear()
 }
