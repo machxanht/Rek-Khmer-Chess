@@ -1,5 +1,5 @@
-// 7 Authentic King Defense Puzzles (Kbuon Karpea Sdech - ក្បួនការពារស្ដេច)
-// Preserved from Cambodian Master Formations (/HUONG_DAN_LUAT_CO_REK_KHMER.md)
+// 7 curated Rek Khmer tactical/defense puzzles.
+// Every published solution is required to be legal under the engine SPEC.
 
 import { Cell, TacticalPuzzle } from './types'
 import { idx } from './captures'
@@ -18,16 +18,13 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     solution: { fromCoord: 'h5', toCoord: 'h2' },
     setup: (board: Cell[]) => {
       board.fill(null)
-      // King at h1 (row 7, col 7)
-      board[idx(7, 7)] = { player: 'you', king: true, id: makePieceId() }
-      // Triangular shield pieces around king
+      board[idx(7, 7)] = { player: 'you', king: true, id: makePieceId() } // h1
       board[idx(7, 6)] = { player: 'you', king: false, id: makePieceId() } // g1
       board[idx(6, 6)] = { player: 'you', king: false, id: makePieceId() } // g2
-      board[idx(3, 7)] = { player: 'you', king: false, id: makePieceId() } // h5 (sliding hero)
-      // Opponent pieces aiming at King
+      board[idx(3, 7)] = { player: 'you', king: false, id: makePieceId() } // h5
       board[idx(7, 2)] = { player: 'opp', king: false, id: makePieceId() } // c1
       board[idx(1, 7)] = { player: 'opp', king: false, id: makePieceId() } // h7
-      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() }  // d8 (Opp King)
+      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() } // d8
     },
   },
   {
@@ -43,10 +40,10 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
       board[idx(7, 3)] = { player: 'you', king: true, id: makePieceId() } // d1
       board[idx(6, 3)] = { player: 'you', king: false, id: makePieceId() } // d2
       board[idx(6, 2)] = { player: 'you', king: false, id: makePieceId() } // c2
-      board[idx(4, 1)] = { player: 'you', king: false, id: makePieceId() } // b4 (our piece)
+      board[idx(4, 1)] = { player: 'you', king: false, id: makePieceId() } // b4
       board[idx(3, 5)] = { player: 'opp', king: false, id: makePieceId() } // f5
       board[idx(5, 5)] = { player: 'opp', king: false, id: makePieceId() } // f3
-      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() }  // d8
+      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() } // d8
     },
   },
   {
@@ -63,23 +60,23 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
       board[idx(7, 2)] = { player: 'you', king: false, id: makePieceId() } // c1
       board[idx(4, 1)] = { player: 'opp', king: false, id: makePieceId() } // b4
       board[idx(4, 3)] = { player: 'opp', king: false, id: makePieceId() } // d4
-      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() }  // d8
+      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() } // d8
     },
   },
   {
     id: 4,
     titleKhmer: 'ក្បួនទី ៤: រែកចាប់ស្ដេច (Direct King Assassination)',
     titleEn: 'Level 4: The Royal King Ambush',
-    desc: 'Vua Đen (d2) và Lính Đen (d6) đứng trên cùng trục dọc. Trượt quân vào ô d4 để kẹp gánh bắt ngay Vua Đen và giành chiến thắng tức thì!',
+    desc: 'Vua Đen ở d3 và Lính Đen ở d5 đứng kề hai phía của ô d4. Trượt quân vào d4 để Gánh bắt Vua ngay lập tức.',
     difficulty: 'Intermediate',
-    hint: 'Trượt quân từ a4 sang d4 để tạo đòn Gánh dọc bắt trúng Vua đối phương!',
+    hint: 'Trượt quân từ a4 sang d4; hai nạn nhân phải nằm kề sát ở d3 và d5.',
     solution: { fromCoord: 'a4', toCoord: 'd4' },
     setup: (board: Cell[]) => {
       board.fill(null)
       board[idx(7, 0)] = { player: 'you', king: true, id: makePieceId() } // a1
       board[idx(4, 0)] = { player: 'you', king: false, id: makePieceId() } // a4
-      board[idx(6, 3)] = { player: 'opp', king: true, id: makePieceId() }  // d2 (King)
-      board[idx(2, 3)] = { player: 'opp', king: false, id: makePieceId() } // d6
+      board[idx(5, 3)] = { player: 'opp', king: true, id: makePieceId() } // d3
+      board[idx(3, 3)] = { player: 'opp', king: false, id: makePieceId() } // d5
     },
   },
   {
@@ -96,7 +93,7 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
       board[idx(3, 0)] = { player: 'you', king: false, id: makePieceId() } // a5
       board[idx(0, 1)] = { player: 'you', king: false, id: makePieceId() } // b8
       board[idx(0, 0)] = { player: 'opp', king: false, id: makePieceId() } // a8
-      board[idx(0, 4)] = { player: 'opp', king: true, id: makePieceId() }  // e8
+      board[idx(0, 4)] = { player: 'opp', king: true, id: makePieceId() } // e8
     },
   },
   {
@@ -113,31 +110,34 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
       board[idx(1, 4)] = { player: 'you', king: false, id: makePieceId() } // e7
       board[idx(2, 0)] = { player: 'you', king: false, id: makePieceId() } // a6
       board[idx(0, 2)] = { player: 'you', king: false, id: makePieceId() } // c8
-      // Opponent group: a8, a7, b8
       board[idx(0, 0)] = { player: 'opp', king: false, id: makePieceId() } // a8
       board[idx(1, 0)] = { player: 'opp', king: false, id: makePieceId() } // a7
       board[idx(0, 1)] = { player: 'opp', king: false, id: makePieceId() } // b8
-      board[idx(0, 7)] = { player: 'opp', king: true, id: makePieceId() }  // h8
+      board[idx(0, 7)] = { player: 'opp', king: true, id: makePieceId() } // h8
     },
   },
   {
     id: 7,
-    titleKhmer: 'ក្បួនទី ៧: អន្ទាក់ហៅរែកមហាសាល (Grand 4-Way Rek Masterpiece)',
-    titleEn: 'Level 7: The Grand 4-Way Rek Masterpiece',
-    desc: 'Đối phương dàn quân vây ép hình chữ thập quanh ô trung tâm d4. Hãy lao thẳng vào tâm điểm d4 để tung tuyệt chiêu Gánh 4 quân (Rek Troat / Rek Boun) quét sạch đối thủ!',
+    titleKhmer: 'ក្បួនទី ៧: រែកហើយព័ទ្ធចាប់ស្ដេច (Rek-Poat Cascade)',
+    titleEn: 'Level 7: The Rek-Poat Royal Cascade',
+    desc: 'Một nước hợp lệ tạo đồng thời hai tầng chiến thuật: trượt c1→c4 để Gánh b4/d4, rồi quân vừa đáp c4 khóa khí cuối cùng của Vua Đen ở c5 để Poat kết thúc ván.',
     difficulty: 'Master',
-    hint: 'Trượt từ a4 thẳng vào d4 để gánh cả 4 quân (c4, e4, d5, d3) cùng 1 lúc!',
-    solution: { fromCoord: 'a4', toCoord: 'd4' },
+    hint: 'Đi c1 → c4. Engine phải xử Rek trước, sau đó mới quét Poat trên bàn cờ hậu-Rek.',
+    solution: { fromCoord: 'c1', toCoord: 'c4' },
     setup: (board: Cell[]) => {
       board.fill(null)
-      board[idx(7, 0)] = { player: 'you', king: true, id: makePieceId() } // a1
-      board[idx(4, 0)] = { player: 'you', king: false, id: makePieceId() } // a4 (our hero piece)
-      // Opponent cross at d4: c4 (4,2), e4 (4,4), d5 (3,3), d3 (5,3)
-      board[idx(4, 2)] = { player: 'opp', king: false, id: makePieceId() } // c4
-      board[idx(4, 4)] = { player: 'opp', king: false, id: makePieceId() } // e4
-      board[idx(3, 3)] = { player: 'opp', king: false, id: makePieceId() } // d5
-      board[idx(5, 3)] = { player: 'opp', king: false, id: makePieceId() } // d3
-      board[idx(0, 3)] = { player: 'opp', king: true, id: makePieceId() }  // d8
+      board[idx(7, 3)] = { player: 'you', king: true, id: makePieceId() } // d1
+      board[idx(7, 2)] = { player: 'you', king: false, id: makePieceId() } // c1 mover
+
+      // Horizontal Rek victims around c4.
+      board[idx(4, 1)] = { player: 'opp', king: false, id: makePieceId() } // b4
+      board[idx(4, 3)] = { player: 'opp', king: false, id: makePieceId() } // d4
+
+      // Opponent King at c5 has c4 as its final liberty before the move.
+      board[idx(3, 2)] = { player: 'opp', king: true, id: makePieceId() } // c5
+      board[idx(3, 1)] = { player: 'you', king: false, id: makePieceId() } // b5
+      board[idx(3, 3)] = { player: 'you', king: false, id: makePieceId() } // d5
+      board[idx(2, 2)] = { player: 'you', king: false, id: makePieceId() } // c6
     },
   },
 ]
