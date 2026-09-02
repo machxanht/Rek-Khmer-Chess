@@ -16,28 +16,29 @@ export default function LocalGamePage() {
   }
 
   const banner = (
-    <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-2 px-4 py-2 text-xs font-semibold">
+    <div className="mx-auto flex w-full max-w-lg flex-col gap-2 px-3 py-2 text-xs font-semibold sm:flex-row sm:items-center sm:justify-between sm:px-4">
       <span className="text-muted-foreground">Rule Mode:</span>
-      <div className="flex items-center gap-1 rounded-xl bg-card/80 p-1 border border-border/80">
+      <div className="grid grid-cols-2 gap-1 rounded-xl bg-card/80 p-1 border border-border/80">
         <button
           onClick={() => handleModeChange('REK_POAT')}
-          className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+          className={`min-h-9 rounded-lg px-2 py-1 text-[11px] font-bold leading-tight transition-all sm:px-3 sm:text-xs ${
             gameMode === 'REK_POAT'
               ? 'bg-gold text-background shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Rek Poat (Standard)
+          Rek Poat
+          <span className="hidden sm:inline"> (Standard)</span>
         </button>
         <button
           onClick={() => handleModeChange('MIN_REK_CHANH')}
-          className={`rounded-lg px-3 py-1 text-xs font-bold transition-all ${
+          className={`min-h-9 rounded-lg px-2 py-1 text-[11px] font-bold leading-tight transition-all sm:px-3 sm:text-xs ${
             gameMode === 'MIN_REK_CHANH'
               ? 'bg-gold text-background shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          Min Rek Chanh (Palace King)
+          Min Rek Chanh
         </button>
       </div>
     </div>
