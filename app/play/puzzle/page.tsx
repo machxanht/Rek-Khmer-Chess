@@ -4,24 +4,24 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRekEngine } from '@/hooks/use-rek-engine'
 import { RekGameView } from '@/components/game/rek-game-view'
 import { KHMER_PUZZLES, coordToIdx } from '@/lib/rek/engine'
-import { HelpCircle, ChevronRight, CheckCircle2, RotateCcw, XCircle } from 'lucide-react'
+import { CheckCircle2, ChevronRight, HelpCircle, RotateCcw, XCircle } from 'lucide-react'
 
 export default function PuzzleGamePage() {
   const [currentIdx, setCurrentIdx] = useState(0)
   const [showHint, setShowHint] = useState(false)
   const puzzle = KHMER_PUZZLES[currentIdx]
 
-  const engine = useRekEngine('REK_POAT', (p) => p === 'you')
+  const engine = useRekEngine('REK_POAT', (player) => player === 'you')
   const { game, loadPuzzle } = engine
 
   useEffect(() => {
     loadPuzzle(KHMER_PUZZLES[0])
   }, [loadPuzzle])
 
-  const handleSelectPuzzle = (idx: number) => {
-    setCurrentIdx(idx)
+  const handleSelectPuzzle = (index: number) => {
+    setCurrentIdx(index)
     setShowHint(false)
-    loadPuzzle(KHMER_PUZZLES[idx])
+    loadPuzzle(KHMER_PUZZLES[index])
   }
 
   const handleNextPuzzle = () => {
@@ -42,89 +42,100 @@ export default function PuzzleGamePage() {
   const isWrongAttempt = attempted && !isSolved
 
   const banner = (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-2 px-3 py-2 text-xs sm:px-4">
-      <div className="flex items-center justify-between gap-2 rounded-2xl bg-card/90 p-3 border border-border/80 shadow-md">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-xl bg-gold text-background font-black font-mono">
-            {puzzle.id}
-          </span>
+    <div className="border-b border-border bg-background/70">
+      <div className="mx-auto w-full max-w-[1280px] px-3 py-3 sm:px-5 lg:px-6">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-start">
           <div className="min-w-0">
-            <h3 className="truncate font-display font-bold text-foreground text-sm leading-tight">
-              {puzzle.titleEn}
-            </h3>
-            <p className="truncate text-[11px] text-gold font-medium">{puzzle.titleKhmer}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="rk-eyebrow">Puzzle {puzzle.id} of {KHMER_PUZZLES.length}</p>
+                <h2 className="mt-1 truncate font-display text-lg font-semibold text-foreground sm:text-xl">
+                  {puzzle.titleEn}
+                </h2>
+                <p className="mt-0.5 truncate text-xs text-gold/90">{puzzle.titleKhmer}</p>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleSelectPuzzle(currentIdx)}
+                  title="Reset puzzle"
+                  aria-label="Reset puzzle"
+                  className="flex size-10 items-center justify-center rounded-md border border-border text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+                >
+                  <RotateCcw className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowHint((value) => !value)}
+                  aria-expanded={showHint}
+                  className="flex h-10 items-center gap-2 rounded-md border border-border px-3 text-xs font-bold text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+                >
+                  <HelpCircle className="size-4 text-gold" />
+                  Hint
+                </button>
+              </div>
+            </div>
+
+            {(showHint || isSolved || isWrongAttempt) && (
+              <div className="mt-3 border-t border-border pt-3">
+                {isSolved && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                    <div className="flex items-center gap-2 text-success">
+                      <CheckCircle2 className="size-4" />
+                      <span className="font-bold">Target move solved.</span>
+                    </div>
+                    {currentIdx < KHMER_PUZZLES.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={handleNextPuzzle}
+                        className="inline-flex h-9 items-center gap-1.5 rounded-md bg-gold px-3 text-xs font-extrabold text-background outline-none transition-colors hover:bg-[#e3c783] focus-visible:ring-2 focus-visible:ring-gold/70"
+                      >
+                        Next puzzle
+                        <ChevronRight className="size-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {isWrongAttempt && (
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPuzzle(currentIdx)}
+                    className="flex min-h-10 w-full items-center gap-2 text-left text-sm font-bold text-destructive outline-none focus-visible:ring-2 focus-visible:ring-destructive/60"
+                  >
+                    <XCircle className="size-4 shrink-0" />
+                    <span>That move is legal, but it is not the published target. Retry this position.</span>
+                  </button>
+                )}
+
+                {showHint && !isSolved && (
+                  <div className="flex items-start gap-2 text-sm leading-5 text-muted-foreground">
+                    <HelpCircle className="mt-0.5 size-4 shrink-0 text-gold" />
+                    <p><strong className="text-foreground">Tactical hint:</strong> {puzzle.hint}</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-px overflow-x-auto bg-border [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:max-w-[25rem]">
+            {KHMER_PUZZLES.map((item, index) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectPuzzle(index)}
+                aria-current={currentIdx === index ? 'step' : undefined}
+                aria-label={`Puzzle ${item.id}: ${item.titleEn}`}
+                className={`flex size-10 shrink-0 items-center justify-center bg-card font-mono text-xs font-black outline-none transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold/70 ${
+                  currentIdx === index ? 'text-gold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                }`}
+              >
+                {item.id}
+              </button>
+            ))}
           </div>
         </div>
-
-        <div className="flex shrink-0 items-center gap-1.5">
-          <button
-            onClick={() => handleSelectPuzzle(currentIdx)}
-            title="Reset Puzzle"
-            aria-label="Reset puzzle"
-            className="flex size-9 items-center justify-center rounded-xl bg-secondary/80 text-muted-foreground hover:bg-gold hover:text-background transition-all touch-manipulation"
-          >
-            <RotateCcw className="size-3.5" />
-          </button>
-          <button
-            onClick={() => setShowHint(!showHint)}
-            className="flex min-h-9 items-center gap-1 rounded-xl bg-secondary/80 px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:bg-gold hover:text-background transition-all touch-manipulation"
-          >
-            <HelpCircle className="size-3.5" />
-            <span>Hint</span>
-          </button>
-        </div>
-      </div>
-
-      {isSolved && (
-        <div className="flex items-center justify-between gap-2 rounded-xl bg-emerald-500/15 p-3 border border-emerald-500/40 text-emerald-400 font-bold animate-fade-rise">
-          <div className="flex min-w-0 items-center gap-2">
-            <CheckCircle2 className="size-4.5 shrink-0 text-emerald-400" />
-            <span className="truncate">Solved! Kbuon Mastered!</span>
-          </div>
-          {currentIdx < KHMER_PUZZLES.length - 1 && (
-            <button
-              onClick={handleNextPuzzle}
-              className="flex shrink-0 items-center gap-1 rounded-lg bg-emerald-500 px-2.5 py-1.5 text-xs font-bold text-background shadow hover:bg-emerald-400 transition-colors touch-manipulation"
-            >
-              <span>Next</span>
-              <ChevronRight className="size-3.5" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {isWrongAttempt && (
-        <button
-          type="button"
-          onClick={() => handleSelectPuzzle(currentIdx)}
-          className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3 font-bold text-destructive transition-colors hover:bg-destructive/15 touch-manipulation"
-        >
-          <XCircle className="size-4" />
-          <span>Not the target move — tap to retry</span>
-        </button>
-      )}
-
-      {showHint && !isSolved && (
-        <div className="rounded-xl bg-gold/15 p-2.5 border border-gold/40 text-gold font-medium animate-fade-rise">
-          💡 <strong>Tactical Hint:</strong> {puzzle.hint}
-        </div>
-      )}
-
-      <div className="flex items-center gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {KHMER_PUZZLES.map((p, i) => (
-          <button
-            key={p.id}
-            onClick={() => handleSelectPuzzle(i)}
-            aria-current={currentIdx === i ? 'step' : undefined}
-            className={`flex min-h-9 items-center gap-1 shrink-0 rounded-xl px-3 py-1.5 font-bold transition-all text-xs touch-manipulation ${
-              currentIdx === i
-                ? 'bg-gold text-background shadow-md shadow-gold/30'
-                : 'bg-card/70 border border-border/70 text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <span>Level {p.id}</span>
-          </button>
-        ))}
       </div>
     </div>
   )
