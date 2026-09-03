@@ -1,35 +1,31 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { ArrowRight, BookOpen, Crown, Shield, Sparkles, Swords, Target } from 'lucide-react'
 import { AppShell } from '@/components/shell/app-shell'
 import { MiniBoard, buildCells } from '@/components/learn/mini-board'
 import { PieceToken } from '@/components/game/piece-token'
-import { ArrowRight, Crown, Swords, Shield, Target, BookOpen, Sparkles, Zap } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'How to Play — Rek Khmer Board Game',
   description:
-    'Learn the rules of Rek Khmer (ល្បែងរែក): Rook-like sliding moves, custodial Rek flanking captures, and Poat flood-fill encirclement.',
+    'Learn the engine-authoritative Rek Khmer rules: orthogonal sliding, adjacent-pair Rek captures, Poat encirclement, and Min Rek Chanh compulsory Rek.',
 }
 
 const N = 5
 
-// Rule 01 — Rek Sandwich
-const custodyCells = buildCells(N, [
-  { at: 11, player: 'you' },
-  { at: 12, player: 'opp' },
-  { at: 13, player: 'you' },
+const movementCells = buildCells(N, [
+  { at: 12, player: 'you' },
+  { at: 2, player: 'opp' },
 ])
 
-// Rule 02 — 4-Way Rek Cross
-const crossCells = buildCells(N, [
-  { at: 7, player: 'opp' },
+// Post-landing geometry: the moving side occupies the center while the two
+// adjacent enemies on opposite sides are Rek victims.
+const rekCells = buildCells(N, [
   { at: 11, player: 'opp' },
   { at: 12, player: 'you' },
   { at: 13, player: 'opp' },
-  { at: 17, player: 'opp' },
 ])
 
-// Rule 03 — Poat Encirclement
 const poatCells = buildCells(N, [
   { at: 6, player: 'you' },
   { at: 7, player: 'you' },
@@ -42,192 +38,191 @@ const poatCells = buildCells(N, [
   { at: 18, player: 'you' },
 ])
 
-// Rule 04 — King Palace Defense
-const kingCells = buildCells(N, [
+const palaceCells = buildCells(N, [
   { at: 2, player: 'opp', king: true },
-  { at: 1, player: 'opp' },
-  { at: 3, player: 'opp' },
   { at: 7, player: 'opp' },
+  { at: 17, player: 'you' },
   { at: 22, player: 'you', king: true },
 ])
+
+const RULES = [
+  {
+    number: '01',
+    icon: Swords,
+    title: 'Orthogonal movement',
+    body: 'Every piece slides horizontally or vertically through empty squares. A piece stops at the first occupied square, cannot jump, and cannot land on an occupied square.',
+    board: <MiniBoard n={N} cells={movementCells} markers={{ 12: 'select', 17: 'move' }} className="w-36" />,
+  },
+  {
+    number: '02',
+    icon: Target,
+    title: 'Rek — land between an enemy pair',
+    body: 'After a legal move lands on an empty square, the engine checks the immediately adjacent squares on opposite sides. If both hold enemy pieces, that pair is captured. Rek resolves before Poat.',
+    board: <MiniBoard n={N} cells={rekCells} markers={{ 12: 'rek' }} className="w-36" />,
+  },
+  {
+    number: '03',
+    icon: Shield,
+    title: 'Poat — zero liberties',
+    body: 'After Rek is resolved, each connected enemy group is checked for orthogonal liberties. A group with no empty orthogonally adjacent square is removed. Board edges act as walls.',
+    board: <MiniBoard n={N} cells={poatCells} markers={{ 12: 'capture' }} className="w-36" />,
+  },
+  {
+    number: '04',
+    icon: Crown,
+    title: 'Win and draw adjudication',
+    body: 'A decisive win comes from capturing the opposing King, removing all opposing pieces, immobilizing the opponent, or a Min Rek Chanh forfeit. The engine also tracks its configured draw conditions.',
+    board: <MiniBoard n={N} cells={palaceCells} markers={{ 2: 'rek' }} className="w-36" />,
+  },
+] as const
 
 export default function HowToPlayPage() {
   return (
     <AppShell>
-      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-10 animate-fade-rise">
-        <header className="mb-8">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-soft px-3.5 py-1 text-xs font-semibold text-gold shadow-sm">
-            <BookOpen className="size-3.5" />
-            <span>Master Authentic Khmer Rules</span>
+      <div className="mx-auto max-w-5xl animate-fade-rise">
+        <header className="grid gap-5 border-b border-border pb-8 sm:grid-cols-[auto_1fr] sm:items-end sm:gap-7">
+          <div className="flex size-14 items-center justify-center border border-border bg-card text-gold">
+            <BookOpen className="size-6" />
           </div>
-          <h1 className="mt-3 font-display text-3xl font-extrabold tracking-tight text-foreground text-balance sm:text-5xl">
-            How to Play <span className="text-gold">Rek Khmer (ល្បែងរែក)</span>
-          </h1>
-          <p className="mt-2.5 max-w-2xl leading-relaxed text-muted-foreground text-pretty sm:text-base">
-            Rek is Cambodia&apos;s ancient strategic board game. Unlike chess, you never capture by stepping on enemy squares. Instead, pieces slide like Rooks and capture through tactical flanking (<strong className="text-gold font-medium">Rek</strong>) and group encirclement (<strong className="text-cyan-400 font-medium">Poat</strong>).
-          </p>
+          <div>
+            <p className="rk-eyebrow">Engine-authoritative guide</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              How to Play <span className="text-gold">Rek Khmer</span>
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Rek Khmer is a Cambodian strategy game played on an 8×8 board. This page explains the behavior implemented by the repository engine; the interface does not invent a second rule set.
+            </p>
+          </div>
         </header>
 
-        <div className="space-y-4">
-          <RuleCard
-            icon={<Swords className="size-5" />}
-            step="01"
-            title="Movement: Rook-like Sliding"
-            body="Every piece on the 8×8 board can slide any number of empty squares in orthogonal directions (horizontal or vertical). Pieces cannot jump or land on occupied squares."
-          >
-            <MiniBoard n={N} cells={custodyCells} markers={{ 11: 'select', 13: 'move' }} className="w-36" />
-          </RuleCard>
-
-          <RuleCard
-            icon={<Zap className="size-5" />}
-            step="02"
-            title="Đòn Gánh (Rek Capture)"
-            body="Step into the middle of two opponent pieces along a straight line (horizontal or vertical) to capture both simultaneously. In a 4-way cross, you can capture up to 4 pieces at once!"
-            highlight
-          >
-            <MiniBoard n={N} cells={crossCells} markers={{ 12: 'rek' }} className="w-36" />
-          </RuleCard>
-
-          <RuleCard
-            icon={<Shield className="size-5" />}
-            step="03"
-            title="Đòn Vây (Poat Encirclement)"
-            body="When an enemy piece or group of connected pieces is completely surrounded with zero open adjacent squares (0 liberties), the entire cluster is removed from the board."
-          >
-            <MiniBoard n={N} cells={poatCells} markers={{ 12: 'capture' }} className="w-36" />
-          </RuleCard>
-
-          <RuleCard
-            icon={<Crown className="size-5" />}
-            step="04"
-            title="Victory: Capture the Royal King"
-            body="Win the game instantly by capturing the opposing King (Sdech), wiping out all enemy forces, or completely blocking all opposing legal moves."
-          >
-            <MiniBoard n={N} cells={kingCells} markers={{ 2: 'rek' }} className="w-36" />
-          </RuleCard>
-        </div>
-
-        {/* The Pieces */}
-        <section className="mt-10">
-          <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">The Pieces</h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 backdrop-blur-sm shadow-md">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-secondary shadow-inner">
-                <PieceToken piece={{ player: 'you', king: true, id: 'legend-king' }} size="board" />
+        <section className="divide-y divide-border border-b border-border">
+          {RULES.map((rule) => (
+            <article
+              key={rule.number}
+              className="grid gap-5 py-6 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-8 sm:py-8"
+            >
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-[10px] font-black text-muted-foreground">{rule.number}</span>
+                  <span className="flex size-9 items-center justify-center border border-border bg-card text-gold">
+                    <rule.icon className="size-4" />
+                  </span>
+                </div>
+                <h2 className="mt-3 font-display text-2xl font-semibold text-foreground">{rule.title}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{rule.body}</p>
               </div>
-              <p className="font-display text-base font-bold text-foreground">Sdech — The Royal King (ស្ដេច)</p>
-              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                Embossed with the royal crown. Losing your King means immediate defeat. In Min Rek Chanh mode, the King stays anchored in the palace throne.
-              </p>
+              <div className="justify-self-center border border-border bg-card/45 p-3 sm:justify-self-end">{rule.board}</div>
+            </article>
+          ))}
+        </section>
+
+        <section className="grid gap-8 border-b border-border py-8 lg:grid-cols-2">
+          <div>
+            <p className="rk-eyebrow">Pieces</p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-foreground">One movement family, two roles</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Both Kings and regular pieces use the core movement model in Rek Poat. Min Rek Chanh changes the King&apos;s role by keeping it stationary.
+            </p>
+
+            <div className="mt-5 divide-y divide-border border-y border-border">
+              <PieceRow
+                piece={{ player: 'you', king: true, id: 'guide-king' }}
+                title="Sdech — King"
+                body="Royal piece. Capturing the opposing King is an immediate decisive result. In Min Rek Chanh the Palace King does not move."
+              />
+              <PieceRow
+                piece={{ player: 'opp', king: false, id: 'guide-man' }}
+                title="Regular piece"
+                body="Uses the same orthogonal sliding geometry and can create Rek or Poat through legal moves."
+              />
             </div>
-            <div className="rounded-2xl border border-border/80 bg-card/80 p-5 backdrop-blur-sm shadow-md">
-              <div className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-secondary shadow-inner">
-                <PieceToken piece={{ player: 'opp', king: false, id: 'legend-man' }} size="board" />
-              </div>
-              <p className="font-display text-base font-bold text-foreground">Pol — The Warriors (ពល)</p>
-              <p className="mt-1.5 text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                Fifteen brave warriors per side. They form protective phalanxes, execute Rek flanking strikes, and seal the fate of enemy battalions.
-              </p>
+          </div>
+
+          <div>
+            <p className="rk-eyebrow">Game modes</p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-foreground">Rek Poat and Min Rek Chanh</h2>
+            <div className="mt-5 divide-y divide-border border-y border-border">
+              <ModeRule
+                icon={Sparkles}
+                title="Rek Poat"
+                body="Rek is optional, Poat is active, and the King moves with the normal orthogonal sliding rules."
+              />
+              <ModeRule
+                icon={Crown}
+                title="Min Rek Chanh"
+                body="The Palace King is stationary. If the side to move has any Rek available anywhere, Rek is compulsory; attempting a different legal geometric move forfeits the game. Poat remains active."
+              />
             </div>
           </div>
         </section>
 
-        {/* Authentic Game Modes & Cultural Insights */}
-        <section className="mt-10">
-          <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">
-            Authentic Khmer Game Modes
-          </h2>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-gold/40 bg-card/90 p-5 shadow-lg shadow-gold/5">
-              <div className="flex items-center gap-2 text-gold font-bold">
-                <Sparkles className="size-4.5" />
-                <h3 className="font-display text-base text-foreground">1. Rek Poat (រែកព័ទ្ធ) — Standard Mode</h3>
-              </div>
-              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                The strategic freeplay mode. The Royal King moves freely like a warrior across the board. Flanking captures (Rek) and encirclement (Poat) are optional tactical choices.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-cyan-500/40 bg-card/90 p-5 shadow-lg shadow-cyan-500/5">
-              <div className="flex items-center gap-2 text-cyan-400 font-bold">
-                <Crown className="size-4.5" />
-                <h3 className="font-display text-base text-foreground">2. Min Rek Chanh (មិនរែកចាញ់) — Palace King</h3>
-              </div>
-              <p className="mt-2 text-xs sm:text-sm leading-relaxed text-muted-foreground">
-                The classical palace format. The King stays anchored on the throne (d1/d8). When baited with <strong className="text-gold">Hao Rek</strong>, the defender is compulsory forced to capture; skipping forfeits the game!
-              </p>
-            </div>
+        <section className="grid gap-4 py-8 sm:grid-cols-[1fr_auto] sm:items-center">
+          <div>
+            <p className="rk-eyebrow">Practice the geometry</p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-foreground">Start with AI or a published puzzle</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+              Legal destinations, captures, compulsory Rek, and end states are calculated by the same engine used in Local play.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/play/puzzle"
+              className="inline-flex h-11 items-center gap-2 rounded-md border border-border bg-card px-4 text-sm font-bold text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              Puzzles
+            </Link>
+            <Link
+              href="/play/ai"
+              className="inline-flex h-11 items-center gap-2 rounded-md bg-gold px-4 text-sm font-extrabold text-background outline-none transition-colors hover:bg-[#e3c783] focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              Play vs AI
+              <ArrowRight className="size-4" />
+            </Link>
           </div>
         </section>
-
-        {/* CTA */}
-        <div className="mt-10 flex flex-col items-center gap-4 rounded-3xl border border-gold/35 bg-gradient-to-b from-gold/15 to-card/60 p-6 sm:p-8 text-center shadow-xl backdrop-blur-md">
-          <div className="flex size-14 items-center justify-center rounded-2xl bg-gold text-background shadow-lg shadow-gold/30">
-            <Sparkles className="size-7" />
-          </div>
-          <h2 className="font-display text-2xl font-bold text-foreground text-balance">
-            Ready to test your strategy?
-          </h2>
-          <p className="max-w-md text-xs sm:text-sm leading-relaxed text-muted-foreground text-pretty">
-            Play against the AI Bot, solve King Defense Puzzles, or challenge a friend in Pass &amp; Play.
-          </p>
-          <Link
-            href="/play/ai"
-            className="mt-1 flex h-12 items-center gap-2 rounded-2xl bg-gold px-8 font-bold text-background shadow-lg shadow-gold/30 ring-2 ring-gold/60 transition-all hover:-translate-y-0.5 hover:opacity-95"
-          >
-            <span>Play vs AI Grandmaster</span>
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
       </div>
     </AppShell>
   )
 }
 
-function RuleCard({
-  icon,
-  step,
+function PieceRow({
+  piece,
   title,
   body,
-  children,
-  highlight,
 }: {
-  icon: React.ReactNode
-  step: string
+  piece: { player: 'you' | 'opp'; king: boolean; id: string }
   title: string
   body: string
-  children: React.ReactNode
-  highlight?: boolean
 }) {
   return (
-    <div
-      className={
-        'grid items-center gap-5 rounded-3xl border p-5 backdrop-blur-sm sm:grid-cols-[1fr_auto] transition-all duration-300 ' +
-        (highlight
-          ? 'border-gold/50 bg-gradient-to-br from-gold/15 to-card shadow-lg shadow-gold/10 ring-1 ring-gold/40'
-          : 'border-border/80 bg-card/80')
-      }
-    >
-      <div>
-        <div className="flex items-center gap-3">
-          <span
-            className={
-              'flex size-9 items-center justify-center rounded-xl shadow-sm ' +
-              (highlight ? 'bg-gold text-background font-bold' : 'bg-secondary text-gold')
-            }
-          >
-            {icon}
-          </span>
-          <span className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-gold">
-            Step {step}
-          </span>
-        </div>
-        <h3 className="mt-3 font-display text-lg font-bold tracking-tight text-foreground">{title}</h3>
-        <p className="mt-1.5 max-w-md text-xs sm:text-sm leading-relaxed text-muted-foreground text-pretty">
-          {body}
-        </p>
+    <div className="grid grid-cols-[3rem_1fr] items-center gap-4 py-4">
+      <div className="size-11">
+        <PieceToken piece={piece} size="board" />
       </div>
-      <div className="justify-self-center sm:justify-self-end">{children}</div>
+      <div>
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+      </div>
+    </div>
+  )
+}
+
+function ModeRule({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  body: string
+}) {
+  return (
+    <div className="grid grid-cols-[auto_1fr] gap-3 py-4">
+      <Icon className="mt-0.5 size-4 text-gold" />
+      <div>
+        <h3 className="text-sm font-bold text-foreground">{title}</h3>
+        <p className="mt-1 text-xs leading-5 text-muted-foreground">{body}</p>
+      </div>
     </div>
   )
 }
