@@ -20,33 +20,49 @@ class SoundManager {
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null
 
-    if (!this.ctx) {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+    let createdContext: AudioContext | null = null
 
-      if (!AudioCtx) return null
+    try {
+      if (!this.ctx) {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
 
-      this.ctx = new AudioCtx()
-      this.compressor = this.ctx.createDynamicsCompressor()
-      this.master = this.ctx.createGain()
+        if (!AudioCtx) return null
 
-      this.compressor.threshold.value = -18
-      this.compressor.knee.value = 18
-      this.compressor.ratio.value = 3.2
-      this.compressor.attack.value = 0.003
-      this.compressor.release.value = 0.2
-      this.master.gain.value = 0.72
+        createdContext = new AudioCtx()
+        const compressor = createdContext.createDynamicsCompressor()
+        const master = createdContext.createGain()
 
-      this.compressor.connect(this.master)
-      this.master.connect(this.ctx.destination)
+        compressor.threshold.value = -18
+        compressor.knee.value = 18
+        compressor.ratio.value = 3.2
+        compressor.attack.value = 0.003
+        compressor.release.value = 0.2
+        master.gain.value = 0.72
+
+        compressor.connect(master)
+        master.connect(createdContext.destination)
+
+        this.ctx = createdContext
+        this.compressor = compressor
+        this.master = master
+      }
+
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {})
+      }
+
+      return this.ctx
+    } catch {
+      if (createdContext) {
+        createdContext.close().catch(() => {})
+      }
+      this.ctx = null
+      this.compressor = null
+      this.master = null
+      return null
     }
-
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {})
-    }
-
-    return this.ctx
   }
 
   private connect(node: AudioNode): void {

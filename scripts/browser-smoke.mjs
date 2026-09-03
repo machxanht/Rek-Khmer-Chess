@@ -2,9 +2,13 @@ import { spawn, spawnSync } from 'node:child_process'
 
 const routes = [
   ['/', 'Rek Khmer'],
+  ['/play', 'Choose Game Mode'],
   ['/play/local', 'Pass & Play'],
   ['/play/ai', 'Khmer AI Battle'],
   ['/play/puzzle', 'King Defense Puzzles'],
+  ['/play/online', 'Play Online'],
+  ['/how-to-play', 'How to Play'],
+  ['/profile', 'Bopha Nak'],
   ['/settings', 'Preferences'],
 ]
 
@@ -151,6 +155,14 @@ async function waitForRoute(page, expectedText, timeoutMs = 8000) {
   return snapshot
 }
 
+function runtimeFailures(page) {
+  const failures = []
+  if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
+  if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
+  if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
+  return failures
+}
+
 async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage) {
   page.exceptions = []
   page.consoleErrors = []
@@ -176,9 +188,7 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   if (!snapshot.text.trim()) failures.push('body text is empty')
   if (snapshot.htmlLength < 100) failures.push(`body HTML unexpectedly small (${snapshot.htmlLength})`)
   if (!includesText(snapshot.text, expectedText)) failures.push(`missing expected text: ${expectedText}`)
-  if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
-  if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
-  if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
+  failures.push(...runtimeFailures(page))
 
   if (failures.length) {
     const bodyPreview = snapshot.text.replace(/\s+/g, ' ').trim().slice(0, 700)
@@ -189,6 +199,109 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   }
 
   console.log(`✓ ${route}${denyStorage ? ' [storage denied]' : ''}`)
+}
+
+async function assertBlockedAudioNavigation(page, baseUrl) {
+  page.exceptions = []
+  page.consoleErrors = []
+  page.resourceErrors = []
+
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `
+      for (const key of ['AudioContext', 'webkitAudioContext']) {
+        try {
+          Object.defineProperty(window, key, {
+            configurable: true,
+            get() { throw new DOMException('Web Audio disabled by smoke test', 'SecurityError') }
+          });
+        } catch {}
+      }
+    `,
+  })
+
+  await page.send('Page.navigate', { url: `${baseUrl}/` })
+  const home = await waitForRoute(page, 'Rek Khmer')
+  if (!includesText(home.text, 'Rek Khmer')) {
+    throw new Error('blocked WebAudio interaction: home route did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `document.querySelector('a[href="/play"]')?.click()`,
+  })
+  const play = await waitForRoute(page, 'Choose Game Mode')
+
+  const failures = []
+  if (!includesText(play.text, 'Choose Game Mode')) failures.push('navigation to /play did not complete')
+  failures.push(...runtimeFailures(page))
+
+  if (failures.length) {
+    throw new Error(`blocked WebAudio interaction: ${failures.join('; ')}`)
+  }
+
+  console.log('✓ navigation interaction [WebAudio denied]')
+}
+
+async function assertBlockedClipboardCopy(page, baseUrl) {
+  page.exceptions = []
+  page.consoleErrors = []
+  page.resourceErrors = []
+
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `
+      window.__rekUnhandledRejections = 0;
+      window.addEventListener('unhandledrejection', (event) => {
+        window.__rekUnhandledRejections += 1;
+        event.preventDefault();
+      });
+      try {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText() {
+              return Promise.reject(new DOMException('Clipboard disabled by smoke test', 'NotAllowedError'));
+            }
+          }
+        });
+      } catch {}
+    `,
+  })
+
+  await page.send('Page.navigate', { url: `${baseUrl}/play/online` })
+  const lobby = await waitForRoute(page, 'Play Online')
+  if (!includesText(lobby.text, 'Create Room')) {
+    throw new Error('blocked clipboard interaction: online lobby did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Create Room'))?.click()`,
+  })
+
+  const waiting = await waitForRoute(page, 'Room Access Code', 5000)
+  if (!includesText(waiting.text, 'Room Access Code')) {
+    throw new Error('blocked clipboard interaction: room code state did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `document.querySelector('button[title="Copy code"]')?.click()`,
+  })
+  await delay(250)
+
+  const rejectionResult = await page.send('Runtime.evaluate', {
+    expression: `window.__rekUnhandledRejections || 0`,
+    returnByValue: true,
+  })
+
+  const failures = []
+  if (rejectionResult.result.value !== 0) {
+    failures.push(`unhandled clipboard rejections: ${rejectionResult.result.value}`)
+  }
+  failures.push(...runtimeFailures(page))
+
+  if (failures.length) {
+    throw new Error(`blocked clipboard interaction: ${failures.join('; ')}`)
+  }
+
+  console.log('✓ room-code copy interaction [clipboard denied]')
 }
 
 const chromePath = findChrome()
@@ -225,6 +338,20 @@ try {
         page.close()
       }
     }
+  }
+
+  const audioPage = await createPage(debugPort)
+  try {
+    await assertBlockedAudioNavigation(audioPage, baseUrl)
+  } finally {
+    audioPage.close()
+  }
+
+  const clipboardPage = await createPage(debugPort)
+  try {
+    await assertBlockedClipboardCopy(clipboardPage, baseUrl)
+  } finally {
+    clipboardPage.close()
   }
 } catch (error) {
   console.error(error)

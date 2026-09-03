@@ -236,11 +236,16 @@ function Matchmaking({
   }
   const { title, sub } = copy[phase]
 
-  const handleCopy = () => {
-    if (roomCode) {
-      navigator.clipboard.writeText(roomCode)
+  const handleCopy = async () => {
+    if (!roomCode) return
+
+    try {
+      if (!navigator.clipboard?.writeText) return
+      await navigator.clipboard.writeText(roomCode)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+    } catch {
+      setCopied(false)
     }
   }
 
@@ -326,4 +331,3 @@ function Avatar({ name, tone }: { name: string; tone: 'you' | 'opp' }) {
     </div>
   )
 }
-
