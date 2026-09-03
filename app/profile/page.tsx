@@ -1,10 +1,10 @@
-import type { Metadata } from "next"
-import { AppShell } from "@/components/shell/app-shell"
-import { ProfileView } from "@/components/profile/profile-view"
+import type { Metadata } from 'next'
+import { AppShell } from '@/components/shell/app-shell'
+import { ProfileView } from '@/components/profile/profile-view'
 
 export const metadata: Metadata = {
-  title: "Profile — Rek Khmer Chess",
-  description: "Your Rek record, rank, and recent matches.",
+  title: 'Local Profile — Rek Khmer',
+  description: 'Local Rek Khmer player surface with offline play shortcuts and device preferences.',
 }
 
 export default function ProfilePage() {

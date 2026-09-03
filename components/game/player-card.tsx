@@ -24,61 +24,68 @@ export function PlayerCard({
   align?: 'start' | 'end'
 }) {
   const you = player === 'you'
+
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-2xl border px-3.5 py-3 transition-all duration-300 backdrop-blur-md shadow-md',
-        active
-          ? 'border-gold/60 bg-gold-soft/80 shadow-[0_0_16px_var(--gold-soft)] ring-1 ring-gold/50 scale-[1.02]'
-          : 'border-border/80 bg-card/70 opacity-90',
+        'relative flex min-h-[70px] items-center gap-3 border border-border bg-card/72 px-3 py-2.5 transition-colors sm:px-4',
+        active && 'border-gold/35 bg-card',
         align === 'end' && 'flex-row-reverse text-right',
       )}
     >
+      <span
+        className={cn(
+          'absolute inset-y-0 w-0.5',
+          align === 'end' ? 'right-0' : 'left-0',
+          active ? (you ? 'bg-you' : 'bg-opp') : 'bg-transparent',
+        )}
+        aria-hidden="true"
+      />
+
       <div
         className={cn(
-          'relative flex size-12 shrink-0 items-center justify-center rounded-2xl text-base font-bold text-background shadow-md transition-transform duration-300',
-          active && 'scale-105',
+          'relative flex size-10 shrink-0 items-center justify-center rounded-full border bg-background text-sm font-black',
+          you ? 'border-you/45 text-you' : 'border-opp/45 text-opp',
         )}
-        style={{
-          background: you
-            ? 'linear-gradient(145deg, oklch(0.78 0.24 28), oklch(0.58 0.23 25))'
-            : 'linear-gradient(145deg, oklch(0.86 0.18 175), oklch(0.68 0.16 178))',
-          boxShadow: you
-            ? '0 4px 12px oklch(0.66 0.23 28 / 0.4)'
-            : '0 4px 12px oklch(0.76 0.16 175 / 0.4)',
-        }}
+        aria-hidden="true"
       >
         {name.slice(0, 1).toUpperCase()}
         {active && (
-          <span className="absolute -right-1 -bottom-1 flex size-4 items-center justify-center rounded-full bg-gold ring-2 ring-card shadow-sm animate-pulse">
-            <span className="size-1.5 rounded-full bg-background" />
-          </span>
+          <span
+            className={cn(
+              'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-card',
+              you ? 'bg-you' : 'bg-opp',
+            )}
+          />
         )}
       </div>
 
-      <div className={cn('flex min-w-0 flex-col', align === 'end' && 'items-end')}>
-        <div className={cn('flex items-center gap-1.5', align === 'end' && 'flex-row-reverse')}>
-          <span className="truncate text-sm font-bold text-foreground">{name}</span>
-          {connection === 'connected' && <Wifi className="size-3.5 text-success" />}
-          {connection === 'reconnecting' && <Wifi className="size-3.5 animate-pulse text-gold" />}
-          {connection === 'disconnected' && <WifiOff className="size-3.5 text-destructive" />}
+      <div className={cn('min-w-0 flex-1', align === 'end' && 'flex flex-col items-end')}>
+        <div className={cn('flex min-w-0 items-center gap-1.5', align === 'end' && 'flex-row-reverse')}>
+          <span className="truncate text-sm font-extrabold text-foreground">{name}</span>
+          {connection === 'connected' && <Wifi className="size-3 text-success" />}
+          {connection === 'reconnecting' && <Wifi className="size-3 text-gold" />}
+          {connection === 'disconnected' && <WifiOff className="size-3 text-destructive" />}
         </div>
-        <div className={cn('flex items-center gap-2 text-xs font-medium text-muted-foreground', align === 'end' && 'flex-row-reverse')}>
-          <span className="flex items-center gap-1 text-foreground/90">
-            <Crown className={cn('size-3.5', you ? 'text-you' : 'text-opp')} />
-            <strong>{piecesLeft}</strong> pieces
+
+        <div className={cn('mt-1 flex items-center gap-2 text-[11px] text-muted-foreground', align === 'end' && 'flex-row-reverse')}>
+          <span className="inline-flex items-center gap-1">
+            <Crown className={cn('size-3', you ? 'text-you' : 'text-opp')} />
+            <strong className="text-foreground">{piecesLeft}</strong>
+            <span>left</span>
           </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span className="text-gold font-medium">+{captured} taken</span>
+          <span aria-hidden="true">/</span>
+          <span>
+            <strong className="text-foreground">{captured}</strong> captured
+          </span>
         </div>
       </div>
 
       {timer && (
         <div
           className={cn(
-            'ml-auto rounded-xl px-2.5 py-1.5 font-mono text-sm font-bold tabular-nums shadow-sm transition-colors',
-            align === 'end' && 'mr-auto ml-0',
-            active ? 'bg-gold text-background ring-1 ring-gold shadow-[0_0_8px_var(--gold-soft)]' : 'bg-secondary/90 text-muted-foreground',
+            'shrink-0 border border-border bg-background/65 px-2 py-1 font-mono text-xs font-bold tabular-nums',
+            active && 'border-gold/30 text-gold',
           )}
         >
           {timer}

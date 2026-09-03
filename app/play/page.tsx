@@ -1,136 +1,117 @@
 'use client'
 
 import Link from 'next/link'
-import { Users, Bot, BookOpen, Globe, ChevronRight, Swords, Sparkles, Trophy } from 'lucide-react'
+import { ArrowRight, Bot, Globe, Swords, Trophy, Users } from 'lucide-react'
 import { AppShell } from '@/components/shell/app-shell'
+import { sounds } from '@/lib/sound'
+
+const PLAYABLE = [
+  {
+    href: '/play/local',
+    icon: Users,
+    number: '01',
+    label: 'LOCAL MATCH',
+    title: 'Pass & Play',
+    description: 'Two players share one device. Full engine rules, undo, and tactical move hints.',
+    detail: '2 players · offline',
+    tone: 'you' as const,
+  },
+  {
+    href: '/play/ai',
+    icon: Bot,
+    number: '02',
+    label: 'SOLO MATCH',
+    title: 'Khmer AI Battle',
+    description: 'Play Rek Poat or Min Rek Chanh against Apprentice, Veteran, or Grandmaster difficulty.',
+    detail: '1 player · 3 difficulties',
+    tone: 'opp' as const,
+  },
+  {
+    href: '/play/puzzle',
+    icon: Trophy,
+    number: '03',
+    label: 'TACTICAL TRAINING',
+    title: 'King Defense Puzzles',
+    description: 'Seven published positions validated against the same engine used in normal matches.',
+    detail: '7 puzzles · engine validated',
+    tone: 'gold' as const,
+  },
+]
 
 export default function PlayPage() {
   return (
     <AppShell>
-      <div className="mx-auto max-w-2xl animate-fade-rise">
-        <header className="mb-6">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-gold/40 bg-gold-soft px-3 py-1 text-xs font-semibold text-gold shadow-sm mb-2">
-            <Swords className="size-3.5" />
-            <span>Select Battlefield</span>
+      <div className="mx-auto max-w-4xl">
+        <header className="grid gap-5 border-b border-border pb-7 sm:grid-cols-[auto_1fr] sm:items-end sm:gap-7">
+          <div className="flex size-14 items-center justify-center border border-border bg-card text-gold">
+            <Swords className="size-6" />
           </div>
-          <h1 className="font-display text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">
-            Choose Game Mode
-          </h1>
-          <p className="mt-1.5 text-muted-foreground text-sm sm:text-base">
-            Every mode uses the authentic 8×8 tactical board with authentic Rek flanking and Poat encirclement rules.
-          </p>
+          <div>
+            <p className="rk-eyebrow">Select battlefield</p>
+            <h1 className="mt-1 font-display text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+              Choose Game Mode
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+              Local, AI, and Puzzle modes all use the same Rek Khmer engine. Pick the kind of pressure you want to practice.
+            </p>
+          </div>
         </header>
 
-        <div className="grid gap-4">
-          <BigMode
-            href="/play/local"
-            icon={Users}
-            title="Pass & Play (2 Players)"
-            desc="Battle against a friend on one device with interactive move hints and undo support."
-            accent="you"
-            tag="Local 2P"
-          />
+        <section className="divide-y divide-border border-b border-border">
+          {PLAYABLE.map((mode) => (
+            <Link
+              key={mode.href}
+              href={mode.href}
+              onClick={() => sounds.playSelect()}
+              className="group grid min-h-[148px] grid-cols-[auto_1fr_auto] items-center gap-4 py-5 outline-none transition-colors hover:bg-card/32 focus-visible:bg-card/42 sm:gap-7 sm:px-3"
+            >
+              <div className="hidden font-mono text-xs font-bold text-muted-foreground sm:block">{mode.number}</div>
 
-          <BigMode
-            href="/play/ai"
-            icon={Bot}
-            title="Vs Khmer AI Master"
-            desc="Practice against the AI bot with 3 strategic levels: Apprentice, Veteran, and Grandmaster."
-            accent="opp"
-            tag="Solo AI"
-          />
+              <div className="min-w-0">
+                <div className="mb-2 flex items-center gap-3">
+                  <span
+                    className={`flex size-9 items-center justify-center border ${
+                      mode.tone === 'you'
+                        ? 'border-you/35 bg-you-soft text-you'
+                        : mode.tone === 'opp'
+                          ? 'border-opp/35 bg-opp-soft text-opp'
+                          : 'border-gold/35 bg-gold-soft text-gold'
+                    }`}
+                  >
+                    <mode.icon className="size-4" />
+                  </span>
+                  <span className="rk-eyebrow">{mode.label}</span>
+                </div>
+                <h2 className="font-display text-2xl font-semibold text-foreground transition-colors group-hover:text-gold sm:text-3xl">
+                  {mode.title}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{mode.description}</p>
+                <p className="mt-3 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/80">
+                  {mode.detail}
+                </p>
+              </div>
 
-          <BigMode
-            href="/play/puzzle"
-            icon={Trophy}
-            title="King Defense Puzzles"
-            desc="Master the 7 authentic Angkor tactical puzzles: Triangle Shield, Dual Column, and Hao Rek Counter-Trap."
-            accent="gold"
-            tag="7 Levels"
-          />
+              <ArrowRight className="size-5 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-gold" />
+            </Link>
+          ))}
+        </section>
 
-          <BigMode
-            href="/play/online"
-            icon={Globe}
-            title="Online Matchmaking"
-            desc="Match with real players or create private rooms with 6-digit invite codes."
-            accent="opp"
-            tag="P2P Multiplayer"
-          />
-        </div>
+        <section className="mt-8 grid gap-4 border border-border bg-card/32 p-5 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-6 sm:p-6">
+          <div className="flex size-10 items-center justify-center border border-border text-muted-foreground">
+            <Globe className="size-4" />
+          </div>
+          <div>
+            <p className="rk-eyebrow">Online multiplayer</p>
+            <h2 className="mt-1 font-display text-xl font-semibold text-foreground">Coming after offline polish</h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              Networking stays out of the critical path while Local, AI, and Puzzle gameplay are being refined.
+            </p>
+          </div>
+          <span className="w-fit border border-border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+            Not primary
+          </span>
+        </section>
       </div>
     </AppShell>
-  )
-}
-
-function BigMode({
-  href,
-  icon: Icon,
-  title,
-  desc,
-  accent,
-  tag,
-}: {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  desc: string
-  accent: 'you' | 'opp' | 'gold'
-  tag: string
-}) {
-  const getStyle = () => {
-    if (accent === 'you') {
-      return {
-        bg: 'var(--you-soft)',
-        color: 'var(--you)',
-        border: '1px solid oklch(0.66 0.23 28 / 0.5)',
-      }
-    }
-    if (accent === 'opp') {
-      return {
-        bg: 'var(--opp-soft)',
-        color: 'var(--opp)',
-        border: '1px solid oklch(0.76 0.16 175 / 0.5)',
-      }
-    }
-    return {
-      bg: 'var(--gold-soft)',
-      color: 'var(--gold)',
-      border: '1px solid oklch(0.86 0.16 82 / 0.5)',
-    }
-  }
-
-  const s = getStyle()
-
-  return (
-    <Link
-      href={href}
-      className="group relative flex items-center gap-4 rounded-3xl border border-border/80 bg-card/80 p-5 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-gold/50 hover:shadow-xl hover:shadow-black/40 active:scale-[0.99]"
-    >
-      <div
-        className="flex size-14 shrink-0 items-center justify-center rounded-2xl shadow-md transition-transform duration-300 group-hover:scale-105"
-        style={{
-          background: s.bg,
-          color: s.color,
-          border: s.border,
-        }}
-      >
-        <Icon className="size-7" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <h3 className="font-display text-lg font-bold text-foreground group-hover:text-gold transition-colors">
-            {title}
-          </h3>
-          <span className="rounded-full bg-gold-soft px-2.5 py-0.5 text-[0.68rem] font-bold text-gold ring-1 ring-gold/40">
-            {tag}
-          </span>
-        </div>
-        <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground leading-snug">{desc}</p>
-      </div>
-      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-all duration-200 group-hover:bg-gold group-hover:text-background group-hover:translate-x-1">
-        <ChevronRight className="size-4" />
-      </div>
-    </Link>
   )
 }

@@ -1,9 +1,7 @@
 'use client'
 
-import { useEffect } from 'react'
 import Link from 'next/link'
-import { Trophy, RotateCcw, Home, Sparkles, Award, Scale } from 'lucide-react'
-import confetti from 'canvas-confetti'
+import { Home, RotateCcw, Scale, Trophy } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import type { Player } from '@/lib/rek/engine'
 
@@ -24,98 +22,70 @@ export function ResultOverlay({
   perspective?: Player | 'neutral'
   onPlayAgain: () => void
 }) {
-  useEffect(() => {
-    if (open && winner && winner !== 'draw') {
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ['#f59e0b', '#d97706', '#fbbf24', '#e11d48', '#06b6d4'],
-        })
-      } catch {}
-    }
-  }, [open, winner])
-
   if (!winner) return null
+
   const isDraw = winner === 'draw'
   const winnerName = winner === 'you' ? youName : oppName
-  const loserName = winner === 'you' ? oppName : youName
   const didWin = perspective !== 'neutral' && perspective === winner
-
   const outcome = isDraw
-    ? 'Honorable Draw'
+    ? 'Draw'
     : perspective === 'neutral'
-      ? `${winnerName} Victory!`
+      ? `${winnerName} wins`
       : didWin
-        ? 'Glorious Victory!'
-        : 'Game Over'
+        ? 'Victory'
+        : 'Defeat'
 
   return (
-    <Modal open={open} dismissable={false} className="text-center">
-      <div className="flex flex-col items-center gap-4 py-2">
+    <Modal open={open} dismissable={false} className="max-w-[30rem]">
+      <div className="py-1 text-center">
         <div
-          className="relative flex size-20 items-center justify-center rounded-3xl shadow-xl animate-bounce"
-          style={{
-            background: isDraw
-              ? 'linear-gradient(135deg, oklch(0.78 0.08 80), oklch(0.58 0.05 70))'
+          className={`mx-auto flex size-14 items-center justify-center rounded-full border bg-background ${
+            isDraw
+              ? 'border-border text-muted-foreground'
               : winner === 'you'
-                ? 'linear-gradient(135deg, oklch(0.85 0.22 85), oklch(0.7 0.22 45))'
-                : 'linear-gradient(135deg, oklch(0.86 0.18 175), oklch(0.65 0.18 180))',
-            boxShadow: '0 0 30px var(--gold-glow)',
-          }}
+                ? 'border-you/45 text-you'
+                : 'border-opp/45 text-opp'
+          }`}
+          aria-hidden="true"
         >
-          {isDraw ? (
-            <Scale className="size-10 text-background drop-shadow-md" />
-          ) : (
-            <Trophy className="size-10 text-background drop-shadow-md" />
-          )}
-          <Sparkles
-            className="absolute -top-2 -right-2 size-6 text-gold animate-spin"
-            style={{ animationDuration: '6s' }}
-          />
+          {isDraw ? <Scale className="size-6" /> : <Trophy className="size-6" />}
         </div>
 
-        <div>
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-gold-soft px-3 py-1 text-xs font-bold text-gold ring-1 ring-gold/40 mb-2">
-            <Award className="size-3.5" />
-            <span>Match Concluded</span>
+        <p className="rk-eyebrow mt-5">Match concluded</p>
+        <h2 className="mt-1 font-display text-4xl font-semibold tracking-tight text-foreground">{outcome}</h2>
+
+        {!isDraw && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            <span className="font-bold text-foreground">{winnerName}</span> takes the match.
+          </p>
+        )}
+
+        {isDraw && (
+          <p className="mt-2 text-sm text-muted-foreground">Neither side takes the match.</p>
+        )}
+
+        {reason && (
+          <div className="mx-auto mt-5 max-w-sm border-y border-border py-3">
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Engine result</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">{reason}</p>
           </div>
-          <h2 className="font-display text-3xl font-extrabold tracking-tight text-foreground">
-            {outcome}
-          </h2>
-          {!isDraw && (
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              <strong className="text-gold font-bold">{winnerName}</strong> outmaneuvered{' '}
-              <span className="text-foreground/90 font-medium">{loserName}</span>
-            </p>
-          )}
-          {isDraw && (
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Neither side takes the match. Start a fresh battle or choose another mode.
-            </p>
-          )}
-          {reason && (
-            <span className="mt-3 inline-block rounded-xl bg-card border border-border px-3.5 py-1.5 text-xs font-semibold text-foreground/90 shadow-sm">
-              {reason}
-            </span>
-          )}
-        </div>
+        )}
 
-        <div className="mt-3 flex w-full flex-col gap-2.5">
+        <div className="mt-6 grid gap-2 sm:grid-cols-2">
           <button
+            type="button"
             onClick={onPlayAgain}
-            className="flex h-13 items-center justify-center gap-2 rounded-2xl bg-gold font-bold text-background shadow-lg shadow-gold/30 ring-2 ring-gold/50 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-gold/50 active:translate-y-0"
+            className="flex h-12 items-center justify-center gap-2 rounded-md bg-gold font-extrabold text-background outline-none transition-colors hover:bg-[#e3c783] focus-visible:ring-2 focus-visible:ring-gold/70"
           >
-            <RotateCcw className="size-5" />
+            <RotateCcw className="size-4" />
             <span>Play Again</span>
           </button>
           <Link
             href="/play"
-            className="flex h-12 items-center justify-center gap-2 rounded-2xl border border-border/80 bg-card/80 font-semibold text-foreground backdrop-blur-sm transition-all duration-200 hover:bg-accent hover:border-gold/40"
+            className="flex h-12 items-center justify-center gap-2 rounded-md border border-border bg-card font-semibold text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-gold/70"
           >
-            <Home className="size-4.5" />
-            <span>Choose Another Mode</span>
+            <Home className="size-4" />
+            <span>Game Modes</span>
           </Link>
         </div>
       </div>

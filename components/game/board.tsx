@@ -1,7 +1,6 @@
 'use client'
 
 import type { CSSProperties } from 'react'
-import { Zap } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SIZE, rc, type Cell, type MoveResult } from '@/lib/rek/engine'
 import { PieceToken } from './piece-token'
@@ -33,7 +32,7 @@ export function Board({
   const cells = flipped ? [...order].reverse() : order
 
   return (
-    <div className="relative aspect-square w-full max-w-[min(94vw,36rem)] select-none touch-manipulation">
+    <div className="relative aspect-square w-full max-w-[43rem] select-none touch-manipulation">
       <div className="rek-board-shell h-full w-full">
         <span className="rek-board-corner rek-board-corner-tl" aria-hidden="true" />
         <span className="rek-board-corner rek-board-corner-tr" aria-hidden="true" />
@@ -73,12 +72,13 @@ export function Board({
               ? `${piece.player === 'you' ? 'White' : 'Black'} ${piece.king ? 'King' : 'piece'}`
               : 'empty'
             const actionLabel = isLegal ? ', legal destination' : ''
+            const threatLabel = isThreatened ? ', tactically threatened' : ''
 
             const pieceToken = piece ? (
               <PieceToken
                 piece={piece}
                 selected={isSelected}
-                className={cn(isWinnerKing && 'ring-4 ring-gold shadow-[0_0_24px_var(--gold-glow)]')}
+                className={cn(isWinnerKing && 'ring-2 ring-gold ring-offset-1 ring-offset-background')}
               />
             ) : null
 
@@ -88,7 +88,7 @@ export function Board({
                 type="button"
                 disabled={!interactive}
                 onClick={() => onSelect(index)}
-                aria-label={`${coord}, ${pieceLabel}${actionLabel}`}
+                aria-label={`${coord}, ${pieceLabel}${actionLabel}${threatLabel}`}
                 aria-pressed={isSelected || undefined}
                 className={cn(
                   'rek-board-square relative flex aspect-square items-center justify-center overflow-visible outline-none select-none touch-manipulation',
@@ -98,12 +98,12 @@ export function Board({
                 )}
               >
                 {col === 0 && (
-                  <span className="rek-coordinate pointer-events-none absolute top-0.5 left-1 font-mono text-[8px] font-bold sm:text-[9px]">
+                  <span className="rek-coordinate pointer-events-none absolute left-1 top-0.5 font-mono text-[7px] font-bold sm:text-[9px]">
                     {SIZE - row}
                   </span>
                 )}
                 {row === 7 && (
-                  <span className="rek-coordinate pointer-events-none absolute right-1 bottom-0.5 font-mono text-[8px] font-bold sm:text-[9px]">
+                  <span className="rek-coordinate pointer-events-none absolute bottom-0.5 right-1 font-mono text-[7px] font-bold sm:text-[9px]">
                     {String.fromCharCode(97 + col)}
                   </span>
                 )}
@@ -140,12 +140,10 @@ export function Board({
 
                 {isThreatened && (
                   <span
-                    className="absolute top-1 right-1 z-30 flex size-4 items-center justify-center rounded-full bg-destructive shadow-lg ring-2 ring-background"
+                    className="absolute right-1 top-1 z-30 size-2 border border-background/80 bg-destructive"
                     aria-hidden="true"
-                    title="Under attack!"
-                  >
-                    <Zap className="size-2.5 text-white" />
-                  </span>
+                    title="Tactically threatened"
+                  />
                 )}
 
                 {isLegal && !piece && !isRek && !isPoat && (
