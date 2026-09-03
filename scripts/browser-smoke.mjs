@@ -155,6 +155,14 @@ async function waitForRoute(page, expectedText, timeoutMs = 8000) {
   return snapshot
 }
 
+function runtimeFailures(page) {
+  const failures = []
+  if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
+  if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
+  if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
+  return failures
+}
+
 async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage) {
   page.exceptions = []
   page.consoleErrors = []
@@ -180,9 +188,7 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   if (!snapshot.text.trim()) failures.push('body text is empty')
   if (snapshot.htmlLength < 100) failures.push(`body HTML unexpectedly small (${snapshot.htmlLength})`)
   if (!includesText(snapshot.text, expectedText)) failures.push(`missing expected text: ${expectedText}`)
-  if (page.exceptions.length) failures.push(`runtime exceptions: ${page.exceptions.join(' | ')}`)
-  if (page.consoleErrors.length) failures.push(`console errors: ${page.consoleErrors.join(' | ')}`)
-  if (page.resourceErrors.length) failures.push(`resource errors: ${page.resourceErrors.join(' | ')}`)
+  failures.push(...runtimeFailures(page))
 
   if (failures.length) {
     const bodyPreview = snapshot.text.replace(/\s+/g, ' ').trim().slice(0, 700)
@@ -193,6 +199,46 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   }
 
   console.log(`✓ ${route}${denyStorage ? ' [storage denied]' : ''}`)
+}
+
+async function assertBlockedAudioNavigation(page, baseUrl) {
+  page.exceptions = []
+  page.consoleErrors = []
+  page.resourceErrors = []
+
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `
+      for (const key of ['AudioContext', 'webkitAudioContext']) {
+        try {
+          Object.defineProperty(window, key, {
+            configurable: true,
+            get() { throw new DOMException('Web Audio disabled by smoke test', 'SecurityError') }
+          });
+        } catch {}
+      }
+    `,
+  })
+
+  await page.send('Page.navigate', { url: `${baseUrl}/` })
+  const home = await waitForRoute(page, 'Rek Khmer')
+  if (!includesText(home.text, 'Rek Khmer')) {
+    throw new Error('blocked WebAudio interaction: home route did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `document.querySelector('a[href="/play"]')?.click()`,
+  })
+  const play = await waitForRoute(page, 'Choose Game Mode')
+
+  const failures = []
+  if (!includesText(play.text, 'Choose Game Mode')) failures.push('navigation to /play did not complete')
+  failures.push(...runtimeFailures(page))
+
+  if (failures.length) {
+    throw new Error(`blocked WebAudio interaction: ${failures.join('; ')}`)
+  }
+
+  console.log('✓ navigation interaction [WebAudio denied]')
 }
 
 const chromePath = findChrome()
@@ -229,6 +275,13 @@ try {
         page.close()
       }
     }
+  }
+
+  const interactionPage = await createPage(debugPort)
+  try {
+    await assertBlockedAudioNavigation(interactionPage, baseUrl)
+  } finally {
+    interactionPage.close()
   }
 } catch (error) {
   console.error(error)
