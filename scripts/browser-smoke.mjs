@@ -2,9 +2,13 @@ import { spawn, spawnSync } from 'node:child_process'
 
 const routes = [
   ['/', 'Rek Khmer'],
+  ['/play', 'Choose Game Mode'],
   ['/play/local', 'Pass & Play'],
   ['/play/ai', 'Khmer AI Battle'],
   ['/play/puzzle', 'King Defense Puzzles'],
+  ['/play/online', 'Play Online'],
+  ['/how-to-play', 'How to Play'],
+  ['/profile', 'Bopha Nak'],
   ['/settings', 'Preferences'],
 ]
 
