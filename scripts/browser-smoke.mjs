@@ -12,6 +12,8 @@ const routes = [
   ['/settings', 'Preferences'],
 ]
 
+const mobileRoutes = routes.filter(([route]) => route !== '/play/online')
+
 function findChrome() {
   for (const candidate of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
     const result = spawnSync('which', [candidate], { encoding: 'utf8' })
@@ -201,6 +203,49 @@ async function navigateAndAssert(page, baseUrl, route, expectedText, denyStorage
   console.log(`✓ ${route}${denyStorage ? ' [storage denied]' : ''}`)
 }
 
+async function assertMobileLayout(page, baseUrl, route, expectedText) {
+  page.exceptions = []
+  page.consoleErrors = []
+  page.resourceErrors = []
+
+  await page.send('Emulation.setDeviceMetricsOverride', {
+    width: 360,
+    height: 800,
+    deviceScaleFactor: 1,
+    mobile: true,
+  })
+  await page.send('Page.navigate', { url: `${baseUrl}${route}` })
+  const snapshot = await waitForRoute(page, expectedText)
+
+  const metrics = await page.send('Runtime.evaluate', {
+    expression: `JSON.stringify({
+      innerWidth: window.innerWidth,
+      bodyScrollWidth: document.body?.scrollWidth || 0,
+      docScrollWidth: document.documentElement?.scrollWidth || 0,
+      boardWidth: document.querySelector('.rek-board-shell')?.getBoundingClientRect().width || 0
+    })`,
+    returnByValue: true,
+  })
+  const layout = JSON.parse(metrics.result.value)
+  const maxScrollWidth = Math.max(layout.bodyScrollWidth, layout.docScrollWidth)
+
+  const failures = []
+  if (!includesText(snapshot.text, expectedText)) failures.push(`missing expected text: ${expectedText}`)
+  if (maxScrollWidth > layout.innerWidth + 1) {
+    failures.push(`horizontal overflow: scrollWidth=${maxScrollWidth}, viewport=${layout.innerWidth}`)
+  }
+  if (layout.boardWidth > 0 && layout.boardWidth > layout.innerWidth + 1) {
+    failures.push(`board overflow: board=${layout.boardWidth}, viewport=${layout.innerWidth}`)
+  }
+  failures.push(...runtimeFailures(page))
+
+  if (failures.length) {
+    throw new Error(`${route} [360px mobile]: ${failures.join('; ')}`)
+  }
+
+  console.log(`✓ ${route} [360px mobile]`)
+}
+
 async function assertBlockedAudioNavigation(page, baseUrl) {
   page.exceptions = []
   page.consoleErrors = []
@@ -337,6 +382,15 @@ try {
       } finally {
         page.close()
       }
+    }
+  }
+
+  for (const [route, expectedText] of mobileRoutes) {
+    const page = await createPage(debugPort)
+    try {
+      await assertMobileLayout(page, baseUrl, route, expectedText)
+    } finally {
+      page.close()
     }
   }
 
