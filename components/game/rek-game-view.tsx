@@ -3,23 +3,18 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
+  AlertTriangle,
+  BookOpen,
   ChevronLeft,
+  History,
   Play,
-  X,
+  RotateCcw,
+  ShieldAlert,
   Sparkles,
   Target,
-  ShieldAlert,
-  BookOpen,
-  AlertTriangle,
-  History,
-  RotateCcw,
   Volume2,
   VolumeX,
-  Flame,
-  Crown,
-  Swords,
-  Shield,
-  Zap,
+  X,
 } from 'lucide-react'
 import { Board } from './board'
 import { PlayerCard, type ConnectionState } from './player-card'
@@ -33,15 +28,6 @@ import { sounds } from '@/lib/sound'
 import { cn } from '@/lib/utils'
 
 type Engine = ReturnType<typeof useRekEngine>
-
-const EMOTES = [
-  { id: 'fire', icon: Flame, label: 'Angkor Fire', color: 'text-amber-500' },
-  { id: 'crown', icon: Crown, label: 'Royal King', color: 'text-gold' },
-  { id: 'swords', icon: Swords, label: 'Battle Strike', color: 'text-red-400' },
-  { id: 'shield', icon: Shield, label: 'Fortress Guard', color: 'text-emerald-400' },
-  { id: 'sparkles', icon: Sparkles, label: 'Glorious Rek', color: 'text-cyan-400' },
-  { id: 'zap', icon: Zap, label: 'Blitz Shock', color: 'text-yellow-400' },
-]
 
 export function RekGameView({
   engine,
@@ -94,21 +80,18 @@ export function RekGameView({
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isMuted, setIsMuted] = useState(() => sounds.isMuted())
   const [resigned, setResigned] = useState<Player | null>(null)
-  const [activeEmote, setActiveEmote] = useState<{
-    icon: React.ElementType
-    color: string
-    id: number
-  } | null>(null)
 
   const modalOpen = pauseOpen || resignOpen || infoOpen || historyOpen
-  const interactive =
-    game.status === 'playing' && canControlTurn && !resigned && !modalOpen
+  const interactive = game.status === 'playing' && canControlTurn && !resigned && !modalOpen
 
   const winner = resigned ? (resigned === 'you' ? 'opp' : 'you') : game.winner
   const resignedName = resigned === 'you' ? youName : resigned === 'opp' ? oppName : null
   const winReason = resignedName ? `${resignedName} resigned` : game.winReason
   const gameOver = game.status !== 'playing' || resigned !== null
   const winnerKing = winner && winner !== 'draw' ? kingIndex(game.board, winner) : null
+
+  const topPlayer: Player = perspective === 'opp' ? 'you' : 'opp'
+  const bottomPlayer: Player = perspective === 'opp' ? 'opp' : 'you'
 
   const handlePlayAgain = () => {
     reset()
@@ -118,309 +101,300 @@ export function RekGameView({
   }
 
   const handleToggleSound = () => {
-    const muted = sounds.toggleMute()
-    setIsMuted(muted)
-  }
-
-  const sendEmote = (emote: (typeof EMOTES)[0]) => {
-    sounds.playSelect()
-    setActiveEmote({ icon: emote.icon, color: emote.color, id: Date.now() })
-    setTimeout(() => {
-      setActiveEmote(null)
-    }, 2200)
+    setIsMuted(sounds.toggleMute())
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-temple selection:bg-gold/30 relative overflow-x-hidden">
+    <div className="bg-temple relative flex min-h-dvh flex-col overflow-x-hidden selection:bg-gold/20">
       {bannerAlert && (
-        <div className="fixed top-18 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-bounce">
-          <div className="flex items-center gap-2 rounded-full border border-gold bg-background/95 px-5 py-2.5 shadow-2xl shadow-gold/40 backdrop-blur-xl ring-4 ring-gold/40">
-            <Sparkles className="size-5 text-gold animate-spin" style={{ animationDuration: '3s' }} />
-            <span className="font-display text-sm font-black text-gold tracking-wider uppercase">
-              {bannerAlert}
-            </span>
+        <div className="pointer-events-none fixed left-1/2 top-16 z-50 w-[min(92vw,34rem)] -translate-x-1/2 animate-fade-rise">
+          <div className="flex items-center gap-2 border border-gold/45 bg-background/96 px-4 py-2.5 shadow-2xl shadow-black/40 backdrop-blur-md">
+            <Sparkles className="size-4 shrink-0 text-gold" />
+            <span className="text-xs font-black uppercase tracking-[0.1em] text-gold">{bannerAlert}</span>
           </div>
         </div>
       )}
 
-      {activeEmote && (
-        <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-bounce">
-          <div className="flex items-center gap-2 rounded-full border border-gold/50 bg-background/95 px-4 py-2 shadow-2xl backdrop-blur-xl ring-2 ring-gold/40">
-            <activeEmote.icon
-              className={cn('size-6 animate-spin', activeEmote.color)}
-              style={{ animationDuration: '3s' }}
-            />
-            <span className="font-display text-sm font-bold text-foreground">Bravo!</span>
+      <header className="sticky top-0 z-30 border-b border-border/80 bg-background/94 backdrop-blur-md">
+        <div className="mx-auto flex h-14 w-full max-w-[1280px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
+          <Link
+            href={exitHref}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-md px-1.5 text-sm font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+          >
+            <ChevronLeft className="size-4" />
+            <span className="hidden sm:inline">Exit</span>
+          </Link>
+
+          <div className="min-w-0 text-center">
+            <p className="truncate font-display text-sm font-semibold text-foreground sm:text-base">{title}</p>
+            <p className="mt-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              Move {game.moveCount + 1} · {game.mode === 'MIN_REK_CHANH' ? 'Min Rek Chanh' : 'Rek Poat'}
+            </p>
           </div>
-        </div>
-      )}
 
-      <header className="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 py-3 sm:px-4 backdrop-blur-xl shadow-md">
-        <Link
-          href={exitHref}
-          className="flex shrink-0 items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-sm font-semibold text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground active:scale-95"
-        >
-          <ChevronLeft className="size-4.5" />
-          <span className="hidden min-[380px]:inline">Exit</span>
-        </Link>
-
-        <div className="flex min-w-0 items-center justify-center gap-1.5 sm:gap-2">
-          <span className="max-w-[44vw] truncate font-display text-xs font-bold tracking-wider text-gold uppercase drop-shadow-[0_0_8px_var(--gold-soft)] sm:max-w-none sm:text-sm">
-            {title}
-          </span>
-          <span className="shrink-0 rounded-full bg-gold/15 px-2 py-0.5 text-[0.6rem] font-bold text-gold ring-1 ring-gold/30 font-mono sm:text-[0.65rem]">
-            Turn {game.moveCount + 1}
-          </span>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
-          <button
-            onClick={handleToggleSound}
-            aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
-            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-accent hover:text-gold active:scale-95"
-            title={isMuted ? 'Unmute Sound' : 'Mute Sound'}
-          >
-            {isMuted ? (
-              <VolumeX className="size-4 text-destructive" />
-            ) : (
-              <Volume2 className="size-4 text-gold" />
-            )}
-          </button>
-          <button
-            onClick={() => setHistoryOpen(true)}
-            aria-label="Open move history"
-            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-accent hover:text-gold active:scale-95"
-            title="Move History"
-          >
-            <History className="size-4" />
-          </button>
-          <button
-            onClick={() => setInfoOpen(true)}
-            aria-label="Open rules"
-            className="flex size-9 items-center justify-center rounded-xl text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-gold active:scale-95 sm:w-auto sm:px-2.5"
-          >
-            <BookOpen className="size-4" />
-            <span className="hidden sm:inline sm:ml-1">Rules</span>
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleToggleSound}
+              aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}
+              className="flex size-10 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              aria-label="Open move history"
+              className="flex size-10 items-center justify-center rounded-md text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              <History className="size-4" />
+            </button>
+          </div>
         </div>
       </header>
 
       {banner}
 
-      <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-3 px-3 pt-2 pb-8 sm:px-4 animate-fade-rise">
-        <PlayerCard
-          player={perspective === 'opp' ? 'you' : 'opp'}
-          name={oppName}
-          active={game.turn === (perspective === 'opp' ? 'you' : 'opp') && !gameOver}
-          piecesLeft={countPieces(game.board, perspective === 'opp' ? 'you' : 'opp')}
-          captured={
-            perspective === 'opp' ? game.captured.opp.length : game.captured.you.length
-          }
-          timer={timers?.opp}
-          connection={connections?.opp}
-        />
-
-        <TurnIndicator
-          turn={game.turn}
-          youName={youName}
-          oppName={oppName}
-          rekAvailable={rekAvailable && !gameOver}
-        />
-
-        <div className="flex justify-center py-1">
-          <Board
-            board={game.board}
-            selected={selected}
-            moveResults={moveResults}
-            lastMove={game.lastMove}
-            lastCaptured={game.lastCaptured}
-            interactive={interactive}
-            flipped={flipped}
-            onSelect={select}
-            threatened={threatened}
-            winnerKing={gameOver ? winnerKing : null}
-          />
-        </div>
-
-        <PlayerCard
-          player={perspective === 'opp' ? 'opp' : 'you'}
-          name={youName}
-          active={game.turn === (perspective === 'opp' ? 'opp' : 'you') && !gameOver}
-          piecesLeft={countPieces(game.board, perspective === 'opp' ? 'opp' : 'you')}
-          captured={
-            perspective === 'opp' ? game.captured.you.length : game.captured.opp.length
-          }
-          timer={timers?.you}
-          connection={connections?.you}
-        />
-
-        {showUtilityBar && (
-          <div className="flex items-center justify-between gap-1.5 rounded-2xl border border-border/80 bg-card/60 px-2.5 py-2 backdrop-blur-md sm:px-3">
-            <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
-              {EMOTES.map((em) => (
-                <button
-                  key={em.id}
-                  onClick={() => sendEmote(em)}
-                  aria-label={em.label}
-                  className="flex size-8 items-center justify-center rounded-xl bg-background/60 hover:bg-gold/20 hover:scale-110 active:scale-95 transition-all text-foreground touch-manipulation"
-                  title={em.label}
-                >
-                  <em.icon className={cn('size-4', em.color)} />
-                </button>
-              ))}
-            </div>
-            {canUndo && !connections && (
-              <button
-                onClick={undo}
-                className="flex shrink-0 items-center gap-1.5 rounded-xl bg-secondary/90 px-3 py-1.5 text-xs font-bold text-foreground hover:bg-gold hover:text-background transition-all active:scale-95 shadow-sm ring-1 ring-border touch-manipulation"
-                title="Undo last move"
-              >
-                <RotateCcw className="size-3.5" />
-                <span>Undo</span>
-              </button>
-            )}
-          </div>
-        )}
-
-        {showMatchControls && (
-          <div className="mt-0.5">
-            <GameControls
-              onPause={() => setPauseOpen(true)}
-              onInfo={() => setInfoOpen(true)}
-              onRestart={perspective === 'neutral' || !connections ? handlePlayAgain : undefined}
-              onResign={() => setResignOpen(true)}
+      <main className="mx-auto w-full max-w-[1280px] flex-1 px-3 py-3 sm:px-4 sm:py-5 lg:px-6 lg:py-6">
+        <div className="lg:grid lg:grid-cols-[220px_minmax(0,1fr)_220px] lg:items-start lg:gap-5 xl:grid-cols-[240px_minmax(0,1fr)_250px] xl:gap-6">
+          <div className="mb-2 lg:hidden">
+            <PlayerCard
+              player={topPlayer}
+              name={oppName}
+              active={game.turn === topPlayer && !gameOver}
+              piecesLeft={countPieces(game.board, topPlayer)}
+              captured={topPlayer === 'you' ? game.captured.you.length : game.captured.opp.length}
+              timer={timers?.opp}
+              connection={connections?.opp}
             />
           </div>
-        )}
-      </div>
+
+          <aside className="hidden lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
+            <div>
+              <p className="rk-eyebrow mb-2">Opponent</p>
+              <PlayerCard
+                player={topPlayer}
+                name={oppName}
+                active={game.turn === topPlayer && !gameOver}
+                piecesLeft={countPieces(game.board, topPlayer)}
+                captured={topPlayer === 'you' ? game.captured.you.length : game.captured.opp.length}
+                timer={timers?.opp}
+                connection={connections?.opp}
+              />
+            </div>
+
+            <div className="rk-rule" />
+
+            <div>
+              <p className="rk-eyebrow mb-2">Your side</p>
+              <PlayerCard
+                player={bottomPlayer}
+                name={youName}
+                active={game.turn === bottomPlayer && !gameOver}
+                piecesLeft={countPieces(game.board, bottomPlayer)}
+                captured={bottomPlayer === 'you' ? game.captured.you.length : game.captured.opp.length}
+                timer={timers?.you}
+                connection={connections?.you}
+              />
+            </div>
+
+            <div className="border border-border bg-card/40 p-3 text-xs leading-5 text-muted-foreground">
+              <p className="font-bold text-foreground">Board state</p>
+              <p className="mt-1">Selected and legal destinations come directly from the Rek engine.</p>
+            </div>
+          </aside>
+
+          <section className="min-w-0">
+            <TurnIndicator
+              turn={game.turn}
+              youName={youName}
+              oppName={oppName}
+              rekAvailable={rekAvailable && !gameOver}
+            />
+
+            <div className="flex justify-center py-2.5 sm:py-3">
+              <Board
+                board={game.board}
+                selected={selected}
+                moveResults={moveResults}
+                lastMove={game.lastMove}
+                lastCaptured={game.lastCaptured}
+                interactive={interactive}
+                flipped={flipped}
+                onSelect={select}
+                threatened={threatened}
+                winnerKing={gameOver ? winnerKing : null}
+              />
+            </div>
+
+            <div className="mt-1 lg:hidden">
+              <PlayerCard
+                player={bottomPlayer}
+                name={youName}
+                active={game.turn === bottomPlayer && !gameOver}
+                piecesLeft={countPieces(game.board, bottomPlayer)}
+                captured={bottomPlayer === 'you' ? game.captured.you.length : game.captured.opp.length}
+                timer={timers?.you}
+                connection={connections?.you}
+              />
+            </div>
+
+            <div className="mt-3 lg:hidden">
+              <MobileUtilityBar
+                show={showUtilityBar}
+                canUndo={canUndo && !connections}
+                onUndo={undo}
+                onHistory={() => setHistoryOpen(true)}
+                onRules={() => setInfoOpen(true)}
+              />
+              {showMatchControls && (
+                <div className="mt-2">
+                  <GameControls
+                    onPause={() => setPauseOpen(true)}
+                    onInfo={() => setInfoOpen(true)}
+                    onRestart={perspective === 'neutral' || !connections ? handlePlayAgain : undefined}
+                    onResign={() => setResignOpen(true)}
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          <aside className="hidden lg:sticky lg:top-20 lg:flex lg:flex-col lg:gap-4">
+            {showUtilityBar && (
+              <div className="border border-border bg-card/52 p-3">
+                <p className="rk-eyebrow">Match tools</p>
+                <div className="mt-3 grid gap-1">
+                  {canUndo && !connections && (
+                    <SideAction icon={RotateCcw} label="Undo last move" onClick={undo} />
+                  )}
+                  <SideAction icon={History} label="Move history" onClick={() => setHistoryOpen(true)} />
+                  <SideAction icon={BookOpen} label="Rules" onClick={() => setInfoOpen(true)} />
+                </div>
+              </div>
+            )}
+
+            <div className="border border-border bg-card/38 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <p className="rk-eyebrow">Recent moves</p>
+                <span className="font-mono text-[10px] text-muted-foreground">{history.length}</span>
+              </div>
+              <HistoryPreview history={history} />
+            </div>
+
+            {showMatchControls && (
+              <GameControls
+                onPause={() => setPauseOpen(true)}
+                onInfo={() => setInfoOpen(true)}
+                onRestart={perspective === 'neutral' || !connections ? handlePlayAgain : undefined}
+                onResign={() => setResignOpen(true)}
+              />
+            )}
+          </aside>
+        </div>
+      </main>
 
       <Modal open={historyOpen} onClose={() => setHistoryOpen(false)}>
-        <div className="flex items-center justify-between pb-3 border-b border-border/70">
+        <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
           <div className="flex items-center gap-2">
-            <History className="size-5 text-gold" />
-            <h2 className="font-display text-xl font-bold text-foreground">Tactical History</h2>
+            <History className="size-4 text-gold" />
+            <h2 className="font-display text-xl font-semibold text-foreground">Move History</h2>
           </div>
-          <span className="rounded-full bg-gold/15 px-2.5 py-0.5 text-xs font-bold text-gold font-mono">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
             {history.length} moves
           </span>
         </div>
 
-        <div className="mt-4 max-h-72 overflow-y-auto pr-1 flex flex-col gap-2 divide-y divide-border/40">
+        <div className="mt-3 max-h-80 overflow-y-auto">
           {history.length === 0 ? (
-            <p className="text-center py-8 text-sm text-muted-foreground">
-              No moves recorded yet. Slide your first piece!
-            </p>
+            <p className="py-8 text-center text-sm text-muted-foreground">No moves recorded yet.</p>
           ) : (
-            history.map((m, i) => (
-              <div key={i} className="pt-2 flex items-center justify-between gap-2 text-xs">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="font-mono text-muted-foreground w-6 font-bold">
-                    #{history.length - i}
-                  </span>
-                  <span
-                    className={cn(
-                      'size-2 shrink-0 rounded-full',
-                      m.player === 'you' ? 'bg-you' : 'bg-opp',
-                    )}
-                  />
-                  <span className="truncate font-bold text-foreground">{m.pieceName}</span>
-                  <span className="shrink-0 font-mono text-gold bg-gold/10 px-1.5 py-0.5 rounded border border-gold/30 font-semibold">
-                    {m.fromCoord} → {m.toCoord}
-                  </span>
+            <div className="divide-y divide-border">
+              {history.map((move, index) => (
+                <div key={`${move.from}-${move.to}-${index}`} className="flex items-center justify-between gap-3 py-2.5 text-xs">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-foreground">{move.pieceName}</p>
+                    <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                      {move.fromCoord} → {move.toCoord}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {move.rek && <TacticalTag label="REK" tone="gold" />}
+                    {move.poat && <TacticalTag label="POAT" tone="opp" />}
+                    {move.captures > 0 && <span className="font-mono text-[10px] text-muted-foreground">+{move.captures}</span>}
+                  </div>
                 </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  {m.rek && (
-                    <span className="rounded-full bg-gold px-2 py-0.5 text-[10px] font-extrabold text-background shadow-sm">
-                      REK!
-                    </span>
-                  )}
-                  {m.poat && (
-                    <span className="rounded-full bg-cyan-400 px-2 py-0.5 text-[10px] font-extrabold text-background shadow-sm">
-                      POAT!
-                    </span>
-                  )}
-                  {m.captures > 0 && !m.rek && !m.poat && (
-                    <span className="rounded-full bg-destructive/20 text-destructive px-2 py-0.5 text-[10px] font-bold">
-                      +{m.captures}
-                    </span>
-                  )}
-                  <span className="hidden text-[10px] text-muted-foreground font-mono sm:inline">
-                    {m.timestamp}
-                  </span>
-                </div>
-              </div>
-            ))
+              ))}
+            </div>
           )}
         </div>
       </Modal>
 
       <Modal open={pauseOpen} onClose={() => setPauseOpen(false)} className="text-center">
-        <h2 className="font-display text-2xl font-bold">Game Paused</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Match paused. Ready when you are.</p>
+        <p className="rk-eyebrow">Match state</p>
+        <h2 className="mt-1 font-display text-2xl font-semibold text-foreground">Game Paused</h2>
+        <p className="mt-2 text-sm text-muted-foreground">The board is locked until the match resumes.</p>
         <button
+          type="button"
           onClick={() => setPauseOpen(false)}
-          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-gold font-bold text-background shadow-lg shadow-gold/30 ring-1 ring-gold transition-all duration-200 hover:opacity-90"
+          className="mt-5 flex h-12 w-full items-center justify-center gap-2 rounded-md bg-gold font-extrabold text-background outline-none transition-colors hover:bg-[#e3c783] focus-visible:ring-2 focus-visible:ring-gold/70"
         >
-          <Play className="size-4.5" />
+          <Play className="size-4" />
           <span>Resume Match</span>
         </button>
       </Modal>
 
       <Modal open={resignOpen} onClose={() => setResignOpen(false)}>
-        <div className="flex items-center gap-2 text-destructive mb-1">
-          <AlertTriangle className="size-5" />
-          <h2 className="font-display text-2xl font-bold">Resign Match?</h2>
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-1 size-5 shrink-0 text-destructive" />
+          <div>
+            <h2 className="font-display text-2xl font-semibold text-foreground">Resign Match?</h2>
+            <p className="mt-1 text-sm leading-5 text-muted-foreground">
+              The resigning side loses immediately. The board itself will not be changed.
+            </p>
+          </div>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          The player whose turn it is will resign and the opponent will be awarded victory.
-        </p>
-        <div className="mt-5 flex gap-2.5">
+        <div className="mt-5 grid grid-cols-2 gap-2">
           <button
+            type="button"
             onClick={() => setResignOpen(false)}
-            className="flex h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-border/80 bg-card font-semibold transition-colors hover:bg-accent"
+            className="flex h-11 items-center justify-center gap-2 rounded-md border border-border bg-card font-semibold text-foreground outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-gold/70"
           >
             <X className="size-4" />
-            <span>Keep Playing</span>
+            Keep Playing
           </button>
           <button
+            type="button"
             onClick={() => {
               setResigned(perspective === 'neutral' ? game.turn : (perspective as Player))
               setResignOpen(false)
             }}
-            className="flex h-12 flex-1 items-center justify-center rounded-2xl bg-destructive/20 font-bold text-destructive ring-1 ring-destructive/40 transition-colors hover:bg-destructive/30"
+            className="flex h-11 items-center justify-center rounded-md border border-destructive/35 bg-destructive/10 font-bold text-destructive outline-none transition-colors hover:bg-destructive/16 focus-visible:ring-2 focus-visible:ring-destructive/60"
           >
-            <span>Resign</span>
+            Resign
           </button>
         </div>
       </Modal>
 
       <Modal open={infoOpen} onClose={() => setInfoOpen(false)}>
-        <h2 className="font-display text-2xl font-bold text-foreground">How Rek Works</h2>
-        <ul className="mt-4 flex flex-col gap-3 text-sm">
-          <li className="flex gap-3 items-start bg-card/60 p-3 rounded-xl border border-border/60">
-            <Target className="mt-0.5 size-5 shrink-0 text-gold" />
-            <span>
-              <strong className="text-foreground">Rook Slide:</strong> Move any number of empty squares horizontally or vertically.
-            </span>
-          </li>
-          <li className="flex gap-3 items-start bg-card/60 p-3 rounded-xl border border-border/60">
-            <Sparkles className="mt-0.5 size-5 shrink-0 text-gold" />
-            <span>
-              <strong className="text-foreground">Rek (Gánh):</strong> Step between 2 enemy pieces horizontally or vertically to capture them!
-            </span>
-          </li>
-          <li className="flex gap-3 items-start bg-card/60 p-3 rounded-xl border border-border/60">
-            <ShieldAlert className="mt-0.5 size-5 shrink-0 text-cyan-400" />
-            <span>
-              <strong className="text-foreground">Poat (Bao Vây):</strong> Fully enclose an enemy cluster with 0 open squares to capture all of them!
-            </span>
-          </li>
-        </ul>
+        <p className="rk-eyebrow">Quick rules</p>
+        <h2 className="mt-1 font-display text-2xl font-semibold text-foreground">How Rek Works</h2>
+        <div className="mt-4 divide-y divide-border border-y border-border">
+          <RuleRow icon={Target} title="Rook-like slide">
+            Move any number of empty squares horizontally or vertically. Pieces cannot jump or land on occupied squares.
+          </RuleRow>
+          <RuleRow icon={Sparkles} title="Rek">
+            Land between an adjacent opposite-side enemy pair to capture that pair.
+          </RuleRow>
+          <RuleRow icon={ShieldAlert} title="Poat">
+            After Rek resolves, connected enemy groups with zero orthogonal liberties are captured.
+          </RuleRow>
+        </div>
         <Link
           href="/how-to-play"
-          className="mt-5 flex h-12 w-full items-center justify-center rounded-2xl bg-accent font-semibold text-gold border border-gold/30 transition-all duration-200 hover:bg-gold hover:text-background"
+          className="mt-5 flex h-11 w-full items-center justify-center rounded-md border border-gold/30 bg-gold-soft font-bold text-gold outline-none transition-colors hover:bg-gold hover:text-background focus-visible:ring-2 focus-visible:ring-gold/70"
         >
-          View Full Interactive Guide
+          View Full Guide
         </Link>
       </Modal>
 
@@ -435,6 +409,131 @@ export function RekGameView({
           onPlayAgain={handlePlayAgain}
         />
       )}
+    </div>
+  )
+}
+
+function SideAction({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex min-h-10 w-full items-center gap-2 rounded-md px-2 text-left text-xs font-semibold text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+    >
+      <Icon className="size-4 text-gold" />
+      <span>{label}</span>
+    </button>
+  )
+}
+
+function MobileUtilityBar({
+  show,
+  canUndo,
+  onUndo,
+  onHistory,
+  onRules,
+}: {
+  show: boolean
+  canUndo: boolean
+  onUndo: () => void
+  onHistory: () => void
+  onRules: () => void
+}) {
+  if (!show) return null
+
+  return (
+    <div className="grid grid-cols-3 gap-px overflow-hidden border border-border bg-border">
+      <UtilityButton icon={RotateCcw} label="Undo" onClick={onUndo} disabled={!canUndo} />
+      <UtilityButton icon={History} label="History" onClick={onHistory} />
+      <UtilityButton icon={BookOpen} label="Rules" onClick={onRules} />
+    </div>
+  )
+}
+
+function UtilityButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled = false,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  label: string
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-11 items-center justify-center gap-1.5 bg-card px-2 text-[11px] font-bold text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-foreground disabled:cursor-not-allowed disabled:opacity-35 focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold/70"
+    >
+      <Icon className="size-3.5" />
+      <span>{label}</span>
+    </button>
+  )
+}
+
+function HistoryPreview({ history }: { history: Engine['history'] }) {
+  if (history.length === 0) {
+    return <p className="mt-3 text-xs leading-5 text-muted-foreground">No moves yet.</p>
+  }
+
+  return (
+    <div className="mt-3 divide-y divide-border">
+      {history.slice(0, 5).map((move, index) => (
+        <div key={`${move.from}-${move.to}-${index}`} className="flex items-center justify-between gap-2 py-2 text-[11px]">
+          <span className="font-mono text-foreground">{move.fromCoord}→{move.toCoord}</span>
+          <div className="flex items-center gap-1">
+            {move.rek && <TacticalTag label="R" tone="gold" />}
+            {move.poat && <TacticalTag label="P" tone="opp" />}
+            {move.captures > 0 && <span className="text-muted-foreground">+{move.captures}</span>}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function TacticalTag({ label, tone }: { label: string; tone: 'gold' | 'opp' }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex min-w-5 items-center justify-center border px-1 py-0.5 font-mono text-[8px] font-black',
+        tone === 'gold'
+          ? 'border-gold/35 bg-gold-soft text-gold'
+          : 'border-opp/35 bg-opp-soft text-opp',
+      )}
+    >
+      {label}
+    </span>
+  )
+}
+
+function RuleRow({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="grid grid-cols-[auto_1fr] gap-3 py-3.5 text-sm">
+      <Icon className="mt-0.5 size-4 text-gold" />
+      <div>
+        <p className="font-bold text-foreground">{title}</p>
+        <p className="mt-1 leading-5 text-muted-foreground">{children}</p>
+      </div>
     </div>
   )
 }
