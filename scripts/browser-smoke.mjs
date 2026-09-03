@@ -241,6 +241,69 @@ async function assertBlockedAudioNavigation(page, baseUrl) {
   console.log('✓ navigation interaction [WebAudio denied]')
 }
 
+async function assertBlockedClipboardCopy(page, baseUrl) {
+  page.exceptions = []
+  page.consoleErrors = []
+  page.resourceErrors = []
+
+  await page.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `
+      window.__rekUnhandledRejections = 0;
+      window.addEventListener('unhandledrejection', (event) => {
+        window.__rekUnhandledRejections += 1;
+        event.preventDefault();
+      });
+      try {
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText() {
+              return Promise.reject(new DOMException('Clipboard disabled by smoke test', 'NotAllowedError'));
+            }
+          }
+        });
+      } catch {}
+    `,
+  })
+
+  await page.send('Page.navigate', { url: `${baseUrl}/play/online` })
+  const lobby = await waitForRoute(page, 'Play Online')
+  if (!includesText(lobby.text, 'Create Room')) {
+    throw new Error('blocked clipboard interaction: online lobby did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `Array.from(document.querySelectorAll('button')).find((button) => button.textContent?.includes('Create Room'))?.click()`,
+  })
+
+  const waiting = await waitForRoute(page, 'Room Access Code', 5000)
+  if (!includesText(waiting.text, 'Room Access Code')) {
+    throw new Error('blocked clipboard interaction: room code state did not render')
+  }
+
+  await page.send('Runtime.evaluate', {
+    expression: `document.querySelector('button[title="Copy code"]')?.click()`,
+  })
+  await delay(250)
+
+  const rejectionResult = await page.send('Runtime.evaluate', {
+    expression: `window.__rekUnhandledRejections || 0`,
+    returnByValue: true,
+  })
+
+  const failures = []
+  if (rejectionResult.result.value !== 0) {
+    failures.push(`unhandled clipboard rejections: ${rejectionResult.result.value}`)
+  }
+  failures.push(...runtimeFailures(page))
+
+  if (failures.length) {
+    throw new Error(`blocked clipboard interaction: ${failures.join('; ')}`)
+  }
+
+  console.log('✓ room-code copy interaction [clipboard denied]')
+}
+
 const chromePath = findChrome()
 const debugPort = Number(process.env.REK_CHROME_DEBUG_PORT || '9222')
 const chrome = spawn(
@@ -277,11 +340,18 @@ try {
     }
   }
 
-  const interactionPage = await createPage(debugPort)
+  const audioPage = await createPage(debugPort)
   try {
-    await assertBlockedAudioNavigation(interactionPage, baseUrl)
+    await assertBlockedAudioNavigation(audioPage, baseUrl)
   } finally {
-    interactionPage.close()
+    audioPage.close()
+  }
+
+  const clipboardPage = await createPage(debugPort)
+  try {
+    await assertBlockedClipboardCopy(clipboardPage, baseUrl)
+  } finally {
+    clipboardPage.close()
   }
 } catch (error) {
   console.error(error)
