@@ -3,214 +3,169 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import {
-  Swords,
-  Users,
+  ArrowRight,
   Bot,
-  Globe,
   BookOpen,
-  ChevronRight,
-  Sparkles,
+  Settings,
   Trophy,
+  Users,
   Volume2,
   VolumeX,
-  Zap,
 } from 'lucide-react'
 import { AppShell } from '@/components/shell/app-shell'
 import { Emblem } from '@/components/brand/logo'
 import { sounds } from '@/lib/sound'
 
+const MODES = [
+  {
+    href: '/play/local',
+    icon: Users,
+    kicker: 'Local',
+    title: 'Pass & Play',
+    desc: 'Two players, one board, no account required.',
+  },
+  {
+    href: '/play/ai',
+    icon: Bot,
+    kicker: 'Solo',
+    title: 'Khmer AI Battle',
+    desc: 'Practice Rek Poat or Min Rek Chanh against the existing engine-driven AI.',
+  },
+  {
+    href: '/play/puzzle',
+    icon: Trophy,
+    kicker: 'Training',
+    title: 'King Defense Puzzles',
+    desc: 'Seven engine-validated tactical positions built around Rek and Poat.',
+  },
+] as const
+
 export default function HomePage() {
   const [isMuted, setIsMuted] = useState(() => sounds.isMuted())
 
-  const handleToggleMute = () => {
-    const muted = sounds.toggleMute()
-    setIsMuted(muted)
+  const toggleSound = () => {
+    setIsMuted(sounds.toggleMute())
   }
 
   return (
     <AppShell>
-      {/* Hero Banner with Angkor Temple backdrop & gold glow */}
-        <section className="relative overflow-hidden rounded-3xl border border-gold/40 shadow-2xl bg-card/70 transition-all duration-300">
+      <section className="grid items-stretch gap-8 border-b border-border pb-9 lg:grid-cols-[1.08fr_0.92fr] lg:gap-12 lg:pb-12">
+        <div className="flex flex-col justify-center py-3 lg:py-10">
+          <div className="mb-6 flex items-center gap-3">
+            <Emblem className="size-10 opacity-90 sm:size-12" />
+            <div>
+              <p className="rk-eyebrow">Cambodian strategy board game</p>
+              <p className="mt-1 text-xs text-muted-foreground">រែក • flanking • encirclement</p>
+            </div>
+          </div>
+
+          <h1 className="font-display text-[clamp(3.4rem,9vw,7.6rem)] leading-[0.82] tracking-[-0.045em] text-foreground">
+            <span className="block text-gold">រែកខ្មែរ</span>
+            <span className="mt-3 block text-[0.46em] font-semibold tracking-[-0.02em] text-foreground/92">
+              Rek Khmer
+            </span>
+          </h1>
+
+          <p className="mt-7 max-w-xl text-balance text-base leading-7 text-muted-foreground sm:text-lg">
+            A quiet board, sharp geometry, and two ways to take space: intervene with Rek or close every liberty with Poat.
+          </p>
+
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              href="/play"
+              onClick={() => sounds.playSelect()}
+              className="group inline-flex h-12 items-center gap-3 rounded-md bg-gold px-5 text-sm font-extrabold text-background outline-none transition-colors hover:bg-[#e3c783] focus-visible:ring-2 focus-visible:ring-gold/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            >
+              <span>Play</span>
+              <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              href="/how-to-play"
+              onClick={() => sounds.playSelect()}
+              className="inline-flex h-12 items-center gap-2 rounded-md border border-border bg-card/45 px-4 text-sm font-semibold text-foreground outline-none transition-colors hover:border-gold/35 hover:bg-accent focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              <BookOpen className="size-4 text-gold" />
+              <span>How to Play</span>
+            </Link>
+            <button
+              type="button"
+              onClick={toggleSound}
+              aria-label={isMuted ? 'Enable sound' : 'Mute sound'}
+              className="inline-flex size-12 items-center justify-center rounded-md border border-border bg-transparent text-muted-foreground outline-none transition-colors hover:border-gold/35 hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+            >
+              {isMuted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+            </button>
+          </div>
+        </div>
+
+        <div className="relative min-h-[340px] overflow-hidden border border-border bg-card sm:min-h-[430px] lg:min-h-[560px]">
           <img
             src="/images/temple-hero.png"
             alt="Angkor temple towers"
-            className="absolute inset-0 h-full w-full object-cover opacity-85 transition-transform duration-700 hover:scale-105"
+            className="absolute inset-0 h-full w-full object-cover object-center opacity-72 grayscale-[18%] contrast-[1.06]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/60 to-transparent" />
-
-          <div className="relative flex flex-col items-start gap-4 px-6 py-8 sm:px-10 sm:py-12">
-            <div className="flex items-center justify-between w-full">
-              <div className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold-soft px-3 py-1 text-xs font-bold text-gold shadow-[0_0_15px_var(--gold-soft)] animate-float">
-                <Sparkles className="size-3.5 animate-spin" style={{ animationDuration: '4s' }} />
-                <span>Angkor Dynasty Strategy</span>
-              </div>
-
-              <button
-                onClick={handleToggleMute}
-                className="flex items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 text-xs font-bold text-muted-foreground border border-border/80 hover:text-gold hover:border-gold/50 backdrop-blur-md transition-all active:scale-95"
-              >
-                {isMuted ? <VolumeX className="size-3.5 text-destructive" /> : <Volume2 className="size-3.5 text-gold" />}
-                <span>{isMuted ? 'Muted' : 'Audio On'}</span>
-              </button>
-            </div>
-
-            <div className="flex items-center gap-3.5">
-              <Emblem className="size-12 sm:size-14 animate-pulse" />
-              <h1 className="font-display text-3xl sm:text-5xl leading-none font-extrabold tracking-tight text-foreground flex flex-wrap items-baseline gap-2">
-                <span className="text-gold bg-gradient-to-r from-gold via-amber-300 to-yellow-200 bg-clip-text text-transparent drop-shadow-md">
-                  រែកខ្មែរ
-                </span>
-                <span className="text-foreground/90 font-light text-2xl sm:text-4xl tracking-normal">
-                  - Rek Khmer
-                </span>
-              </h1>
-            </div>
-
-            <p className="max-w-lg text-pretty text-muted-foreground text-sm sm:text-base leading-relaxed">
-              The authentic Cambodian board game of flanking and encirclement. Move like Rooks, execute glorious <strong className="text-gold font-semibold">Rek (Gánh)</strong> sandwiches, and capture the Royal King!
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <Link
-                href="/play/ai"
-                onClick={() => sounds.playSelect()}
-                className="group flex h-12 items-center gap-2 rounded-2xl bg-gold px-6 text-sm sm:text-base font-bold text-background shadow-xl shadow-gold/30 ring-2 ring-gold/60 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-gold/50 active:translate-y-0"
-              >
-                <Bot className="size-5 transition-transform duration-300 group-hover:scale-110" />
-                <span>Play vs AI</span>
-                <ChevronRight className="size-4 opacity-75 transition-transform duration-300 group-hover:translate-x-1" />
-              </Link>
-              <Link
-                href="/play/local"
-                onClick={() => sounds.playSelect()}
-                className="flex h-12 items-center gap-2 rounded-2xl border border-border/80 bg-card/80 px-5 text-sm sm:text-base font-bold text-foreground backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent hover:border-gold/40 hover:text-gold"
-              >
-                <Users className="size-5 text-gold" />
-                <span>Pass & Play</span>
-              </Link>
-              <Link
-                href="/play/puzzle"
-                onClick={() => sounds.playSelect()}
-                className="flex h-12 items-center gap-2 rounded-2xl border border-border/80 bg-card/80 px-5 text-sm sm:text-base font-bold text-foreground backdrop-blur-md transition-all duration-200 hover:-translate-y-0.5 hover:bg-accent hover:border-gold/40 hover:text-gold"
-              >
-                <Trophy className="size-5 text-gold" />
-                <span>King Puzzles</span>
-              </Link>
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(21,18,14,0.03),rgba(21,18,14,0.25)_45%,rgba(21,18,14,0.96))]" />
+          <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7">
+            <div className="mb-4 rk-rule" />
+            <div className="grid grid-cols-3 gap-3 text-xs sm:text-sm">
+              <Fact label="Board" value="8×8" />
+              <Fact label="Movement" value="Orthogonal" />
+              <Fact label="Core" value="Rek → Poat" />
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Quick Mode Cards */}
-        <section className="mt-5 grid gap-3 sm:grid-cols-2">
-          <ModeCard
-            href="/play/local"
-            icon={Users}
-            title="Pass & Play (2P)"
-            desc="Battle against a friend on one device with interactive hints and undo."
-            accent="you"
-            badge="Local"
-          />
-          <ModeCard
-            href="/play/ai"
-            icon={Bot}
-            title="Vs AI Grandmaster"
-            desc="Practice your strategy against the intelligent Angkor AI bot."
-            accent="opp"
-            badge="Solo"
-          />
-          <ModeCard
-            href="/play/puzzle"
-            icon={Trophy}
-            title="7 King Defense Puzzles"
-            desc="Authentic tactical formations: Triangle Shield, Dual Column, Radial Guard."
-            accent="gold"
-            badge="Puzzles"
-          />
-          <ModeCard
-            href="/how-to-play"
-            icon={BookOpen}
-            title="Rules & Tactics Guide"
-            desc="Interactive visual guide on Rek flanking, Poat encirclement, and Hao Rek traps."
-            accent="opp"
-            badge="Guide"
-          />
-        </section>
-      </AppShell>
+      <section className="py-8 sm:py-10">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p className="rk-eyebrow">Offline modes</p>
+            <h2 className="mt-1 font-display text-2xl font-semibold text-foreground sm:text-3xl">Choose your board</h2>
+          </div>
+          <Link
+            href="/settings"
+            className="inline-flex h-10 items-center gap-2 rounded-md px-2 text-sm font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-gold/70"
+          >
+            <Settings className="size-4" />
+            <span className="hidden sm:inline">Settings</span>
+          </Link>
+        </div>
+
+        <div className="divide-y divide-border border-y border-border">
+          {MODES.map((mode, index) => (
+            <Link
+              key={mode.href}
+              href={mode.href}
+              onClick={() => sounds.playSelect()}
+              className="group grid min-h-[104px] grid-cols-[auto_1fr_auto] items-center gap-4 py-4 outline-none transition-colors hover:bg-card/35 focus-visible:bg-card/45 sm:gap-6 sm:px-3"
+            >
+              <div className="flex size-11 items-center justify-center border border-border bg-card text-gold sm:size-12">
+                <mode.icon className="size-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-3">
+                  <span className="font-mono text-[10px] font-bold text-muted-foreground">0{index + 1}</span>
+                  <span className="rk-eyebrow">{mode.kicker}</span>
+                </div>
+                <h3 className="mt-1 font-display text-xl font-semibold text-foreground transition-colors group-hover:text-gold">
+                  {mode.title}
+                </h3>
+                <p className="mt-1 max-w-2xl text-sm leading-5 text-muted-foreground">{mode.desc}</p>
+              </div>
+              <ArrowRight className="size-5 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-gold" />
+            </Link>
+          ))}
+        </div>
+      </section>
+    </AppShell>
   )
 }
 
-function ModeCard({
-  href,
-  icon: Icon,
-  title,
-  desc,
-  accent,
-  badge,
-}: {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  title: string
-  desc: string
-  accent: 'you' | 'opp' | 'gold'
-  badge?: string
-}) {
-  const getStyle = () => {
-    if (accent === 'you') {
-      return {
-        bg: 'var(--you-soft)',
-        color: 'var(--you)',
-        border: '1px solid oklch(0.66 0.23 28 / 0.5)',
-      }
-    }
-    if (accent === 'opp') {
-      return {
-        bg: 'var(--opp-soft)',
-        color: 'var(--opp)',
-        border: '1px solid oklch(0.76 0.16 175 / 0.5)',
-      }
-    }
-    return {
-      bg: 'var(--gold-soft)',
-      color: 'var(--gold)',
-      border: '1px solid oklch(0.86 0.16 82 / 0.5)',
-    }
-  }
-
-  const s = getStyle()
-
+function Fact({ label, value }: { label: string; value: string }) {
   return (
-    <Link
-      href={href}
-      onClick={() => sounds.playSelect()}
-      className="group relative flex items-center gap-3.5 overflow-hidden rounded-3xl border border-border/80 bg-card/85 p-4 backdrop-blur-md transition-all duration-300 hover:-translate-y-0.5 hover:border-gold/50 hover:shadow-xl hover:shadow-black/40 active:scale-[0.99]"
-    >
-      <div
-        className="flex size-12 shrink-0 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110 shadow-md"
-        style={{
-          background: s.bg,
-          color: s.color,
-          border: s.border,
-        }}
-      >
-        <Icon className="size-6" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <h3 className="font-display text-base font-bold text-foreground group-hover:text-gold transition-colors">
-            {title}
-          </h3>
-          {badge && (
-            <span className="rounded-full bg-gold-soft px-2 py-0.2 text-[0.65rem] font-bold text-gold ring-1 ring-gold/40">
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 text-xs text-muted-foreground leading-snug">{desc}</p>
-      </div>
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary/80 text-muted-foreground transition-all duration-200 group-hover:bg-gold group-hover:text-background group-hover:translate-x-1">
-        <ChevronRight className="size-3.5" />
-      </div>
-    </Link>
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className="mt-1 font-semibold text-foreground">{value}</p>
+    </div>
   )
 }
