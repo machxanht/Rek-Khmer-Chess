@@ -16,30 +16,20 @@ export default function LocalGamePage() {
   }
 
   const banner = (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-2 px-3 py-2 text-xs font-semibold sm:flex-row sm:items-center sm:justify-between sm:px-4">
-      <span className="text-muted-foreground">Rule Mode:</span>
-      <div className="grid grid-cols-2 gap-1 rounded-xl bg-card/80 p-1 border border-border/80">
-        <button
-          onClick={() => handleModeChange('REK_POAT')}
-          className={`min-h-9 rounded-lg px-2 py-1 text-[11px] font-bold leading-tight transition-all sm:px-3 sm:text-xs ${
-            gameMode === 'REK_POAT'
-              ? 'bg-gold text-background shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Rek Poat
-          <span className="hidden sm:inline"> (Standard)</span>
-        </button>
-        <button
-          onClick={() => handleModeChange('MIN_REK_CHANH')}
-          className={`min-h-9 rounded-lg px-2 py-1 text-[11px] font-bold leading-tight transition-all sm:px-3 sm:text-xs ${
-            gameMode === 'MIN_REK_CHANH'
-              ? 'bg-gold text-background shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          Min Rek Chanh
-        </button>
+    <div className="border-b border-border bg-background/68">
+      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-3 px-3 py-2.5 sm:px-5 lg:px-6">
+        <div>
+          <p className="rk-eyebrow">Rule mode</p>
+          <p className="mt-0.5 hidden text-xs text-muted-foreground sm:block">Changing mode starts a fresh local match.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-px border border-border bg-border">
+          <ModeButton active={gameMode === 'REK_POAT'} onClick={() => handleModeChange('REK_POAT')}>
+            Rek Poat
+          </ModeButton>
+          <ModeButton active={gameMode === 'MIN_REK_CHANH'} onClick={() => handleModeChange('MIN_REK_CHANH')}>
+            Min Rek Chanh
+          </ModeButton>
+        </div>
       </div>
     </div>
   )
@@ -48,12 +38,35 @@ export default function LocalGamePage() {
     <RekGameView
       engine={engine}
       title="Pass & Play (2P)"
-      youName="White (Garnet)"
-      oppName="Black (Jade)"
+      youName="Ivory"
+      oppName="Verdigris"
       perspective="neutral"
       canControlTurn
       exitHref="/play"
       banner={banner}
     />
+  )
+}
+
+function ModeButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-h-10 bg-card px-3 text-[11px] font-extrabold outline-none transition-colors focus-visible:relative focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold/70 sm:px-4 sm:text-xs ${
+        active ? 'text-gold' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+      }`}
+    >
+      {children}
+    </button>
   )
 }
