@@ -1,6 +1,0 @@
-{
-  "name": "រែកខ្មែរ - Rek Khmer",
-  "description": "Traditional Cambodian strategic board game featuring Rek capture, surround mechanics, local AI, online lobbies, and interactive tutorials.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
