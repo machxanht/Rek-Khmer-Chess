@@ -34,7 +34,12 @@ function isGameMode(value: unknown): value is GameMode {
 }
 
 function isBoardIndex(value: unknown): value is number {
-  return Number.isInteger(value) && Number(value) >= 0 && Number(value) < BOARD_SIZE * BOARD_SIZE
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 0 &&
+    value < BOARD_SIZE * BOARD_SIZE
+  )
 }
 
 function clonePiece(piece: Piece): Piece {
@@ -67,7 +72,11 @@ function assertPiece(value: unknown, label: string, expectedPlayer?: PlayerColor
   }
 }
 
-function assertPieceArray(value: unknown, label: string, expectedPlayer: PlayerColor): asserts value is Piece[] {
+function assertPieceArray(
+  value: unknown,
+  label: string,
+  expectedPlayer: PlayerColor
+): asserts value is Piece[] {
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`)
   value.forEach((piece, index) => assertPiece(piece, `${label}[${index}]`, expectedPlayer))
 }
@@ -140,17 +149,21 @@ function assertGameState(value: unknown): asserts value is GameState {
     allIds.add(piece.id)
   }
 
-  if (!Number.isInteger(value.moveCount) || Number(value.moveCount) < 0) {
+  if (typeof value.moveCount !== 'number' || !Number.isInteger(value.moveCount) || value.moveCount < 0) {
     throw new Error('snapshot.state.moveCount must be a non-negative integer')
   }
-  if (!Number.isInteger(value.availableRekMovesCount) || Number(value.availableRekMovesCount) < 0) {
+  if (
+    typeof value.availableRekMovesCount !== 'number' ||
+    !Number.isInteger(value.availableRekMovesCount) ||
+    value.availableRekMovesCount < 0
+  ) {
     throw new Error('snapshot.state.availableRekMovesCount must be a non-negative integer')
   }
 
   if (value.positionCounts !== undefined) {
     if (!isRecord(value.positionCounts)) throw new Error('snapshot.state.positionCounts must be an object')
     for (const count of Object.values(value.positionCounts)) {
-      if (!Number.isInteger(count) || Number(count) <= 0) {
+      if (typeof count !== 'number' || !Number.isInteger(count) || count <= 0) {
         throw new Error('snapshot.state.positionCounts values must be positive integers')
       }
     }
@@ -158,14 +171,18 @@ function assertGameState(value: unknown): asserts value is GameState {
 
   if (
     value.loneKingMoveCount !== undefined &&
-    (!Number.isInteger(value.loneKingMoveCount) || Number(value.loneKingMoveCount) < 0)
+    (typeof value.loneKingMoveCount !== 'number' ||
+      !Number.isInteger(value.loneKingMoveCount) ||
+      value.loneKingMoveCount < 0)
   ) {
     throw new Error('snapshot.state.loneKingMoveCount must be a non-negative integer')
   }
 
   if (
     value.drawMoveLimit !== undefined &&
-    (!Number.isInteger(value.drawMoveLimit) || Number(value.drawMoveLimit) <= 0)
+    (typeof value.drawMoveLimit !== 'number' ||
+      !Number.isInteger(value.drawMoveLimit) ||
+      value.drawMoveLimit <= 0)
   ) {
     throw new Error('snapshot.state.drawMoveLimit must be a positive integer')
   }
