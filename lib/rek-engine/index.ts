@@ -4,5 +4,6 @@
 export * from './types'
 export * from './captures'
 export * from './engine'
+export * from './session'
 export * from './ai'
 export * from './puzzles'

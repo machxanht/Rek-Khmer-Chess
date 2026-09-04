@@ -129,10 +129,10 @@ export function runSimulationTests(): {
   }
 
   run('SIM-01', 'REK_POAT survives deterministic long-run legal play', () =>
-    stressMode('REK_POAT', 160, 0x52454b01))
+    stressMode('REK_POAT', 2500, 0x52454b01))
 
   run('SIM-02', 'MIN_REK_CHANH survives deterministic compulsory-Rek play', () =>
-    stressMode('MIN_REK_CHANH', 100, 0x52454b02))
+    stressMode('MIN_REK_CHANH', 1500, 0x52454b02))
 
   const passed = results.filter((result) => result.passed).length
   return { total: results.length, passed, failed: results.length - passed, results }
