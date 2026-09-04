@@ -20,6 +20,7 @@ const sourceFiles = [
   'lib/rek-engine/puzzle-tests.ts',
   'lib/rek-engine/simulation-tests.ts',
   'lib/rek-engine/ai-quality-tests.ts',
+  'lib/rek-engine/move-regression-tests.ts',
 ]
 
 function printReport(label, report) {
@@ -69,6 +70,7 @@ try {
   const { runPuzzleTests } = load('puzzle-tests.js')
   const { runSimulationTests } = load('simulation-tests.js')
   const { runAiQualityTests } = load('ai-quality-tests.js')
+  const { runMoveRegressionTests } = load('move-regression-tests.js')
 
   const reports = [
     ['Rek core engine', runAllUnitTests()],
@@ -79,6 +81,7 @@ try {
     ['Rek published puzzles', runPuzzleTests()],
     ['Rek long-run simulations', runSimulationTests()],
     ['Rek AI tactical quality', runAiQualityTests()],
+    ['Rek movement regression', runMoveRegressionTests()],
   ]
 
   for (const [label, report] of reports) printReport(label, report)

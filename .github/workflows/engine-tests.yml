@@ -6,14 +6,14 @@ on:
       - 'lib/rek-engine/**'
       - 'scripts/run-engine-tests.cjs'
       - 'package.json'
-      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
       - '.github/workflows/engine-tests.yml'
   pull_request:
     paths:
       - 'lib/rek-engine/**'
       - 'scripts/run-engine-tests.cjs'
       - 'package.json'
-      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
       - '.github/workflows/engine-tests.yml'
 
 jobs:
@@ -30,14 +30,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Enable Corepack
-        run: corepack enable
+      - name: Install engine test dependencies
+        run: npm install --no-package-lock --ignore-scripts
 
-      # The repository lockfile already drifts from package.json on main
-      # (for example canvas-confetti is declared but absent from the importer).
-      # Do not let unrelated dependency housekeeping block pure engine tests.
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Typecheck engine
+        run: npm run typecheck
 
       - name: Run core engine regressions
-        run: pnpm test:engine
+        run: npm run test:engine

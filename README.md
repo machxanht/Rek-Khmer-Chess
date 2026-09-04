@@ -1,53 +1,41 @@
-# រែកខ្មែរ - Rek Khmer (Khmer Traditional Board Game)
+# រែកខ្មែរ - Rek Khmer Engine
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-16-black.svg)](https://nextjs.org/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-v4-38bdf8.svg)](https://tailwindcss.com/)
+Repository này hiện được thu gọn thành **game engine TypeScript thuần** cho Rek Khmer. Toàn bộ lớp UI/UX, Next.js, React, Tailwind, asset giao diện, âm thanh và browser-flow đã được loại khỏi nhánh engine-only để engine có thể được kiểm thử độc lập.
 
-**រែកខ្មែរ - Rek Khmer** là dự án số hóa và chuẩn hóa trò chơi cờ dân gian truyền thống độc đáo của người Khmer (Campuchia & Nam Bộ). Trò chơi sử dụng bàn cờ $8 \times 8$ với các quy tắc trượt xe (Rook-sliding), đòn kẹp Gánh (**រែក - Rek**), đòn Bao Vây diệt cụm (**ព័ទ្ធ - Poat**) và bảo vệ Vua tối cao (**ស្តេច - Sdech**).
+## Engine giữ lại
 
----
+- `lib/rek-engine/types.ts` — kiểu dữ liệu và GameState.
+- `lib/rek-engine/captures.ts` — Rek (Gánh) và Poat (Bao Vây/Flood Fill).
+- `lib/rek-engine/engine.ts` — thiết lập bàn cờ, sinh nước đi, thực thi lượt, thắng/thua/hòa.
+- `lib/rek-engine/ai.ts` — AI dựa trên tập nước đi hợp lệ của engine.
+- `lib/rek-engine/puzzles.ts` — dữ liệu/thế cờ dùng bởi engine.
+- `lib/rek-engine/*-tests.ts` — regression, specification lock, simulation, AI và draw tests.
 
-## 🌟 Tính Năng Nổi Bật
+Ba tài liệu nền tảng vẫn là nguồn sự thật của dự án và được giữ nguyên:
 
-1. **Chuẩn Hóa Luật Bản Địa Khmer 100%:**
-   - Hỗ trợ cả 2 chế độ chơi chuẩn: **Rek Poat (រែកព័ទ្ធ)** và **Min Rek Chanh (មិនរែកចាញ់)**.
-   - Cơ chế bắt buộc Gánh (*Hao Rek - ហៅរែក*) và thuật toán Flood-Fill tính khí giải phóng đòn Bao Vây (*Poat*).
-2. **4 Chế Độ Chơi Đa Dạng:**
-   - 👥 **Pass & Play (2P):** Đối kháng trực tiếp trên cùng thiết bị với chỉ dẫn nước đi trực quan & hoàn tác (Undo).
-   - 🤖 **Vs AI Master:** Thi đấu với Bot trí tuệ nhân tạo (Tập sự, Dày dạn, Đại sư).
-   - 🏆 **7 Thế Cờ Hộ Vua Cổ Truyền (*Kbuon Karpea Sdech*):** Chế độ giải đố chiến thuật (Khuyên tam giác, Cột đôi, Bẫy phản gánh...).
-   - 🌐 **Online Multiplayer:** Tạo phòng thi đấu cá nhân với mã mời 6 chữ số.
-3. **Trải Nghiệm Nghe Nhìn Chân Thực (Khmer Aesthetic & Sound Synthesis):**
-   - Theme đền đài Angkor mạ vàng hoàng gia, quân cờ chạm khắc tinh xảo.
-   - Âm thanh Web Audio Synthesizer: Tiếng gõ gỗ Teak, chuông đồng hoàng cung khi Gánh và chiêng chiến thắng.
+- `HUONG_DAN_LUAT_CO_REK_KHMER.md`
+- `SPEC_ENGINE_CO_REK_KHMER.md`
+- `PLAN_PHAT_TRIEN_CO_REK.md`
 
----
+## Kiểm tra lỗi “không di chuyển quân”
 
-## 📂 Tài Liệu Kiến Trúc & Nghiên Cứu
+Audit không phát hiện lỗi trong pipeline sinh/thực thi nước đi của engine. Engine sinh nước theo 4 hướng trực giao, chỉ qua ô trống và không nhảy qua quân cản.
 
-- [`/HUONG_DAN_LUAT_CO_REK_KHMER.md`](./HUONG_DAN_LUAT_CO_REK_KHMER.md) — Khảo sát đối chứng thực địa văn hóa & nguồn gốc luật cờ Khmer.
-- [`/SPEC_ENGINE_CO_REK_KHMER.md`](./SPEC_ENGINE_CO_REK_KHMER.md) — Đặc tả toán học, tọa độ và thuật toán Game Engine.
-- [`/PLAN_PHAT_TRIEN_CO_REK.md`](./PLAN_PHAT_TRIEN_CO_REK.md) — Lộ trình phát triển và giao thức kỹ thuật.
+Hai trường hợp quan trọng:
 
----
+1. Ở thế khai cuộc, quân tại hàng sau (`rank 1`, gồm Vua ở `d1`) bị hàng `rank 2` của chính mình chặn nên chưa có nước đi. Đây là hành vi đúng luật.
+2. Trong `MIN_REK_CHANH`, Vua còn phải đứng yên hoàn toàn theo đặc tả.
 
-## 🚀 Khởi Chạy Ứng Dụng (Local Development)
+Regression test `MOVE-01` khóa hành vi rằng nước khai cuộc `a2 → a3` phải được sinh và thực thi thành công. `MOVE-02` khóa hành vi hàng sau bị chặn đúng luật.
+
+Ở lớp UI cũ, toàn bộ ô bàn cờ từng bị `disabled` khi cờ `interactive` là false (ví dụ: không phải lượt điều khiển, modal mở hoặc trạng thái kết nối). Browser smoke cũ chỉ kiểm tra render/layout chứ không thực sự click quân và ô đích, nên lỗi tương tác UI có thể lọt qua dù engine test xanh. Lớp UI đó không còn nằm trong nhánh engine-only này.
+
+## Chạy kiểm thử
 
 ```bash
-# Cài đặt dependencies
-npm install
-
-# Khởi chạy server dev (Port 3000)
-npm run dev
-
-# Build production
-npm run build
+npm install --no-package-lock
+npm run typecheck
+npm test
 ```
 
----
-
-## 📜 Giấy Phép (License)
-
-Dự án được phân phối dưới giấy phép MIT License. Bảo tồn và phát huy di sản văn hóa trò chơi dân gian Khmer.
+Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/AI/state/draw/puzzle/simulation/movement.
