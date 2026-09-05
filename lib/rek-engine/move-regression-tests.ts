@@ -33,39 +33,41 @@ export function runMoveRegressionTests(): {
     }
   }
 
-  run('MOVE-01', 'A legal opening move can be generated and executed', () => {
+  run('MOVE-01', 'A legal canonical opening move can be generated and executed', () => {
     const state = createInitialState('REK_POAT')
-    const from = coordToIdx('a2')
-    const to = coordToIdx('a3')
+    const from = coordToIdx('a3')
+    const to = coordToIdx('a4')
     const moves = getMoveResults(state.board, from, state.mode)
 
-    expect(moves.has(to), 'a2 -> a3 must be a legal opening move')
+    expect(moves.has(to), 'a3 -> a4 must be a legal opening move')
 
     const next = executeMove(state, from, to)
     expect(next !== state, 'executeMove must return a new state for a legal move')
-    expect(next.board[from] === null, 'the source square a2 must be empty after the move')
-    expect(next.board[to]?.player === 'you', 'the moving piece must arrive on a3')
+    expect(next.board[from] === null, 'the source square a3 must be empty after the move')
+    expect(next.board[to]?.player === 'you', 'the moving piece must arrive on a4')
     expect(next.turn === 'opp', 'turn must pass to the opponent after a legal move')
     expect(next.moveCount === 1, 'moveCount must increment after a legal move')
 
-    return 'The engine generates and applies a2 -> a3 from the initial position.'
+    return 'The engine generates and applies a3 -> a4 from the canonical initial position.'
   })
 
-  run('MOVE-02', 'Back-rank pieces are blocked at the initial position', () => {
+  run('MOVE-02', 'Canonical staggered setup exposes the intended palace gaps', () => {
     const state = createInitialState('REK_POAT')
-    const king = coordToIdx('d1')
-    const backRankMan = coordToIdx('a1')
 
-    expect(
-      getMoveResults(state.board, king, state.mode).size === 0,
-      'd1 King must initially be blocked by friendly pieces',
-    )
-    expect(
-      getMoveResults(state.board, backRankMan, state.mode).size === 0,
-      'a1 back-rank piece must initially be blocked by friendly pieces',
-    )
+    expect(state.board[coordToIdx('a1')] === null, 'a1 must start empty')
+    expect(state.board[coordToIdx('h8')] === null, 'h8 must start empty')
+    expect(state.board[coordToIdx('a2')]?.king === true, 'White King must start on a2')
+    expect(state.board[coordToIdx('h7')]?.king === true, 'Black King must start on h7')
 
-    return 'A blocked rank-1 piece not moving is legal behavior, not an engine failure.'
+    const whiteRearMoves = new Set(getMoveResults(state.board, coordToIdx('b1'), state.mode).keys())
+    expect(whiteRearMoves.has(coordToIdx('a1')), 'b1 must be able to slide into the empty a1 corner')
+    expect(whiteRearMoves.has(coordToIdx('b2')), 'b1 must be able to slide into the empty b2 palace gap')
+
+    const blackRearMoves = new Set(getMoveResults(state.board, coordToIdx('g8'), state.mode).keys())
+    expect(blackRearMoves.has(coordToIdx('h8')), 'g8 must be able to slide into the empty h8 corner')
+    expect(blackRearMoves.has(coordToIdx('g7')), 'g8 must be able to slide into the empty g7 palace gap')
+
+    return 'The staggered 7+King+8 formation and its opening gaps are preserved.'
   })
 
   const passed = results.filter((result) => result.passed).length

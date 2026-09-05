@@ -225,7 +225,7 @@ Theo phân loại dân tộc học từ Viện Phật học Campuchia và các k
 
 | Tiêu chí | 1. Chế độ Rek Poat (រែកព័ទ្ធ) - Chuẩn | 2. Chế độ Min Rek Chanh (មិនរែកចាញ់) | 3. Biến thể Rek Haek (រែកហែក) - Dân gian |
 | :--- | :--- | :--- | :--- |
-| **Thiết lập (Setup)** | 16 quân mỗi bên (1 Vua + 15 Lính), xếp 2 hàng đầu (1-2 và 7-8). Vua tại `d1`/`d8`. | Tương tự (1 Vua + 15 Lính), Vua tại `d1`/`d8`. | Tương tự (16 quân mỗi bên). |
+| **Thiết lập (Setup)** | 16 quân mỗi bên (1 Vua + 15 Lính), đội hình **7 + Vua + 8**: Trắng `b1-h1`, Vua `a2`, `a3-h3`; Đen `a6-h6`, Vua `h7`, `a8-g8`. | Cùng setup canonical; Vua `a2`/`h7` là Palace King cố định trong mode này. | Tương tự (16 quân mỗi bên, cùng setup canonical). |
 | **Cách di chuyển** | Tất cả các quân (kể cả Vua) đi thẳng ngang/dọc tùy ý như quân Xe, chỉ vào ô trống. | 15 Lính đi thẳng ngang/dọc như Xe. | Đi thẳng ngang/dọc như Xe. |
 | **Quy tắc về Vua** | **Vua di chuyển tự do**, được tham gia gánh ăn quân địch, có thể bị bắt bằng Rek hoặc Poat. | **Vua CỐ ĐỊNH 100% (ស្តេចវាំង)** tại ô ban đầu, không được di chuyển dù chỉ 1 ô. | Vua di chuyển tự do. |
 | **Cách bắt quân** | 1. Gánh (រែក - 2 quân hoặc 4 quân).<br>2. Bao vây (ព័ទ្ធ - nhốt kín không còn nước đi). | 1. Gánh (រែក) bắt buộc theo chuỗi ép.<br>2. Bao vây hỗ trợ. | Gánh chia tách cụm quân (*Haek* - xé lẻ). |
@@ -341,10 +341,22 @@ Theo phân loại dân tộc học từ Viện Phật học Campuchia và các k
 ### NHÓM 7: QUY CHUẨN VỀ VUA (ស្តេច - SDECH)
 
 #### 7.1. Vua đặt chính xác ở đâu khi xếp bàn cờ (Setup)?
-* **Quy chuẩn đối xứng:** 
-  - **Bên Trắng:** Vua đặt tại ô **`d1`** (hàng 1, cột thứ 4 từ trái sang).
-  - **Bên Đen:** Vua đặt tại ô **`d8`** (đối diện trực tiếp với Vua Trắng trên cùng cột d).
-* *Ghi chú:* Một số tài liệu địa phương có thể xếp Vua ở `e1`/`e8`, nhưng đa số tuyệt đối các kỳ thủ Khmer thi đấu trên bàn 8×8 đều chuẩn hóa tại cột `d`.
+* **Setup canonical của project là đội hình 7 + Vua + 8, đối xứng quay 180°:**
+  - **Bên Trắng:** Vua tại **`a2`**; 7 Lính ở `b1-h1`; 8 Lính ở `a3-h3`; ô `a1` trống.
+  - **Bên Đen:** Vua tại **`h7`**; 8 Lính ở `a6-h6`; 7 Lính ở `a8-g8`; ô `h8` trống.
+* Hai Vua **không** nằm cùng cột. Vị trí `a2`/`h7` và hai khoảng trống `a1`/`h8` tạo cấu trúc đối xứng quay 180° của đội hình khai cuộc.
+
+```
+    a b c d e f g h
+8   M M M M M M M .
+7   . . . . . . . K
+6   M M M M M M M M
+5   . . . . . . . .
+4   . . . . . . . .
+3   M M M M M M M M
+2   K . . . . . . .
+1   . M M M M M M M
+```
 
 #### 7.2. Hoạt động của Vua trong Rek Poat vs Min Rek Chanh:
 1. **Trong Rek Poat (រែកព័ទ្ធ):**
@@ -352,7 +364,7 @@ Theo phân loại dân tộc học từ Viện Phật học Campuchia và các k
    - Vua có thể xông pha vào giữa 2 quân địch để Gánh ăn quân địch.
    - Vua cũng hoàn toàn có thể bị đối phương Gánh trúng hoặc Bao vây tiêu diệt.
 2. **Trong Min Rek Chanh (មិនរែកចាញ់):**
-   - Vua là **"Vua Cung Điện" (*ស្តេចវាំង*)**. Vua **BẤT ĐỘNG 100%**, không được di chuyển khỏi ô `d1` (hoặc `d8`) trong suốt cả ván cờ.
+   - Vua là **"Vua Cung Điện" (*ស្តេចវាំង*)**. Vua **BẤT ĐỘNG 100%**, không được di chuyển khỏi ô `a2` (Trắng) hoặc `h7` (Đen) trong suốt cả ván cờ.
    - Việc Vua cố định là **nền tảng cốt lõi** tạo nên tính chất giải đố / ép thế liên hoàn của thể thức Min Rek Chanh.
 
 #### 7.3. Mục tiêu chiến thắng:
@@ -383,13 +395,13 @@ Theo phân loại dân tộc học từ Viện Phật học Campuchia và các k
 
 | Nhóm Quy Tắc | Tên Luật / Cơ Chế | Trạng Thái Phân Loại | Bằng Chứng & Nguồn Xác Thực | Ghi Chú Khi Lập Trình App |
 | :--- | :--- | :---: | :--- | :--- |
-| **Cơ bản** | Bàn cờ 8×8, mỗi bên 16 quân (1 Vua + 15 Lính), xếp 2 hàng đầu | **RULE CONFIRMED** *(100% Đồng thuận)* | Mọi nguồn tư liệu, video và bài viết Khmer đều khẳng định. | Thiết lập chuẩn cho mọi chế độ. |
+| **Cơ bản** | Bàn cờ 8×8, mỗi bên 16 quân (1 Vua + 15 Lính), setup canonical **7 + Vua + 8** trải trên ba hàng gần mỗi bên | **RULE CONFIRMED** *(canonical project setup)* | Setup bàn cờ chuẩn đã được xác nhận cho project và được khóa bằng engine regression. | Trắng: `b1-h1`, K `a2`, `a3-h3`; Đen: `a6-h6`, K `h7`, `a8-g8`. |
 | **Di chuyển** | Đi thẳng ngang/dọc không giới hạn ô (như Xe), chỉ vào ô trống | **RULE CONFIRMED** *(100% Đồng thuận)* | Xác nhận bởi Viện Phật học & video thực tế người chơi. | Không cho đi chéo, không nhảy qua đầu quân. |
 | **Cấm bắt đè** | Tuyệt đối KHÔNG có nước đi đè lên quân đối phương để ăn | **RULE CONFIRMED** *(100% Đồng thuận)* | 100% người chơi bản địa không ai đi đè quân như Cờ Vua/Cờ Ouk. | Chặn hoàn toàn thao tác click ăn đè trong UI. |
 | **Đòn Rek (Gánh)** | Nhảy vào giữa 2 quân địch thẳng hàng để ăn cả 2 (ngang/dọc) | **RULE CONFIRMED** *(100% Đồng thuận)* | Là đòn cốt lõi mang lại tên gọi cho trò chơi (*រែក*). | Tự động loại bỏ 2 quân địch khi vào giữa. |
 | **Đòn Poat (Vây)** | Khóa chặt toàn bộ ô di chuyển của 1 quân hoặc cụm quân địch $\rightarrow$ Ăn sạch | **RULE CONFIRMED** *(100% Đồng thuận)* | Video thực tế và tài liệu văn hóa chứng minh rõ ràng. | Viết hàm kiểm tra $LegalMoves == 0$ cho các cụm quân. |
 | **Đòn Rek 4 quân** | Nhảy vào tâm chữ thập giữa 4 quân địch $\rightarrow$ Ăn cả 4 | **RULE LIKELY** *(Chứng cứ mạnh)* | Ghi nhận trong các thế cờ thực tế của kỳ thủ (*រែកបួន / រែកត្រួត*). | Cần kích hoạt ăn 4 quân khi thỏa mãn hình chữ thập. |
-| **Vị trí Vua** | Ô `d1` (Trắng) và `d8` (Đen) đối xứng nhau | **RULE LIKELY** *(Đa số áp đảo)* | Phổ biến nhất ở các ván đấu thực tế. | Đặt mặc định tại cột d. |
+| **Vị trí Vua** | Ô `a2` (Trắng) và `h7` (Đen), đối xứng quay 180° | **RULE CONFIRMED** *(canonical project setup)* | Setup bàn cờ chuẩn được xác nhận cho project; thay thế giả định cũ `d1/d8`. | Đặt mặc định K Trắng tại `a2`, K Đen tại `h7`. |
 | **Chế độ chơi** | Phân chia 2 chế độ: **Rek Poat** (Vua tự do) và **Min Rek Chanh** (Vua cố định) | **RULE CONFIRMED** *(100% Đồng thuận)* | Phân định rõ ràng trong mọi nghiên cứu và video của kỳ thủ Khmer. | Cho phép người dùng chuyển đổi 2 chế độ trong App. |
 | **Bắt buộc gánh** | Trong Rek Poat: Tùy chọn.<br>Trong Min Rek Chanh: Bắt buộc 100%. | **RULE CONFIRMED** *(100% Đồng thuận)* | Phù hợp hoàn toàn với ý nghĩa của tên gọi "Min Rek Chanh" (Không gánh là thua). | Xử lý logic kiểm tra vi phạm trong Min Rek Chanh. |
 | **Số nước đếm hòa** | Quy định số nước đếm hòa khi chỉ còn 1 Vua đơn độc (24, 32 hoặc 44 nước) | **RULE CONFLICTING** *(Khác biệt theo vùng)* | Các vùng miền có quy ước truyền miệng khác nhau, không có sách chuẩn. | Cung cấp tùy chọn cấu hình số nước đếm trong Settings. |

@@ -73,32 +73,35 @@ export interface MoveResult {
 ## 2. THIẾT LẬP BÀN CỜ BAN ĐẦU (BOARD SETUP)
 
 * **Tổng số quân:** Mỗi bên 16 quân (1 Vua + 15 Lính).
+* **Quy tắc đối xứng:** Hai bên dùng cùng đội hình **7 + Vua + 8**, quay đối xứng 180° qua tâm bàn cờ.
 * **Bên Trắng (WHITE):**
-  - Hàng 1 (`y = 0`): `a1, b1, c1, d1 (VUA), e1, f1, g1, h1`
-  - Hàng 2 (`y = 1`): `a2, b2, c2, d2, e2, f2, g2, h2` (8 Lính)
+  - Hàng 1 (`y = 0`): `a1` TRỐNG; Lính tại `b1, c1, d1, e1, f1, g1, h1` (7 Lính).
+  - Hàng 2 (`y = 1`): Vua tại **`a2`**; `b2..h2` TRỐNG.
+  - Hàng 3 (`y = 2`): `a3, b3, c3, d3, e3, f3, g3, h3` (8 Lính).
 * **Bên Đen (BLACK):**
-  - Hàng 8 (`y = 7`): `a8, b8, c8, d8 (VUA), e8, f8, g8, h8`
-  - Hàng 7 (`y = 6`): `a7, b7, c7, d7, e7, f7, g7, h7` (8 Lính)
-* **Hàng 3, 4, 5, 6 (`y = 2, 3, 4, 5`):** Hoàn toàn TRỐNG (32 ô trống ở trung tâm).
+  - Hàng 6 (`y = 5`): `a6, b6, c6, d6, e6, f6, g6, h6` (8 Lính).
+  - Hàng 7 (`y = 6`): Vua tại **`h7`**; `a7..g7` TRỐNG.
+  - Hàng 8 (`y = 7`): Lính tại `a8, b8, c8, d8, e8, f8, g8`; `h8` TRỐNG.
+* **Hàng 4 và 5 (`y = 3, 4`):** Hoàn toàn TRỐNG (16 ô trống ở trung tâm).
 
 ```
     a   b   c   d   e   f   g   h
   +---+---+---+---+---+---+---+---+
-8 | M | M | M | K | M | M | M | M |  8 (Đen - Hàng 8)
+8 | M | M | M | M | M | M | M | . |  8 (Đen - 7 Lính)
   +---+---+---+---+---+---+---+---+
-7 | M | M | M | M | M | M | M | M |  7 (Đen - Hàng 7)
+7 | . | . | . | . | . | . | . | K |  7 (Đen - Vua h7)
   +---+---+---+---+---+---+---+---+
-6 | . | . | . | . | . | . | . | . |  6
+6 | M | M | M | M | M | M | M | M |  6 (Đen - 8 Lính)
   +---+---+---+---+---+---+---+---+
 5 | . | . | . | . | . | . | . | . |  5
   +---+---+---+---+---+---+---+---+
 4 | . | . | . | . | . | . | . | . |  4
   +---+---+---+---+---+---+---+---+
-3 | . | . | . | . | . | . | . | . |  3
+3 | M | M | M | M | M | M | M | M |  3 (Trắng - 8 Lính)
   +---+---+---+---+---+---+---+---+
-2 | M | M | M | M | M | M | M | M |  2 (Trắng - Hàng 2)
+2 | K | . | . | . | . | . | . | . |  2 (Trắng - Vua a2)
   +---+---+---+---+---+---+---+---+
-1 | M | M | M | K | M | M | M | M |  1 (Trắng - Hàng 1)
+1 | . | M | M | M | M | M | M | M |  1 (Trắng - 7 Lính)
   +---+---+---+---+---+---+---+---+
     a   b   c   d   e   f   g   h
 ```
@@ -115,7 +118,7 @@ export interface MoveResult {
    - **TUYỆT ĐỐI KHÔNG ĐƯỢC BẮT QUÂN ĐÈ LÊN Ô ĐÃ CÓ QUÂN.** Ô đích (`to`) bắt buộc phải là ô TRỐNG.
 3. **Quy tắc về Vua:**
    - Trong `REK_POAT`: Vua di chuyển như Lính.
-   - Trong `MIN_REK_CHANH`: Vua đứng yên 100% tại `d1`/`d8`, không tạo ra bất kỳ nước đi nào.
+   - Trong `MIN_REK_CHANH`: Vua đứng yên 100% tại vị trí cung điện ban đầu `a2` (Trắng) / `h7` (Đen), không tạo ra bất kỳ nước đi nào.
 
 ---
 
@@ -221,7 +224,7 @@ Thuật toán Flood-Fill Poat:
 
 | Đặc tính | Chế độ REK POAT (រែកព័ទ្ធ) | Chế độ MIN REK CHANH (មិនរែកចាញ់) |
 | :--- | :--- | :--- |
-| **Hành vi của Vua** | Di chuyển tự do như Lính (Rook-like) | **Đứng yên cố định tại `d1`/`d8` (Palace King)** |
+| **Hành vi của Vua** | Di chuyển tự do như Lính (Rook-like) | **Đứng yên cố định tại `a2`/`h7` (Palace King)** |
 | **Tính bắt buộc của Rek** | **Tự chọn (Optional):** Có thể gánh hoặc không gánh | **Bắt buộc (Compulsory):** Nếu tồn tại ít nhất 1 nước Rek, người chơi **buộc phải** chọn 1 nước Rek |
 | **Cơ chế Hao Rek** | Lời hô tâm lý / chiến thuật | Quy tắc ràng buộc pháp lý (Vi phạm = Thua ngay) |
 | **Đòn Poat** | Bật (Hoạt động bình thường) | Bật (Hoạt động bình thường) |
@@ -274,16 +277,22 @@ export class RekEngine {
     this.winReason = '';
     this.moveHistory = [];
 
-    // Setup White (y = 0, 1)
+    // Setup White: 7 rear men (b1-h1), King a2, 8 front men (a3-h3)
     for (let x = 0; x < 8; x++) {
-      this.board[x][1] = { id: `w_m_${x}`, type: 'MAN', color: 'WHITE' };
-      this.board[x][0] = { id: `w_back_${x}`, type: x === 3 ? 'KING' : 'MAN', color: 'WHITE' };
+      this.board[x][2] = { id: `w_front_${x}`, type: 'MAN', color: 'WHITE' };
+    }
+    this.board[0][1] = { id: 'w_king', type: 'KING', color: 'WHITE' };
+    for (let x = 1; x < 8; x++) {
+      this.board[x][0] = { id: `w_rear_${x}`, type: 'MAN', color: 'WHITE' };
     }
 
-    // Setup Black (y = 6, 7)
+    // Setup Black: 8 front men (a6-h6), King h7, 7 rear men (a8-g8)
     for (let x = 0; x < 8; x++) {
-      this.board[x][6] = { id: `b_m_${x}`, type: 'MAN', color: 'BLACK' };
-      this.board[x][7] = { id: `b_back_${x}`, type: x === 3 ? 'KING' : 'MAN', color: 'BLACK' };
+      this.board[x][5] = { id: `b_front_${x}`, type: 'MAN', color: 'BLACK' };
+    }
+    this.board[7][6] = { id: 'b_king', type: 'KING', color: 'BLACK' };
+    for (let x = 0; x < 7; x++) {
+      this.board[x][7] = { id: `b_rear_${x}`, type: 'MAN', color: 'BLACK' };
     }
   }
 

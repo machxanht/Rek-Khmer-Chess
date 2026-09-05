@@ -70,16 +70,23 @@ export function createInitialBoard(mode: GameMode = 'REK_POAT'): Cell[] {
   pieceIdCounter = 0
   const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
 
-  // Black (opp) pieces on top ranks (rows 0 and 1)
+  // Canonical Khmer setup, rotationally symmetric by 180 degrees:
+  // Black/opp: seven rear men a8-g8, King h7, eight front men a6-h6.
+  for (let col = 0; col < BOARD_SIZE - 1; col++) {
+    board[idx(0, col)] = { player: 'opp', king: false, id: makeId() }
+  }
+  board[idx(1, BOARD_SIZE - 1)] = { player: 'opp', king: true, id: makeId() }
   for (let col = 0; col < BOARD_SIZE; col++) {
-    board[idx(0, col)] = { player: 'opp', king: col === 3, id: makeId() }
-    board[idx(1, col)] = { player: 'opp', king: false, id: makeId() }
+    board[idx(2, col)] = { player: 'opp', king: false, id: makeId() }
   }
 
-  // White (you) pieces on bottom ranks (rows 6 and 7)
+  // White/you: eight front men a3-h3, King a2, seven rear men b1-h1.
   for (let col = 0; col < BOARD_SIZE; col++) {
-    board[idx(6, col)] = { player: 'you', king: false, id: makeId() }
-    board[idx(7, col)] = { player: 'you', king: col === 3, id: makeId() }
+    board[idx(5, col)] = { player: 'you', king: false, id: makeId() }
+  }
+  board[idx(6, 0)] = { player: 'you', king: true, id: makeId() }
+  for (let col = 1; col < BOARD_SIZE; col++) {
+    board[idx(7, col)] = { player: 'you', king: false, id: makeId() }
   }
 
   return board

@@ -4,7 +4,7 @@ Repository này hiện được thu gọn thành **game engine TypeScript thuầ
 
 ## Nguồn luật chuẩn
 
-Ba tài liệu nền tảng vẫn là nguồn sự thật của dự án và được giữ nguyên:
+Ba tài liệu nền tảng là nguồn sự thật của dự án và phải được cập nhật đồng bộ khi một quy tắc canonical được xác nhận:
 
 - `HUONG_DAN_LUAT_CO_REK_KHMER.md` — hướng dẫn/đối chứng luật chơi Rek Khmer.
 - `SPEC_ENGINE_CO_REK_KHMER.md` — đặc tả kỹ thuật dùng để khóa hành vi engine.
@@ -23,6 +23,27 @@ Engine và regression tests phải tuân theo các tài liệu này; UI/server v
 - `lib/rek-engine/puzzles.ts` — dữ liệu/thế cờ dùng bởi engine.
 - `lib/rek-engine/*-tests.ts` — regression, specification lock, rule-guide lock, public API, simulation, AI và draw tests.
 
+## Thiết lập bàn cờ chuẩn
+
+Bàn 8×8 dùng hệ tọa độ `a1` ở góc dưới-trái nhìn từ phía Trắng (`you`). Mỗi bên có **16 quân = 1 Vua + 15 Lính**. Setup canonical của project là đội hình **7 + Vua + 8**, đối xứng quay 180°:
+
+```text
+    a   b   c   d   e   f   g   h
+8   M   M   M   M   M   M   M   .
+7   .   .   .   .   .   .   .   K
+6   M   M   M   M   M   M   M   M
+5   .   .   .   .   .   .   .   .
+4   .   .   .   .   .   .   .   .
+3   M   M   M   M   M   M   M   M
+2   K   .   .   .   .   .   .   .
+1   .   M   M   M   M   M   M   M
+```
+
+- Trắng (`you`): Vua `a2`; Lính `b1-h1` và `a3-h3`; `a1` trống.
+- Đen (`opp`): Vua `h7`; Lính `a6-h6` và `a8-g8`; `h8` trống.
+- Chỉ hàng 4 và 5 trống hoàn toàn lúc bắt đầu.
+- Cách xếp này áp dụng cho cả `REK_POAT` và `MIN_REK_CHANH`; khác biệt giữa hai mode nằm ở luật Vua và Hao Rek, không nằm ở setup.
+
 ## Public API ổn định
 
 Import từ `lib/rek-engine/index.ts`:
@@ -32,8 +53,8 @@ import { coordToIdx, createGame, deserializeGame } from './lib/rek-engine'
 
 const game = createGame('REK_POAT')
 
-const from = coordToIdx('a2')
-const to = coordToIdx('a3')
+const from = coordToIdx('a3')
+const to = coordToIdx('a4')
 
 const legalTargets = game.getLegalMoves(from)
 if (legalTargets.includes(to)) {
@@ -97,8 +118,9 @@ GitHub Actions có workflow manual `Rek AI Tournament Baseline`, cho phép nhậ
 
 `rule-guide-lock-tests.ts` khóa các điểm cốt lõi trực tiếp từ tài liệu luật:
 
-- Toàn bộ quân hàng 2/hàng 7 ở khai cuộc có đúng 4 nước trượt vào trung tâm, ở cả `REK_POAT` và `MIN_REK_CHANH`.
-- Hàng sau bị chính hàng trước chặn; không quân nào được nhảy qua quân cản.
+- Setup canonical 7+Vua+8: Vua Trắng `a2`, Vua Đen `h7`, hai góc `a1`/`h8` trống và mỗi bên đủ 16 quân.
+- Hàng quân trước nằm ở rank 3/rank 6; tùy cột, quân có 2 hoặc 3 nước mở đầu do các khoảng trống palace ở rank 2/rank 7.
+- Hàng sau `b1-h1` và `a8-g8` có các đường trượt qua khoảng trống cạnh Vua; không được giả định toàn bộ hàng sau bị khóa như setup cũ.
 - Chỉ đi trực giao và ô đích bắt buộc trống.
 - King đi như Man trong `REK_POAT`, đứng yên trong `MIN_REK_CHANH`.
 - Rek bắt 2 hoặc 4 quân theo hai trục.
@@ -113,12 +135,13 @@ Long-run simulation hiện chạy **4.000 deterministic legal plies** tổng c�
 
 Audit không phát hiện lỗi trong pipeline sinh/thực thi nước đi của engine. Engine sinh nước theo 4 hướng trực giao, chỉ qua ô trống và không nhảy qua quân cản.
 
-Hai trường hợp quan trọng:
+Với setup canonical hiện tại:
 
-1. Ở thế khai cuộc, quân tại hàng sau (`rank 1`, gồm Vua ở `d1`) bị hàng `rank 2` của chính mình chặn nên chưa có nước đi. Đây là hành vi đúng luật.
-2. Trong `MIN_REK_CHANH`, Vua còn phải đứng yên hoàn toàn theo đặc tả.
+1. Quân Trắng tại `a3` có thể mở `a3 → a4` hoặc `a3 → a5`; các quân `b3-h3` còn có thể lùi vào khoảng trống rank 2.
+2. Quân sau `b1` có thể trượt sang `a1` hoặc lên `b2`; phía Đen đối xứng với `g8 → h8/g7`.
+3. Trong `MIN_REK_CHANH`, Vua tại `a2`/`h7` vẫn phải đứng yên hoàn toàn theo luật mode.
 
-Regression test `MOVE-01` khóa hành vi rằng nước khai cuộc `a2 → a3` phải được sinh và thực thi thành công. `MOVE-02` khóa hành vi hàng sau bị chặn đúng luật.
+Regression test `MOVE-01` khóa nước khai cuộc `a3 → a4`. `MOVE-02` khóa chính xác các khoảng trống `a1/h8`, vị trí Vua `a2/h7` và khả năng trượt của hàng sau.
 
 Ở lớp UI cũ, toàn bộ ô bàn cờ từng bị `disabled` khi cờ `interactive` là false (ví dụ: không phải lượt điều khiển, modal mở hoặc trạng thái kết nối). Browser smoke cũ chỉ kiểm tra render/layout chứ không thực sự click quân và ô đích, nên lỗi tương tác UI có thể lọt qua dù engine test xanh. Lớp UI đó không còn nằm trong engine-only repository này.
 

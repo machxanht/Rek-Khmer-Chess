@@ -78,8 +78,8 @@ export function runStateContractTests(): {
 
   run('STATE-01', 'A normal move updates turn, move count, and last-move metadata atomically', () => {
     const state = createInitialState('REK_POAT')
-    const from = coordToIdx('a2')
-    const to = coordToIdx('a3')
+    const from = coordToIdx('a3')
+    const to = coordToIdx('a4')
     const next = executeMove(state, from, to)
 
     expect(next !== state, 'A legal move must produce a new state object')
@@ -145,7 +145,7 @@ export function runStateContractTests(): {
       'Initial availableRekMovesCount must match current-turn engine discovery'
     )
 
-    const next = executeMove(state, coordToIdx('a2'), coordToIdx('a3'))
+    const next = executeMove(state, coordToIdx('a3'), coordToIdx('a4'))
     expect(next.status === 'playing', 'Fixture must remain a continuing game')
     expect(
       next.availableRekMovesCount === getAllRekOpportunities(next.board, next.turn, next.mode).length,
@@ -161,7 +161,7 @@ export function runStateContractTests(): {
     const youCapturedBefore = [...state.captured.you]
     const oppCapturedBefore = [...state.captured.opp]
 
-    const next = executeMove(state, coordToIdx('a2'), coordToIdx('a3'))
+    const next = executeMove(state, coordToIdx('a3'), coordToIdx('a4'))
 
     expect(next !== state, 'Fixture must execute a legal move')
     expect(state.board.length === boardBefore.length, 'Input board length must remain unchanged')
@@ -179,9 +179,9 @@ export function runStateContractTests(): {
 
   run('STATE-06', 'A rejected geometric move is a true no-op including metadata', () => {
     const state = createInitialState('REK_POAT')
-    const next = executeMove(state, coordToIdx('a1'), coordToIdx('a4'))
+    const next = executeMove(state, coordToIdx('b1'), coordToIdx('b4'))
 
-    expect(next === state, 'Blocked a1 -> a4 attempt must return the exact same state object')
+    expect(next === state, 'Blocked b1 -> b4 attempt must return the exact same state object')
     expect(state.moveCount === 0, 'Rejected move must not increment move count')
     expect(state.lastMove === null, 'Rejected move must not create lastMove metadata')
     expect(state.lastCaptured.length === 0, 'Rejected move must not create capture metadata')

@@ -4,7 +4,7 @@
 export const BOARD_SIZE = 8
 export const DEFAULT_LONE_KING_DRAW_LIMIT = 32
 
-export type PlayerColor = 'you' | 'opp' // you = White (bottom/rows 6-7), opp = Black (top/rows 0-1)
+export type PlayerColor = 'you' | 'opp' // you = White (bottom formation rows 5-7), opp = Black (top formation rows 0-2)
 
 export interface Piece {
   player: PlayerColor
