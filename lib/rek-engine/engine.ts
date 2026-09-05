@@ -207,6 +207,52 @@ export function getAllRekOpportunities(
 }
 
 /**
+ * Resolves Rek then Poat for a move whose geometry and current rule obligation
+ * have already been validated by this module. Keeping this helper in engine.ts
+ * lets bulk generation reuse the same capture pipeline without duplicating rule
+ * logic in AI or other consumers.
+ */
+function resolveValidatedMove(
+  board: Cell[],
+  from: number,
+  to: number,
+  mover: PlayerColor
+): MoveResult {
+  const piece = board[from]
+  if (!piece || piece.player !== mover) return emptyMoveResult(from, to)
+
+  const tempBoard = [...board]
+  tempBoard[to] = piece
+  tempBoard[from] = null
+
+  const rekCaptures = checkRekCaptures(tempBoard, to, mover)
+  for (const victim of rekCaptures) tempBoard[victim] = null
+
+  const poatCaptures = checkPoatCaptures(tempBoard, opponent(mover))
+  const captures = Array.from(new Set([...rekCaptures, ...poatCaptures]))
+
+  let notation = `${idxToCoord(from)} → ${idxToCoord(to)}`
+  if (rekCaptures.length > 0 && poatCaptures.length > 0) {
+    notation += ` [រែក ${rekCaptures.length} & ព័ទ្ធ ${poatCaptures.length}]`
+  } else if (rekCaptures.length > 0) {
+    notation += ` [រែក ${rekCaptures.length}]`
+  } else if (poatCaptures.length > 0) {
+    notation += ` [ព័ទ្ធ ${poatCaptures.length}]`
+  }
+
+  return {
+    from,
+    to,
+    rekCaptures,
+    poatCaptures,
+    captures,
+    rek: rekCaptures.length > 0,
+    poat: poatCaptures.length > 0,
+    sanNotation: notation,
+  }
+}
+
+/**
  * Predicts the full outcome of a legal move without modifying the board.
  * Invalid geometry, occupied destinations, blocked paths and color mismatches
  * return an empty result instead of simulating an impossible board state.
@@ -238,7 +284,7 @@ export function previewMove(
   if (ruleset === 'MIN_REK_CHANH') {
     const rekMoves = getAllRekOpportunities(board, mover, ruleset)
     if (rekMoves.length > 0) {
-      const isRekMove = rekMoves.some((m) => m.from === from && m.to === to)
+      const isRekMove = rekMoves.some((move) => move.from === from && move.to === to)
       if (!isRekMove) {
         return {
           ...emptyMoveResult(from, to),
@@ -248,42 +294,85 @@ export function previewMove(
     }
   }
 
-  // 1. Move piece.
-  const tempBoard = [...board]
-  tempBoard[to] = piece
-  tempBoard[from] = null
+  return resolveValidatedMove(board, from, to, mover)
+}
 
-  // 2. Rek first (current engine ordering).
-  const rekCaptures = checkRekCaptures(tempBoard, to, mover)
-  for (const v of rekCaptures) {
-    tempBoard[v] = null
+function compulsoryRekDestinations(
+  board: Cell[],
+  player: PlayerColor,
+  mode: RuleSetInput
+): Map<number, Set<number>> | null {
+  const ruleset = normalizeRuleSet(mode)
+  if (ruleset !== 'MIN_REK_CHANH') return null
+
+  const opportunities = getAllRekOpportunities(board, player, ruleset)
+  if (opportunities.length === 0) return null
+
+  const byFrom = new Map<number, Set<number>>()
+  for (const opportunity of opportunities) {
+    let destinations = byFrom.get(opportunity.from)
+    if (!destinations) {
+      destinations = new Set<number>()
+      byFrom.set(opportunity.from, destinations)
+    }
+    destinations.add(opportunity.to)
+  }
+  return byFrom
+}
+
+/**
+ * Returns actual rule-legal destinations for one selected piece.
+ * In MIN_REK_CHANH the current contract computes the side-wide Rek obligation
+ * once for this query, then resolves only the allowed destinations.
+ */
+export function getMoveResults(
+  board: Cell[],
+  from: number,
+  mode: RuleSetInput = DEFAULT_RULESET
+): Map<number, MoveResult> {
+  const ruleset = normalizeRuleSet(mode)
+  const results = new Map<number, MoveResult>()
+  const piece = board[from]
+  if (!piece) return results
+
+  const allowedReks = compulsoryRekDestinations(board, piece.player, ruleset)
+  const destinations = getLegalMoves(board, from, ruleset)
+
+  for (const to of destinations) {
+    if (allowedReks && !allowedReks.get(from)?.has(to)) continue
+    results.set(to, resolveValidatedMove(board, from, to, piece.player))
+  }
+  return results
+}
+
+/**
+ * Bulk rule-legal move results for a whole side. This is the preferred search
+ * boundary: the current Min Rek Chanh side-wide obligation is computed once,
+ * then every legal destination uses the same engine-owned capture resolver.
+ */
+export function getAllMoveResults(
+  board: Cell[],
+  player: PlayerColor,
+  mode: RuleSetInput = DEFAULT_RULESET
+): Map<number, Map<number, MoveResult>> {
+  const ruleset = normalizeRuleSet(mode)
+  const results = new Map<number, Map<number, MoveResult>>()
+  const allowedReks = compulsoryRekDestinations(board, player, ruleset)
+
+  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
+    const piece = board[from]
+    if (!piece || piece.player !== player) continue
+
+    const perPiece = new Map<number, MoveResult>()
+    const destinations = getLegalMoves(board, from, ruleset)
+    for (const to of destinations) {
+      if (allowedReks && !allowedReks.get(from)?.has(to)) continue
+      perPiece.set(to, resolveValidatedMove(board, from, to, player))
+    }
+    results.set(from, perPiece)
   }
 
-  // 3. Poat second on the post-Rek board (current engine interpretation).
-  const opp = opponent(mover)
-  const poatCaptures = checkPoatCaptures(tempBoard, opp)
-
-  const allCaptures = Array.from(new Set([...rekCaptures, ...poatCaptures]))
-
-  let notation = `${idxToCoord(from)} → ${idxToCoord(to)}`
-  if (rekCaptures.length > 0 && poatCaptures.length > 0) {
-    notation += ` [រែក ${rekCaptures.length} & ព័ទ្ធ ${poatCaptures.length}]`
-  } else if (rekCaptures.length > 0) {
-    notation += ` [រែក ${rekCaptures.length}]`
-  } else if (poatCaptures.length > 0) {
-    notation += ` [ព័ទ្ធ ${poatCaptures.length}]`
-  }
-
-  return {
-    from,
-    to,
-    rekCaptures,
-    poatCaptures,
-    captures: allCaptures,
-    rek: rekCaptures.length > 0,
-    poat: poatCaptures.length > 0,
-    sanNotation: notation,
-  }
+  return results
 }
 
 /** Executes a move and produces a new immutable game state. */
@@ -557,27 +646,3 @@ export class RekEngine {
 export const applyMove = executeMove
 export const evaluateMove = previewMove
 export const getAvailableRekMoves = getAllRekOpportunities
-
-/**
- * Returns actual rule-legal destinations for a selected piece.
- * In MIN_REK_CHANH, the current project contract suppresses quiet moves while
- * a Rek opportunity exists; exact traditional Hao Rek semantics remain pending.
- */
-export function getMoveResults(
-  board: Cell[],
-  from: number,
-  mode: RuleSetInput = DEFAULT_RULESET
-): Map<number, MoveResult> {
-  const ruleset = normalizeRuleSet(mode)
-  const map = new Map<number, MoveResult>()
-  const piece = board[from]
-  if (!piece) return map
-
-  const destinations = getLegalMoves(board, from, ruleset)
-  for (const to of destinations) {
-    const res = previewMove(board, from, to, piece.player, ruleset)
-    if (res.isHaoRekViolation) continue
-    map.set(to, res)
-  }
-  return map
-}
