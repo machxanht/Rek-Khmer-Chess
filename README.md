@@ -45,6 +45,7 @@ Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you
 ## Core engine
 
 - `lib/rek-engine/types.ts` — `GameState`, `RuleSet`, compatibility aliases.
+- `lib/rek-engine/catalog.ts` — identity của game + catalog 2 canonical ruleset cho UI/server discovery; không chứa legality/capture logic.
 - `lib/rek-engine/captures.ts` — primitive Rek + Poat.
 - `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw adjudication.
 - `lib/rek-engine/session.ts` — `RekGame`, undo, snapshot migration/save/load.
@@ -55,7 +56,17 @@ Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you
 ## Public API
 
 ```ts
-import { coordToIdx, createGame } from './lib/rek-engine'
+import {
+  REK_GAME,
+  coordToIdx,
+  createGame,
+  getRuleSetMetadata,
+  listRuleSets,
+} from './lib/rek-engine'
+
+console.log(REK_GAME.id) // REK_KHMER
+console.log(listRuleSets().map((ruleset) => ruleset.id))
+// ['REK_STANDARD', 'MIN_REK_CHANH']
 
 // Canonical default
 const game = createGame('REK_STANDARD')
@@ -68,13 +79,17 @@ if (game.getLegalMoves(from).includes(to)) {
 }
 
 console.log(game.getState().mode) // REK_STANDARD
+console.log(getRuleSetMetadata(game.getState().mode).displayName)
 ```
+
+UI/server nên dùng `listRuleSets()` để render lựa chọn ruleset. Không tự hard-code thêm `REK_POAT` thành lựa chọn thứ ba và không dùng metadata catalog để quyết định move legality; legality/capture luôn gọi core engine.
 
 Legacy callers vẫn chạy:
 
 ```ts
 const legacy = createGame('REK_POAT')
 console.log(legacy.getState().mode) // REK_STANDARD
+console.log(getRuleSetMetadata('REK_POAT').id) // REK_STANDARD
 ```
 
 Snapshot schema vẫn là version `1`; loader nhận snapshot cũ có `mode: "REK_POAT"`, migrate mode + repetition keys sang `REK_STANDARD`, và khi serialize lại chỉ phát canonical identifier.

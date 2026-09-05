@@ -2,6 +2,7 @@
 // Pure TypeScript engine module
 
 export * from './types'
+export * from './catalog'
 export * from './captures'
 export * from './engine'
 export * from './session'

@@ -6,6 +6,12 @@ import {
   PlayerColor,
   TestResult,
 } from './types'
+import {
+  REK_GAME,
+  RULE_SET_CATALOG,
+  getRuleSetMetadata,
+  listRuleSets,
+} from './catalog'
 import { coordToIdx, createPositionKey, getAllRekOpportunities } from './engine'
 import {
   REK_GAME_SNAPSHOT_VERSION,
@@ -255,6 +261,41 @@ export function runPublicApiTests(): {
     )
 
     return 'REK_POAT remains a compatibility alias only; public state and new snapshots are canonical.'
+  })
+
+  run('API-08', 'ruleset catalog exposes one game and exactly two canonical rulesets', () => {
+    const rulesets = listRuleSets()
+    const ids = rulesets.map((entry) => entry.id)
+
+    expect(REK_GAME.id === 'REK_KHMER', 'Package game identity must be REK_KHMER')
+    expect(REK_GAME.defaultRuleSet === 'REK_STANDARD', 'Game metadata must point at REK_STANDARD by default')
+    expect(rulesets === RULE_SET_CATALOG, 'Catalog accessor must return the stable exported catalog')
+    expect(rulesets.length === 2, 'Only two canonical rulesets may be discoverable')
+    expect(ids[0] === 'REK_STANDARD' && ids[1] === 'MIN_REK_CHANH', 'Catalog order must be Standard then Min Rek Chanh')
+    expect(!ids.some((id) => String(id) === 'REK_POAT'), 'Legacy REK_POAT must never appear as a discoverable ruleset')
+    expect(new Set(ids).size === ids.length, 'Catalog ruleset IDs must be unique')
+    expect(Object.isFrozen(RULE_SET_CATALOG), 'Exported catalog array must be frozen')
+    expect(rulesets.every((entry) => Object.isFrozen(entry)), 'Catalog entries must be frozen')
+
+    return 'Consumers can render one Rek Khmer game with two canonical rulesets without hard-coding legacy mode names.'
+  })
+
+  run('API-09', 'ruleset metadata canonicalizes legacy aliases without duplicating rule logic', () => {
+    const standard = getRuleSetMetadata('REK_STANDARD')
+    const legacy = getRuleSetMetadata('REK_POAT')
+    const min = getRuleSetMetadata('MIN_REK_CHANH')
+
+    expect(legacy === standard, 'Legacy metadata lookup must resolve to the exact REK_STANDARD metadata object')
+    expect(legacy.id === 'REK_STANDARD', 'Legacy metadata must expose canonical REK_STANDARD identity')
+    expect(standard.kind === 'standard', 'REK_STANDARD metadata must be classified as standard')
+    expect(standard.researchStatus === 'EVIDENCE_BACKED_CORE', 'Standard metadata must reflect the evidence-backed core')
+    expect(min.kind === 'variant', 'MIN_REK_CHANH metadata must be classified as a variant')
+    expect(
+      min.researchStatus === 'PARTIALLY_UNVERIFIED_VARIANT',
+      'Min metadata must preserve its partially-unverified research status'
+    )
+
+    return 'Catalog metadata is presentation-only: aliases normalize to canonical IDs while legality remains owned by the engine.'
   })
 
   const passed = results.filter((result) => result.passed).length
