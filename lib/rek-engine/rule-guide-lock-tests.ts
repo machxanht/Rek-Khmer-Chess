@@ -68,8 +68,8 @@ function sameSquares(actual: Iterable<number>, expectedCoords: string[], label: 
 
 function setupCompulsoryRekFixture(mode: GameMode): GameState {
   const board = emptyBoard()
-  put(board, 'd1', 'you', true, 'you_king')
-  put(board, 'd8', 'opp', true, 'opp_king')
+  put(board, 'a2', 'you', true, 'you_king')
+  put(board, 'h7', 'opp', true, 'opp_king')
   put(board, 'c1', 'you', false, 'you_rek')
   put(board, 'h1', 'you', false, 'you_quiet')
   put(board, 'b4', 'opp', false, 'opp_b4')
@@ -98,7 +98,7 @@ export function runRuleGuideLockTests(): {
     }
   }
 
-  run('GUIDE-01', 'Every initial front-rank piece has exactly the four central sliding moves', () => {
+  run('GUIDE-01', 'Initial front lines have the documented staggered opening mobility', () => {
     const files = 'abcdefgh'.split('')
     const modes: GameMode[] = ['REK_POAT', 'MIN_REK_CHANH']
     let checked = 0
@@ -106,74 +106,80 @@ export function runRuleGuideLockTests(): {
     for (const mode of modes) {
       const state = createInitialState(mode)
       for (const file of files) {
+        const whiteExpected = file === 'a' ? [`${file}4`, `${file}5`] : [`${file}2`, `${file}4`, `${file}5`]
+        const blackExpected = file === 'h' ? [`${file}5`, `${file}4`] : [`${file}7`, `${file}5`, `${file}4`]
+
         sameSquares(
-          getMoveResults(state.board, coordToIdx(`${file}2`), mode).keys(),
-          [3, 4, 5, 6].map((rank) => `${file}${rank}`),
-          `${mode} ${file}2`
+          getMoveResults(state.board, coordToIdx(`${file}3`), mode).keys(),
+          whiteExpected,
+          `${mode} ${file}3`
         )
         sameSquares(
-          getMoveResults(state.board, coordToIdx(`${file}7`), mode).keys(),
-          [6, 5, 4, 3].map((rank) => `${file}${rank}`),
-          `${mode} ${file}7`
+          getMoveResults(state.board, coordToIdx(`${file}6`), mode).keys(),
+          blackExpected,
+          `${mode} ${file}6`
         )
         checked += 2
       }
     }
 
-    return `${checked} opening pieces checked across both rule modes; each has exactly four legal slides.`
+    return `${checked} front-line pieces checked across both modes against the corrected 7+King+8 formation.`
   })
 
-  run('GUIDE-02', 'Initial back-rank pieces are blocked by their own front rank', () => {
-    const files = 'abcdefgh'.split('')
+  run('GUIDE-02', 'Initial rear formation and palace gaps match the canonical setup', () => {
     const modes: GameMode[] = ['REK_POAT', 'MIN_REK_CHANH']
-    let checked = 0
 
     for (const mode of modes) {
       const state = createInitialState(mode)
-      for (const file of files) {
-        expect(
-          getMoveResults(state.board, coordToIdx(`${file}1`), mode).size === 0,
-          `${mode} ${file}1 must be blocked initially`
-        )
-        expect(
-          getMoveResults(state.board, coordToIdx(`${file}8`), mode).size === 0,
-          `${mode} ${file}8 must be blocked initially`
-        )
-        checked += 2
-      }
+      expect(state.board[coordToIdx('a1')] === null, `${mode} a1 must start empty`)
+      expect(state.board[coordToIdx('h8')] === null, `${mode} h8 must start empty`)
+      expect(state.board[coordToIdx('a2')]?.player === 'you' && state.board[coordToIdx('a2')]?.king, `${mode} White King must be on a2`)
+      expect(state.board[coordToIdx('h7')]?.player === 'opp' && state.board[coordToIdx('h7')]?.king, `${mode} Black King must be on h7`)
+
+      sameSquares(
+        getMoveResults(state.board, coordToIdx('b1'), mode).keys(),
+        ['a1', 'b2'],
+        `${mode} b1 rear man`
+      )
+      sameSquares(
+        getMoveResults(state.board, coordToIdx('g8'), mode).keys(),
+        ['g7', 'h8'],
+        `${mode} g8 rear man`
+      )
     }
 
-    return `${checked} back-rank pieces checked; none can jump through its own front rank.`
+    return 'Both modes preserve a1/h8 corner gaps, Kings on a2/h7, and the rear-rank slides created by the staggered setup.'
   })
 
   run('GUIDE-03', 'Movement is orthogonal only and cannot land on or jump through occupied cells', () => {
     const state = createInitialState('REK_POAT')
-    const moves = new Set(getLegalMoves(state.board, coordToIdx('a2'), 'REK_POAT'))
+    const moves = new Set(getLegalMoves(state.board, coordToIdx('a3'), 'REK_POAT'))
 
-    expect(!moves.has(coordToIdx('b3')), 'Diagonal a2 -> b3 must be illegal')
-    expect(!moves.has(coordToIdx('a1')), 'Landing on own occupied a1 must be illegal')
-    expect(!moves.has(coordToIdx('a7')), 'Landing on occupied enemy a7 must be illegal')
-    expect(!moves.has(coordToIdx('a8')), 'Jumping through occupied a7 to a8 must be illegal')
+    expect(!moves.has(coordToIdx('b4')), 'Diagonal a3 -> b4 must be illegal')
+    expect(!moves.has(coordToIdx('a2')), 'Landing on own occupied King at a2 must be illegal')
+    expect(!moves.has(coordToIdx('a6')), 'Landing on occupied enemy a6 must be illegal')
+    expect(!moves.has(coordToIdx('a7')), 'Jumping through occupied a6 to a7 must be illegal')
+    expect(!moves.has(coordToIdx('a8')), 'Jumping through occupied a6 to a8 must be illegal')
 
-    return 'Diagonal movement, occupied landing, and jumping are all rejected.'
+    return 'Diagonal movement, occupied landing, and jumping are all rejected from the corrected initial formation.'
   })
 
   run('GUIDE-04', 'King slides like a Man in Rek Poat but is stationary in Min Rek Chanh', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true, 'you_king')
-    put(board, 'd8', 'opp', true, 'opp_king')
+    put(board, 'a2', 'you', true, 'you_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
 
     sameSquares(
-      getLegalMoves(board, coordToIdx('d1'), 'REK_POAT'),
-      ['a1', 'b1', 'c1', 'e1', 'f1', 'g1', 'h1', 'd2', 'd3', 'd4', 'd5', 'd6', 'd7'],
-      'REK_POAT King d1'
+      getLegalMoves(board, coordToIdx('a2'), 'REK_POAT'),
+      ['a1', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2'],
+      'REK_POAT King a2'
     )
     expect(
-      getLegalMoves(board, coordToIdx('d1'), 'MIN_REK_CHANH').length === 0,
+      getLegalMoves(board, coordToIdx('a2'), 'MIN_REK_CHANH').length === 0,
       'MIN_REK_CHANH King must expose zero moves'
     )
 
-    return 'The King behavior is locked independently for both documented modes.'
+    return 'The King behavior is locked independently for both documented modes at the canonical White throne.'
   })
 
   run('GUIDE-05', 'Rek can capture two on one axis or four on both axes', () => {

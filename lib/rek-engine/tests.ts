@@ -111,7 +111,6 @@ export function runAllUnitTests(): {
     const board = emptyBoard()
     put(board, 'h1', 'you', true, 'you_king')
     put(board, 'a4', 'you')
-    // Rek victims must be adjacent to the landing square d4.
     put(board, 'd3', 'opp', true, 'opp_king')
     put(board, 'd5', 'opp')
 
@@ -198,13 +197,13 @@ export function runAllUnitTests(): {
     return 'Flood-fill treats a7/a8/b8 as one group and captures it at zero liberties.'
   })
 
-  run('REG-01', 'Initial movement is rook-like and blocked by the enemy front', () => {
+  run('REG-01', 'Initial staggered movement is rook-like and blocked by the surrounding formation', () => {
     const state = createInitialState('REK_POAT')
-    const moves = getLegalMoves(state.board, coordToIdx('a2'), state.mode)
-    const expected = ['a3', 'a4', 'a5', 'a6'].map(coordToIdx)
+    const moves = getLegalMoves(state.board, coordToIdx('b3'), state.mode)
+    const expected = ['b2', 'b4', 'b5'].map(coordToIdx)
 
-    expect(sameMembers(moves, expected), 'a2 should slide only through a3-a6 at the initial position')
-    return 'Initial a2 has exactly four unobstructed forward destinations.'
+    expect(sameMembers(moves, expected), 'b3 should slide to b2/b4/b5 and stop at b1/b6 blockers')
+    return 'Initial b3 uses the palace gap behind it and the two central squares ahead of it.'
   })
 
   run('REG-02', 'Pieces cannot jump over blockers', () => {
@@ -256,10 +255,10 @@ export function runAllUnitTests(): {
 
   run('REG-06', 'King mobility differs by game mode', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true)
+    put(board, 'a2', 'you', true)
 
-    const standard = getLegalMoves(board, coordToIdx('d1'), 'REK_POAT')
-    const palace = getLegalMoves(board, coordToIdx('d1'), 'MIN_REK_CHANH')
+    const standard = getLegalMoves(board, coordToIdx('a2'), 'REK_POAT')
+    const palace = getLegalMoves(board, coordToIdx('a2'), 'MIN_REK_CHANH')
     expect(standard.length > 0, 'King must move like a rook in REK_POAT')
     expect(palace.length === 0, 'King must be stationary in MIN_REK_CHANH')
     return 'Mode-specific King behavior is enforced by the core move generator.'
@@ -303,7 +302,7 @@ export function runAllUnitTests(): {
   run('REG-09', 'RekEngine class cannot move the opponent on the wrong turn', () => {
     const engine = new RekEngine('REK_POAT')
     const before = engine.getState()
-    const accepted = engine.makeMove(coordToIdx('a7'), coordToIdx('a6'))
+    const accepted = engine.makeMove(coordToIdx('a6'), coordToIdx('a5'))
     const after = engine.getState()
 
     expect(accepted === false, 'Wrong-turn move must return false')

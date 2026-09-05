@@ -80,21 +80,44 @@ export function runSpecLockTests(): {
     }
   }
 
-  run('SPEC-01', 'Initial setup is exactly 16 pieces per side with Kings on d1/d8', () => {
+  run('SPEC-01', 'Initial setup is exactly the canonical 7+King+8 formation with Kings on a2/h7', () => {
     const state = createInitialState('REK_POAT')
 
     expect(countPieces(state.board, 'you') === 16, 'White/you must start with 16 pieces')
     expect(countPieces(state.board, 'opp') === 16, 'Black/opp must start with 16 pieces')
-    expect(state.board[coordToIdx('d1')]?.player === 'you' && state.board[coordToIdx('d1')]?.king, 'White King must start on d1')
-    expect(state.board[coordToIdx('d8')]?.player === 'opp' && state.board[coordToIdx('d8')]?.king, 'Black King must start on d8')
+    expect(state.board[coordToIdx('a2')]?.player === 'you' && state.board[coordToIdx('a2')]?.king, 'White King must start on a2')
+    expect(state.board[coordToIdx('h7')]?.player === 'opp' && state.board[coordToIdx('h7')]?.king, 'Black King must start on h7')
 
-    for (const rank of [3, 4, 5, 6]) {
-      for (const file of 'abcdefgh') {
-        expect(state.board[coordToIdx(`${file}${rank}`)] === null, `Central square ${file}${rank} must start empty`)
-      }
+    const whiteMen = [
+      ...'bcdefgh'.split('').map((file) => `${file}1`),
+      ...'abcdefgh'.split('').map((file) => `${file}3`),
+    ]
+    const blackMen = [
+      ...'abcdefgh'.split('').map((file) => `${file}6`),
+      ...'abcdefg'.split('').map((file) => `${file}8`),
+    ]
+
+    for (const coord of whiteMen) {
+      const piece = state.board[coordToIdx(coord)]
+      expect(piece?.player === 'you' && !piece.king, `${coord} must contain a White/you man`)
+    }
+    for (const coord of blackMen) {
+      const piece = state.board[coordToIdx(coord)]
+      expect(piece?.player === 'opp' && !piece.king, `${coord} must contain a Black/opp man`)
     }
 
-    return 'Setup matches the repository specification: 16 vs 16, d1/d8 Kings, four empty central ranks.'
+    const expectedEmpty = [
+      'a1',
+      ...'bcdefgh'.split('').map((file) => `${file}2`),
+      ...'abcdefgh'.split('').flatMap((file) => [`${file}4`, `${file}5`]),
+      ...'abcdefg'.split('').map((file) => `${file}7`),
+      'h8',
+    ]
+    for (const coord of expectedEmpty) {
+      expect(state.board[coordToIdx(coord)] === null, `${coord} must start empty`)
+    }
+
+    return 'Setup matches the corrected Khmer formation: White K@a2, Black K@h7, 15 men each, and only ranks 4-5 fully empty.'
   })
 
   run('SPEC-02', 'Rook-like movement stops at the first occupied square in every direction', () => {
@@ -195,21 +218,21 @@ export function runSpecLockTests(): {
 
   run('SPEC-08', 'The Palace King never generates movement or Rek in MIN_REK_CHANH', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true)
-    put(board, 'c4', 'opp')
-    put(board, 'e4', 'opp')
+    put(board, 'a2', 'you', true)
+    put(board, 'b4', 'opp')
+    put(board, 'd4', 'opp')
 
-    expect(getLegalMoves(board, coordToIdx('d1'), 'MIN_REK_CHANH').length === 0, 'Palace King must have zero legal destinations')
+    expect(getLegalMoves(board, coordToIdx('a2'), 'MIN_REK_CHANH').length === 0, 'Palace King must have zero legal destinations')
     const reks = getAllRekOpportunities(board, 'you', 'MIN_REK_CHANH')
-    expect(!reks.some((move) => move.from === coordToIdx('d1')), 'Stationary Palace King must never appear in Rek opportunities')
+    expect(!reks.some((move) => move.from === coordToIdx('a2')), 'Stationary Palace King must never appear in Rek opportunities')
 
     return 'King immobility is enforced consistently in both movement and compulsory-Rek discovery.'
   })
 
   run('SPEC-09', 'Poat remains enabled in MIN_REK_CHANH', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true, 'you_king')
-    put(board, 'h8', 'opp', true, 'opp_king')
+    put(board, 'a2', 'you', true, 'you_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
     put(board, 'a6', 'you')
     put(board, 'b8', 'you')
     put(board, 'a8', 'opp')
@@ -223,26 +246,26 @@ export function runSpecLockTests(): {
 
   run('SPEC-10', 'Immobilization is a win when the opponent has no legal moves', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true, 'you_king')
+    put(board, 'a2', 'you', true, 'you_king')
     put(board, 'a1', 'you')
-    put(board, 'd8', 'opp', true, 'opp_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
 
-    const next = executeMove(makeState(board, 'you', 'MIN_REK_CHANH'), coordToIdx('a1'), coordToIdx('a2'))
+    const next = executeMove(makeState(board, 'you', 'MIN_REK_CHANH'), coordToIdx('a1'), coordToIdx('b1'))
     expect(next.status === 'won' && next.winner === 'you', 'Opponent with zero legal moves must lose')
     expect(next.winReason === 'Opponent completely immobilized (Zero liberties)', 'Immobilization must be reported as the win reason')
-    expect(next.board[coordToIdx('d8')]?.king === true, 'Immobilization must not require the King to be captured first')
+    expect(next.board[coordToIdx('h7')]?.king === true, 'Immobilization must not require the King to be captured first')
 
     return 'A surviving but completely immobile opponent loses according to the endgame specification.'
   })
 
   run('SPEC-11', 'A finished game is immutable to further move attempts', () => {
     const board = emptyBoard()
-    put(board, 'd1', 'you', true, 'you_king')
+    put(board, 'a2', 'you', true, 'you_king')
     put(board, 'a1', 'you')
-    put(board, 'd8', 'opp', true, 'opp_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
 
-    const won = executeMove(makeState(board, 'you', 'MIN_REK_CHANH'), coordToIdx('a1'), coordToIdx('a2'))
-    const after = executeMove(won, coordToIdx('d8'), coordToIdx('d7'))
+    const won = executeMove(makeState(board, 'you', 'MIN_REK_CHANH'), coordToIdx('a1'), coordToIdx('b1'))
+    const after = executeMove(won, coordToIdx('h7'), coordToIdx('h6'))
     expect(after === won, 'executeMove must return the exact finished state when the game is no longer playing')
 
     return 'No rule processing or state mutation is allowed after win/draw status is reached.'

@@ -87,28 +87,30 @@ export function runPublicApiTests(): {
     }
   }
 
-  run('API-01', 'createGame exposes a rule-legal initial session without UI dependencies', () => {
+  run('API-01', 'createGame exposes a rule-legal canonical initial session without UI dependencies', () => {
     const game = createGame('REK_POAT')
     const state = game.getState()
-    const moves = new Set(game.getLegalMoves(coordToIdx('a2')))
+    const moves = new Set(game.getLegalMoves(coordToIdx('a3')))
 
     expect(state.mode === 'REK_POAT', 'createGame must preserve requested mode')
     expect(state.turn === 'you' && state.status === 'playing', 'New session must start with White/you to move')
-    for (const coord of ['a3', 'a4', 'a5', 'a6']) {
+    for (const coord of ['a4', 'a5']) {
       expect(moves.has(coordToIdx(coord)), `Initial public API must expose ${coord}`)
     }
-    expect(moves.size === 4, 'a2 must have exactly four public rule-legal moves initially')
+    expect(moves.size === 2, 'a3 must have exactly two public rule-legal moves initially')
+    expect(state.board[coordToIdx('a2')]?.king === true, 'Public initial state must expose White King on a2')
+    expect(state.board[coordToIdx('h7')]?.king === true, 'Public initial state must expose Black King on h7')
 
-    return 'New callers can create a game and query legal moves through one stable facade.'
+    return 'New callers see the corrected canonical setup and query legal moves through one stable facade.'
   })
 
   run('API-02', 'makeMove and undo update session state atomically', () => {
     const game = new RekGame('REK_POAT')
     const before = game.getState()
-    const from = coordToIdx('a2')
-    const to = coordToIdx('a3')
+    const from = coordToIdx('a3')
+    const to = coordToIdx('a4')
 
-    expect(game.makeMove(from, to), 'Legal a2 -> a3 must execute')
+    expect(game.makeMove(from, to), 'Legal a3 -> a4 must execute')
     expect(game.canUndo(), 'Successful move must create undo history')
     const after = game.getState()
     expect(after.board[from] === null, 'Source must be empty after move')
@@ -133,7 +135,7 @@ export function runPublicApiTests(): {
     const external = game.getState()
     const a2 = coordToIdx('a2')
     const originalId = external.board[a2]?.id
-    expect(typeof originalId === 'string', 'Fixture must contain a2 piece')
+    expect(typeof originalId === 'string', 'Fixture must contain the a2 King')
 
     external.board[a2] = null
     external.lastCaptured.push(coordToIdx('h8'))
@@ -151,8 +153,8 @@ export function runPublicApiTests(): {
 
   run('API-04', 'serialize and deserialize round-trip a live game state with versioned snapshots', () => {
     const game = createGame('REK_POAT')
-    expect(game.makeMove(coordToIdx('a2'), coordToIdx('a3')), 'First fixture move must execute')
-    expect(game.makeMove(coordToIdx('a7'), coordToIdx('a6')), 'Second fixture move must execute')
+    expect(game.makeMove(coordToIdx('a3'), coordToIdx('a4')), 'First fixture move must execute')
+    expect(game.makeMove(coordToIdx('a6'), coordToIdx('a5')), 'Second fixture move must execute')
 
     const serialized = game.serialize()
     const envelope = JSON.parse(serialized) as { version?: unknown }
