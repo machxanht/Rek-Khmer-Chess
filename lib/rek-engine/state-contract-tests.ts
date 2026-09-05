@@ -199,6 +199,11 @@ export function runStateContractTests(): {
     put(board, 'd4', 'opp', false, 'opp_d4')
 
     const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
     const next = executeMove(state, coordToIdx('h1'), coordToIdx('h2'))
 
     expect(next !== state, 'Forfeit must produce a terminal state')
@@ -208,6 +213,7 @@ export function runStateContractTests(): {
     expect(next.lastCaptured === state.lastCaptured, 'Ignored illegal move must not invent capture metadata')
     expect(next.turn === state.turn, 'Forfeit adjudication must not pretend a legal turn switch occurred')
     expect(next.availableRekMovesCount === state.availableRekMovesCount, 'Forfeit must preserve pre-existing Rek metadata')
+    expect(next.haoRekContext === state.haoRekContext, 'Forfeit must preserve the active Hao context')
 
     return 'Forfeit changes only terminal adjudication fields; the illegal move never becomes history.'
   })

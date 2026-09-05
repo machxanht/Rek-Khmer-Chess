@@ -12,6 +12,7 @@ import {
   Piece,
   RuleSetInput,
   GameState,
+  HaoRekContext,
   MoveResult,
   normalizeRuleSet,
 } from './types'
@@ -51,7 +52,8 @@ export function idxToCoord(index: number): string {
 export function createPositionKey(
   board: Cell[],
   turn: PlayerColor,
-  mode: RuleSetInput
+  mode: RuleSetInput,
+  haoRekContext?: HaoRekContext | null
 ): string {
   const cells = board
     .map((piece) => {
@@ -60,7 +62,14 @@ export function createPositionKey(
       return `${side}${piece.king ? 'K' : 'M'}`
     })
     .join(',')
-  return `${normalizeRuleSet(mode)}|${turn}|${cells}`
+  const base = `${normalizeRuleSet(mode)}|${turn}|${cells}`
+  if (!haoRekContext?.active || haoRekContext.allowedResponses.length === 0) return base
+
+  const hao = haoRekContext.allowedResponses
+    .map((move) => responseKey(move.from, move.to))
+    .sort()
+    .join(',')
+  return `${base}|hao=${hao}`
 }
 
 export function hasLoneKing(board: Cell[]): boolean {
@@ -117,6 +126,7 @@ export function createInitialState(mode: RuleSetInput = DEFAULT_RULESET): GameSt
     captured: { you: [], opp: [] },
     moveCount: 0,
     availableRekMovesCount: 0,
+    haoRekContext: null,
     positionCounts: { [createPositionKey(board, turn, ruleset)]: 1 },
     loneKingMoveCount: 0,
     drawMoveLimit: DEFAULT_LONE_KING_DRAW_LIMIT,
@@ -278,46 +288,58 @@ export function previewMove(
   const legal = getLegalMoves(board, from, ruleset)
   if (!legal.includes(to)) return emptyMoveResult(from, to)
 
-  // Current project interpretation for MIN_REK_CHANH: if any Rek opportunity
-  // exists, a submitted quiet move is a forfeit. The exact traditional trigger
-  // is still UNVERIFIED in the evidence guide and may be refined later.
-  if (ruleset === 'MIN_REK_CHANH') {
-    const rekMoves = getAllRekOpportunities(board, mover, ruleset)
-    if (rekMoves.length > 0) {
-      const isRekMove = rekMoves.some((move) => move.from === from && move.to === to)
-      if (!isRekMove) {
-        return {
-          ...emptyMoveResult(from, to),
-          isHaoRekViolation: true,
-        }
-      }
-    }
-  }
-
+  // Board-only preview cannot know whether a Rek was newly created by the
+  // previous move. Hao Rek legality is therefore applied only by state-aware
+  // helpers / executeMove(), which own transition context.
   return resolveValidatedMove(board, from, to, mover)
 }
 
-function compulsoryRekDestinations(
-  board: Cell[],
-  player: PlayerColor,
-  mode: RuleSetInput
-): Map<number, Set<number>> | null {
+function responseKey(from: number, to: number): string {
+  return `${from}:${to}`
+}
+
+function activeHaoResponses(state: GameState): Map<number, Set<number>> | null {
+  if (normalizeRuleSet(state.mode) !== 'MIN_REK_CHANH') return null
+  const context = state.haoRekContext
+  if (!context?.active || context.allowedResponses.length === 0) return null
+
+  const byFrom = new Map<number, Set<number>>()
+  for (const response of context.allowedResponses) {
+    let destinations = byFrom.get(response.from)
+    if (!destinations) {
+      destinations = new Set<number>()
+      byFrom.set(response.from, destinations)
+    }
+    destinations.add(response.to)
+  }
+  return byFrom
+}
+
+function deriveHaoRekContext(
+  beforeBoard: Cell[],
+  afterBoard: Cell[],
+  responder: PlayerColor,
+  mode: RuleSetInput,
+  createdByMove: { from: number; to: number }
+): HaoRekContext | null {
   const ruleset = normalizeRuleSet(mode)
   if (ruleset !== 'MIN_REK_CHANH') return null
 
-  const opportunities = getAllRekOpportunities(board, player, ruleset)
-  if (opportunities.length === 0) return null
+  const before = new Set(
+    getAllRekOpportunities(beforeBoard, responder, ruleset)
+      .map((move) => responseKey(move.from, move.to))
+  )
+  const newlyCreated = getAllRekOpportunities(afterBoard, responder, ruleset)
+    .filter((move) => !before.has(responseKey(move.from, move.to)))
+    .map((move) => ({ from: move.from, to: move.to }))
+    .sort((a, b) => a.from - b.from || a.to - b.to)
 
-  const byFrom = new Map<number, Set<number>>()
-  for (const opportunity of opportunities) {
-    let destinations = byFrom.get(opportunity.from)
-    if (!destinations) {
-      destinations = new Set<number>()
-      byFrom.set(opportunity.from, destinations)
-    }
-    destinations.add(opportunity.to)
+  if (newlyCreated.length === 0) return null
+  return {
+    active: true,
+    createdByMove: { ...createdByMove },
+    allowedResponses: newlyCreated,
   }
-  return byFrom
 }
 
 /**
@@ -335,11 +357,9 @@ export function getMoveResults(
   const piece = board[from]
   if (!piece) return results
 
-  const allowedReks = compulsoryRekDestinations(board, piece.player, ruleset)
   const destinations = getLegalMoves(board, from, ruleset)
 
   for (const to of destinations) {
-    if (allowedReks && !allowedReks.get(from)?.has(to)) continue
     results.set(to, resolveValidatedMove(board, from, to, piece.player))
   }
   return results
@@ -357,7 +377,6 @@ export function getAllMoveResults(
 ): Map<number, Map<number, MoveResult>> {
   const ruleset = normalizeRuleSet(mode)
   const results = new Map<number, Map<number, MoveResult>>()
-  const allowedReks = compulsoryRekDestinations(board, player, ruleset)
 
   for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
     const piece = board[from]
@@ -366,12 +385,42 @@ export function getAllMoveResults(
     const perPiece = new Map<number, MoveResult>()
     const destinations = getLegalMoves(board, from, ruleset)
     for (const to of destinations) {
-      if (allowedReks && !allowedReks.get(from)?.has(to)) continue
       perPiece.set(to, resolveValidatedMove(board, from, to, player))
     }
     results.set(from, perPiece)
   }
 
+  return results
+}
+
+export function getStateMoveResults(
+  state: GameState,
+  from: number
+): Map<number, MoveResult> {
+  const ruleset = normalizeRuleSet(state.mode)
+  const piece = state.board[from]
+  const results = new Map<number, MoveResult>()
+  if (state.status !== 'playing' || !piece || piece.player !== state.turn) return results
+
+  const allowed = activeHaoResponses(state)
+  for (const [to, result] of getMoveResults(state.board, from, ruleset)) {
+    if (allowed && (!allowed.get(from)?.has(to) || !result.rek)) continue
+    results.set(to, result)
+  }
+  return results
+}
+
+export function getAllStateMoveResults(
+  state: GameState
+): Map<number, Map<number, MoveResult>> {
+  const results = new Map<number, Map<number, MoveResult>>()
+  if (state.status !== 'playing') return results
+
+  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
+    const piece = state.board[from]
+    if (!piece || piece.player !== state.turn) continue
+    results.set(from, getStateMoveResults(state, from))
+  }
   return results
 }
 
@@ -391,15 +440,15 @@ export function executeMove(
   const legal = getLegalMoves(state.board, from, ruleset)
   if (!legal.includes(to)) return state
 
+  const activeHao = activeHaoResponses(state)
   const result = previewMove(state.board, from, to, mover, ruleset)
-
-  if (result.isHaoRekViolation) {
+  if (activeHao && (!activeHao.get(from)?.has(to) || !result.rek)) {
     return {
       ...state,
       mode: ruleset,
       status: 'won',
       winner: opponent(mover),
-      winReason: 'Min Rek Chanh violation: compulsory Rek was ignored',
+      winReason: 'Min Rek Chanh violation: active Hao Rek response was ignored',
     }
   }
 
@@ -453,11 +502,21 @@ export function executeMove(
     }
   }
 
-  const currentPositionKey = createPositionKey(state.board, state.turn, ruleset)
+  const haoRekContext =
+    status === 'playing'
+      ? deriveHaoRekContext(state.board, newBoard, nextTurn, ruleset, { from, to })
+      : null
+
+  const currentPositionKey = createPositionKey(
+    state.board,
+    state.turn,
+    ruleset,
+    state.haoRekContext
+  )
   const positionCounts: Record<string, number> = state.positionCounts
     ? normalizePositionCounts(state.positionCounts)
     : { [currentPositionKey]: 1 }
-  const nextPositionKey = createPositionKey(newBoard, nextTurn, ruleset)
+  const nextPositionKey = createPositionKey(newBoard, nextTurn, ruleset, haoRekContext)
   positionCounts[nextPositionKey] = (positionCounts[nextPositionKey] ?? 0) + 1
 
   const hadLoneKing = hasLoneKing(state.board)
@@ -504,6 +563,7 @@ export function executeMove(
     captured: newCaptured,
     moveCount: state.moveCount + 1,
     availableRekMovesCount: availableReks,
+    haoRekContext,
     positionCounts,
     loneKingMoveCount,
     drawMoveLimit,
@@ -577,11 +637,11 @@ export class RekEngine {
     if (this.state.status !== 'playing') return []
     const piece = this.state.board[from]
     if (!piece || piece.player !== this.state.turn) return []
-    return Array.from(getMoveResults(this.state.board, from, this.state.mode).keys())
+    return Array.from(getStateMoveResults(this.state, from).keys())
   }
 
   public previewMove(from: number, to: number): MoveResult {
-    return previewMove(this.state.board, from, to, this.state.turn, this.state.mode)
+    return getStateMoveResults(this.state, from).get(to) ?? emptyMoveResult(from, to)
   }
 
   public makeMove(from: number, to: number): boolean {
@@ -594,12 +654,12 @@ export class RekEngine {
     if (!geometric.includes(to)) return false
 
     const before = this.state
-    const preview = previewMove(before.board, from, to, before.turn, before.mode)
+    const next = executeMove(before, from, to)
+    if (next === before) return false
 
     this.history.push(before)
-    this.state = executeMove(before, from, to)
-
-    return !preview.isHaoRekViolation && this.state !== before
+    this.state = next
+    return true
   }
 
   public undo(): boolean {
@@ -635,6 +695,7 @@ export class RekEngine {
       captured: { you: [], opp: [] },
       moveCount: 0,
       availableRekMovesCount: getAllRekOpportunities(board, turn, ruleset).length,
+      haoRekContext: null,
       positionCounts: { [createPositionKey(board, turn, ruleset)]: 1 },
       loneKingMoveCount: 0,
       drawMoveLimit: this.state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT,

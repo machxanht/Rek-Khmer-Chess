@@ -8,10 +8,13 @@ import {
 import {
   coordToIdx,
   getMoveResults,
+  getStateMoveResults,
 } from './engine'
 import {
   chooseAiMove,
+  chooseAiMoveForState,
   getAllLegalMoves,
+  getAllLegalMovesForState,
   type AiDifficulty,
 } from './ai'
 
@@ -93,7 +96,7 @@ export function runAiBoundaryTests(): {
     return 'AI move generation is a projection of engine move results in the canonical Standard ruleset.'
   })
 
-  run('AI-BOUNDARY-02', 'AI legal set exactly matches engine in MIN_REK_CHANH', () => {
+  run('AI-BOUNDARY-02', 'State-aware AI legal set exactly matches active Hao context', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true)
     put(board, 'd8', 'opp', true)
@@ -102,16 +105,40 @@ export function runAiBoundaryTests(): {
     put(board, 'b4', 'opp')
     put(board, 'd4', 'opp')
 
-    const expected = engineMoveKeys(board, 'you', 'MIN_REK_CHANH')
-    const actual = aiMoveKeys(board, 'you', 'MIN_REK_CHANH')
+    const state = {
+      board,
+      turn: 'you' as const,
+      status: 'playing' as const,
+      winner: null,
+      winReason: null,
+      mode: 'MIN_REK_CHANH' as const,
+      lastMove: null,
+      lastCaptured: [],
+      lastRek: false,
+      lastPoat: false,
+      captured: { you: [], opp: [] },
+      moveCount: 0,
+      availableRekMovesCount: 1,
+      haoRekContext: {
+        active: true,
+        createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+        allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+      },
+    }
 
-    expect(actual.size === expected.size, 'AI and engine move counts must match in MIN_REK_CHANH')
-    for (const key of expected) expect(actual.has(key), `AI is missing compulsory Rek move ${key}`)
-    for (const key of actual) expect(expected.has(key), `AI exposed a forbidden non-Rek move ${key}`)
-    expect(actual.has(`${coordToIdx('c1')}-${coordToIdx('c4')}`), 'Compulsory c1 -> c4 Rek must remain available')
-    expect(!Array.from(actual).some((key) => key.startsWith(`${coordToIdx('h1')}-`)), 'Ordinary h1 moves must disappear while current Min obligation is active')
+    const expected = new Set<string>()
+    for (let from = 0; from < board.length; from++) {
+      for (const to of getStateMoveResults(state, from).keys()) expected.add(`${from}-${to}`)
+    }
+    const actual = new Set(getAllLegalMovesForState(state).map((move) => `${move.from}-${move.to}`))
 
-    return 'AI inherits the current Min engine contract without re-implementing it.'
+    expect(actual.size === expected.size, 'State-aware AI and engine move counts must match')
+    for (const key of expected) expect(actual.has(key), `AI is missing active Hao response ${key}`)
+    for (const key of actual) expect(expected.has(key), `AI exposed a move outside active Hao context: ${key}`)
+    expect(actual.has(`${coordToIdx('c1')}-${coordToIdx('c4')}`), 'Called c1 -> c4 response must remain available')
+    expect(!Array.from(actual).some((key) => key.startsWith(`${coordToIdx('h1')}-`)), 'Quiet h1 moves must disappear during active Hao')
+
+    return 'Live AI consumes engine-owned Hao context instead of deriving board-global obligation.'
   })
 
   run('AI-BOUNDARY-03', 'AI never moves the stationary King in current MIN_REK_CHANH contract', () => {
@@ -120,7 +147,23 @@ export function runAiBoundaryTests(): {
     put(board, 'd8', 'opp', true)
     put(board, 'a2', 'you')
 
-    const moves = getAllLegalMoves(board, 'you', 'MIN_REK_CHANH')
+    const state = {
+      board,
+      turn: 'you' as const,
+      status: 'playing' as const,
+      winner: null,
+      winReason: null,
+      mode: 'MIN_REK_CHANH' as const,
+      lastMove: null,
+      lastCaptured: [],
+      lastRek: false,
+      lastPoat: false,
+      captured: { you: [], opp: [] },
+      moveCount: 0,
+      availableRekMovesCount: 0,
+      haoRekContext: null,
+    }
+    const moves = getAllLegalMovesForState(state)
     expect(!moves.some((move) => move.from === coordToIdx('d1')), 'Stationary d1 King must never appear in AI legal moves')
     expect(moves.some((move) => move.from === coordToIdx('a2')), 'Other movable pieces should remain available')
 
@@ -152,11 +195,27 @@ export function runAiBoundaryTests(): {
     put(board, 'd1', 'you', true)
     put(board, 'd8', 'opp', true)
 
-    const moves = getAllLegalMoves(board, 'opp', 'MIN_REK_CHANH')
+    const state = {
+      board,
+      turn: 'opp' as const,
+      status: 'playing' as const,
+      winner: null,
+      winReason: null,
+      mode: 'MIN_REK_CHANH' as const,
+      lastMove: null,
+      lastCaptured: [],
+      lastRek: false,
+      lastPoat: false,
+      captured: { you: [], opp: [] },
+      moveCount: 0,
+      availableRekMovesCount: 0,
+      haoRekContext: null,
+    }
+    const moves = getAllLegalMovesForState(state)
     expect(moves.length === 0, 'A side with only its stationary King has zero legal moves under current Min contract')
 
     for (const difficulty of ['easy', 'medium', 'hard'] as AiDifficulty[]) {
-      expect(chooseAiMove(board, 'opp', 'MIN_REK_CHANH', difficulty) === null, `${difficulty} AI must return null at zero legal moves`)
+      expect(chooseAiMoveForState(state, difficulty) === null, `${difficulty} live AI must return null at zero legal moves`)
     }
 
     return 'AI does not synthesize fallback moves when the engine reports immobilization.'

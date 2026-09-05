@@ -1,6 +1,7 @@
 import {
   BOARD_SIZE,
   Cell,
+  GameState,
   PlayerColor,
   RuleSet,
   TestResult,
@@ -12,8 +13,9 @@ import {
 } from './engine'
 import {
   analyzeAiMove,
-  countRuleLegalMoves,
+  analyzeAiState,
   getAllLegalMoves,
+  getAllLegalMovesForState,
   minimax,
   type AiMove,
 } from './ai'
@@ -61,6 +63,29 @@ function compulsoryRekFixture(): Cell[] {
   return board
 }
 
+function activeMinState(board: Cell[], from: string, to: string): GameState {
+  return {
+    board,
+    turn: 'you',
+    status: 'playing',
+    winner: null,
+    winReason: null,
+    mode: 'MIN_REK_CHANH',
+    lastMove: null,
+    lastCaptured: [],
+    lastRek: false,
+    lastPoat: false,
+    captured: { you: [], opp: [] },
+    moveCount: 0,
+    availableRekMovesCount: 1,
+    haoRekContext: {
+      active: true,
+      createdByMove: null,
+      allowedResponses: [{ from: coordToIdx(from), to: coordToIdx(to) }],
+    },
+  }
+}
+
 function royalThreatFixture(): Cell[] {
   const board = emptyBoard()
   put(board, 'd1', 'you', true, 'you_king')
@@ -104,19 +129,18 @@ export function runAiSearchRegressionTests(): {
     }
   }
 
-  run('AIS-01', 'AI mobility heuristic counts rule-legal Min Rek Chanh moves only', () => {
+  run('AIS-01', 'State-aware AI search sees only active Hao responses', () => {
     const board = compulsoryRekFixture()
-    const legal = getAllLegalMoves(board, 'you', 'MIN_REK_CHANH')
-    const count = countRuleLegalMoves(board, 'you', 'MIN_REK_CHANH')
+    const state = activeMinState(board, 'c1', 'c4')
+    const legal = getAllLegalMovesForState(state)
 
-    expect(legal.length === 1, `Fixture must expose exactly one compulsory Rek, got ${legal.length}`)
-    expect(count === legal.length, `Rule mobility count ${count} must equal engine-backed AI legal count ${legal.length}`)
+    expect(legal.length === 1, `Fixture must expose exactly one active Hao response, got ${legal.length}`)
     expect(
       legal[0].from === coordToIdx('c1') && legal[0].to === coordToIdx('c4'),
-      'The only legal move must be c1→c4 Rek'
+      'The only live legal move must be c1→c4 Rek'
     )
 
-    return 'MIN_REK_CHANH evaluation can no longer inflate mobility with forbidden quiet slides.'
+    return 'MIN_REK_CHANH live search consumes transition-owned Hao context without board-global filtering.'
   })
 
   run('AIS-02', 'Depth-zero minimax still recognizes engine terminal immobilization', () => {
@@ -192,19 +216,20 @@ export function runAiSearchRegressionTests(): {
     put(board, 'b3', 'opp')
     put(board, 'b5', 'opp')
 
-    const medium = analyzeAiMove(board, 'you', 'MIN_REK_CHANH', 'medium')
-    const hard = analyzeAiMove(board, 'you', 'MIN_REK_CHANH', 'hard')
+    const state = activeMinState(board, 'a4', 'b4')
+    const medium = analyzeAiState(state, 'medium')
+    const hard = analyzeAiState(state, 'hard')
 
-    expect(medium.move && hard.move, 'Both deterministic difficulties must find the compulsory Rek')
+    expect(medium.move && hard.move, 'Both deterministic difficulties must find the active Hao response')
     expect(medium.depth === 2, `Medium depth must remain 2, got ${medium.depth}`)
     expect(hard.depth === 5, `Hard should deepen a <=4-move root to depth 5, got ${hard.depth}`)
     expect(
       hard.move.from === coordToIdx('a4') && hard.move.to === coordToIdx('b4'),
-      'Hard must play the compulsory a4→b4 Rek that immobilizes the remaining Palace King'
+      'Hard must play the active a4→b4 Hao response that immobilizes the remaining Palace King'
     )
     expect((hard.move.score ?? 0) > 90000, 'Immediate immobilization win must receive a mate-like score')
 
-    return 'Hard spends extra depth only where branching is narrow, while immediate terminal wins short-circuit search.'
+    return 'State-aware Hard deepens the single-response Hao position while immediate terminal wins short-circuit search.'
   })
 
   run('AIS-06', 'Alpha-beta pruned bounds are not cached as exact transposition values', () => {

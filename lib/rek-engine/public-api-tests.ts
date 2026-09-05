@@ -218,19 +218,25 @@ export function runPublicApiTests(): {
     put(board, 'b4', 'opp', false, 'opp_b4')
     put(board, 'd4', 'opp', false, 'opp_d4')
 
-    const game = new RekGame(makeState(board, 'you', 'MIN_REK_CHANH'))
-    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no legal moves under current compulsory-Rek contract')
+    const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
+    const game = new RekGame(state)
+    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no moves during active Hao')
     expect(
       game.getLegalMoves(coordToIdx('c1')).includes(coordToIdx('c4')),
-      'Actual Rek move must remain exposed'
+      'Called Hao response must remain exposed'
     )
 
-    expect(game.makeMove(coordToIdx('h1'), coordToIdx('h2')), 'Submitted Hao Rek violation must be adjudicated as a state change')
+    expect(game.makeMove(coordToIdx('h1'), coordToIdx('h2')), 'Submitted Hao violation must be adjudicated as a state change')
     const terminal = game.getState()
     expect(terminal.status === 'won' && terminal.winner === 'opp', 'Core engine must award the violation to opponent')
     expect(terminal.board[coordToIdx('h1')]?.id === 'you_quiet', 'Illegal quiet move must not alter board')
 
-    return 'Current Min variant remains behaviorally unchanged while its exact historical trigger stays under research.'
+    return 'Public legality now consumes transition-owned Hao context and keeps ignored-call forfeit semantics.'
   })
 
   run('API-07', 'legacy REK_POAT callers and snapshots migrate to REK_STANDARD', () => {
@@ -312,6 +318,33 @@ export function runPublicApiTests(): {
     expect(reloadedMode === 'REK_STANDARD', 'Canonical deserialize return type must never expose legacy mode')
 
     return 'Typecheck now proves compatibility input is separate from canonical session output.'
+  })
+
+  run('API-11', 'active Hao context round-trips through canonical snapshots', () => {
+    const board = emptyBoard()
+    put(board, 'a2', 'you', true, 'you_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
+    put(board, 'c1', 'you', false, 'you_rek')
+    put(board, 'b4', 'opp', false, 'opp_b4')
+    put(board, 'd4', 'opp', false, 'opp_d4')
+
+    const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
+
+    const loaded = deserializeGameState(serializeGameState(state))
+    expect(loaded.haoRekContext?.active === true, 'Active Hao flag must survive save/load')
+    expect(loaded.haoRekContext?.allowedResponses.length === 1, 'Allowed response set must survive save/load')
+    expect(
+      loaded.haoRekContext?.allowedResponses[0].from === coordToIdx('c1') &&
+        loaded.haoRekContext?.allowedResponses[0].to === coordToIdx('c4'),
+      'Exact Hao response coordinates must survive save/load'
+    )
+
+    return 'Snapshot v1 remains backward-compatible because Hao context is an additive optional field normalized to null when absent.'
   })
 
   const passed = results.filter((result) => result.passed).length

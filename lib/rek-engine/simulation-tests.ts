@@ -4,7 +4,7 @@ import {
   createPositionKey,
   executeMove,
   getAllRekOpportunities,
-  getMoveResults,
+  getStateMoveResults,
 } from './engine'
 
 interface LegalChoice {
@@ -21,7 +21,7 @@ function collectLegal(state: GameState): LegalChoice[] {
   for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
     const piece = state.board[from]
     if (!piece || piece.player !== state.turn) continue
-    for (const to of getMoveResults(state.board, from, state.mode).keys()) {
+    for (const to of getStateMoveResults(state, from).keys()) {
       choices.push({ from, to })
     }
   }
@@ -64,7 +64,7 @@ function assertIntegrity(state: GameState): void {
     expect(state.availableRekMovesCount === 0, 'Terminal state must not expose future Rek opportunities')
   }
 
-  const key = createPositionKey(state.board, state.turn, state.mode)
+  const key = createPositionKey(state.board, state.turn, state.mode, state.haoRekContext)
   expect((state.positionCounts?.[key] ?? 0) >= 1, 'Current position must be represented in repetition bookkeeping')
 }
 

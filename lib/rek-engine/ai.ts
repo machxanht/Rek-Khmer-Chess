@@ -6,6 +6,7 @@ import {
   BOARD_SIZE,
   DEFAULT_RULESET,
   Cell,
+  GameState,
   PlayerColor,
   RuleSet,
 } from './types'
@@ -18,7 +19,9 @@ import {
 } from './captures'
 import {
   createPositionKey,
+  executeMove,
   getAllMoveResults,
+  getAllStateMoveResults,
   hasKing,
   countPieces,
 } from './engine'
@@ -87,6 +90,34 @@ export function getAllLegalMoves(
         captures: [...result.captures],
         capturesCount: result.captures.length,
         capturesKing: result.captures.some((square) => board[square]?.king === true),
+        rek: result.rek,
+        poat: result.poat,
+      })
+    }
+  }
+
+  return moves.sort((a, b) => {
+    if (a.capturesKing !== b.capturesKing) return a.capturesKing ? -1 : 1
+    if (a.capturesCount !== b.capturesCount) return b.capturesCount - a.capturesCount
+    if (a.poat !== b.poat) return a.poat ? -1 : 1
+    if (a.rek !== b.rek) return a.rek ? -1 : 1
+    if (a.from !== b.from) return a.from - b.from
+    return a.to - b.to
+  })
+}
+
+/** State-aware live legality, including transition-owned Hao Rek context. */
+export function getAllLegalMovesForState(state: GameState): AiLegalMove[] {
+  const moves: AiLegalMove[] = []
+
+  for (const [from, legalResults] of getAllStateMoveResults(state)) {
+    for (const [to, result] of legalResults) {
+      moves.push({
+        from,
+        to,
+        captures: [...result.captures],
+        capturesCount: result.captures.length,
+        capturesKing: result.captures.some((square) => state.board[square]?.king === true),
         rek: result.rek,
         poat: result.poat,
       })
@@ -332,6 +363,124 @@ export function minimax(
   return minEval
 }
 
+function terminalGameStateScore(
+  state: GameState,
+  aiColor: PlayerColor,
+  depth: number
+): number | null {
+  if (state.status === 'draw') return 0
+  if (state.status === 'won') {
+    return state.winner === aiColor ? 100000 + depth : -100000 - depth
+  }
+  return null
+}
+
+function createLiveSearchKey(state: GameState, depth: number): string {
+  const hao = state.haoRekContext?.active
+    ? state.haoRekContext.allowedResponses
+        .map((move) => `${move.from}:${move.to}`)
+        .sort()
+        .join(',')
+    : '-'
+  return [
+    depth,
+    createPositionKey(state.board, state.turn, state.mode),
+    `hao=${hao}`,
+    `lk=${state.loneKingMoveCount ?? 0}`,
+    `limit=${state.drawMoveLimit ?? 32}`,
+    `rep=${JSON.stringify(state.positionCounts ?? {})}`,
+  ].join('|')
+}
+
+/**
+ * State-aware alpha-beta search for live sessions.
+ * Every transition delegates to executeMove(), so Hao/draw/terminal semantics
+ * remain engine-owned instead of being duplicated inside AI.
+ */
+export function minimaxState(
+  state: GameState,
+  depth: number,
+  alpha: number,
+  beta: number,
+  aiColor: PlayerColor,
+  cache: Map<string, number> = new Map(),
+  stats?: AiSearchStats
+): number {
+  if (stats) stats.nodes++
+
+  const terminal = terminalGameStateScore(state, aiColor, depth)
+  if (terminal !== null) {
+    if (stats) stats.leaves++
+    return terminal
+  }
+
+  const mode = state.mode === 'REK_POAT' ? 'REK_STANDARD' : state.mode
+  const oppColor = opponent(aiColor)
+  if (!hasKing(state.board, aiColor) || !hasKing(state.board, oppColor)) {
+    if (stats) stats.leaves++
+    return evaluateBoard(state.board, aiColor, mode)
+  }
+
+  const cacheKey = createLiveSearchKey(state, depth)
+  const cached = cache.get(cacheKey)
+  if (cached !== undefined) {
+    if (stats) stats.cacheHits++
+    return cached
+  }
+
+  const moves = getAllLegalMovesForState(state)
+  if (stats) stats.legalMoveGenerations++
+
+  if (moves.length === 0) {
+    if (stats) stats.leaves++
+    const score = terminalNoMoveScore(state.turn, aiColor, depth)
+    cache.set(cacheKey, score)
+    return score
+  }
+
+  if (depth === 0) {
+    if (stats) stats.leaves++
+    if (moves.some((move) => move.capturesKing)) {
+      const tactical = royalHorizonScore(state.turn, aiColor, depth)
+      cache.set(cacheKey, tactical)
+      return tactical
+    }
+    const evaluated = evaluateBoardInternal(state.board, aiColor, mode, {
+      player: state.turn,
+      moves,
+    })
+    cache.set(cacheKey, evaluated)
+    return evaluated
+  }
+
+  const maximizing = state.turn === aiColor
+  let best = maximizing ? -Infinity : Infinity
+  let cutoff = false
+
+  for (const move of moves) {
+    const next = executeMove(state, move.from, move.to)
+    const immediate = terminalGameStateScore(next, aiColor, depth - 1)
+    const value = immediate ?? minimaxState(next, depth - 1, alpha, beta, aiColor, cache, stats)
+
+    if (maximizing) {
+      best = Math.max(best, value)
+      alpha = Math.max(alpha, best)
+    } else {
+      best = Math.min(best, value)
+      beta = Math.min(beta, best)
+    }
+
+    if (beta <= alpha) {
+      cutoff = true
+      if (stats) stats.cutoffs++
+      break
+    }
+  }
+
+  if (!cutoff) cache.set(cacheKey, best)
+  return best
+}
+
 function chooseSearchDepth(
   difficulty: AiDifficulty,
   rootMoves: number,
@@ -426,6 +575,78 @@ export function analyzeAiMove(
     depth: searchDepth,
     stats,
   }
+}
+
+/** Deterministic state-aware analysis for live GameState sessions. */
+export function analyzeAiState(
+  state: GameState,
+  difficulty: AiDifficulty = 'medium'
+): AiAnalysis {
+  const stats = createSearchStats()
+  const aiColor = state.turn
+  const mode: RuleSet = state.mode === 'REK_POAT' ? 'REK_STANDARD' : state.mode
+  const moves = getAllLegalMovesForState(state)
+  const totalPieces = countPieces(state.board, 'you') + countPieces(state.board, 'opp')
+  const searchDepth = chooseSearchDepth(difficulty, moves.length, totalPieces)
+
+  if (moves.length === 0) return { move: null, depth: searchDepth, stats }
+
+  if (difficulty === 'easy') {
+    const capturingMoves = moves.filter((move) => move.capturesCount > 0)
+    if (capturingMoves.length > 0 && Math.random() < 0.65) {
+      const move = capturingMoves[Math.floor(Math.random() * capturingMoves.length)]
+      return { move: { from: move.from, to: move.to }, depth: 0, stats }
+    }
+    const move = moves[Math.floor(Math.random() * moves.length)]
+    return { move: { from: move.from, to: move.to }, depth: 0, stats }
+  }
+
+  const immediateRoyal = moves.find((move) => move.capturesKing)
+  if (immediateRoyal) {
+    return {
+      move: { from: immediateRoyal.from, to: immediateRoyal.to, score: 100000 },
+      depth: searchDepth,
+      stats,
+    }
+  }
+
+  const cache = new Map<string, number>()
+  let bestMove: AiMove | null = null
+  let bestScore = -Infinity
+
+  for (const move of moves) {
+    const next = executeMove(state, move.from, move.to)
+    const immediate = terminalGameStateScore(next, aiColor, searchDepth - 1)
+    const searchScore = immediate ?? minimaxState(
+      next,
+      searchDepth - 1,
+      -Infinity,
+      Infinity,
+      aiColor,
+      cache,
+      stats
+    )
+    const score = searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
+
+    if (score > bestScore) {
+      bestScore = score
+      bestMove = { from: move.from, to: move.to, score }
+    }
+  }
+
+  const fallback = moves[0]
+  return {
+    move: bestMove ?? { from: fallback.from, to: fallback.to },
+    depth: searchDepth,
+    stats,
+  }
+}
+
+export function chooseAiMoveForState(
+  state: GameState,
+  difficulty: AiDifficulty = 'medium'
+): AiMove | null {
+  return analyzeAiState(state, difficulty).move
 }
 
 /** Chooses the best engine-legal AI move for the selected difficulty. */

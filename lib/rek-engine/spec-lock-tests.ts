@@ -168,7 +168,7 @@ export function runSpecLockTests(): {
     return 'A King has no immunity from Poat; zero liberties removes it and ends the game.'
   })
 
-  run('SPEC-05', 'Compulsory Rek in MIN_REK_CHANH is global across the whole side', () => {
+  run('SPEC-05', 'Pre-existing Rek does not create a Min obligation without transition context', () => {
     const board = emptyBoard()
     put(board, 'c1', 'you')
     put(board, 'h1', 'you')
@@ -176,15 +176,15 @@ export function runSpecLockTests(): {
     put(board, 'd4', 'opp')
 
     const ordinaryPieceMoves = getMoveResults(board, coordToIdx('h1'), 'MIN_REK_CHANH')
-    expect(ordinaryPieceMoves.size === 0, 'A non-Rek piece must expose no moves while another friendly piece can Rek')
+    expect(ordinaryPieceMoves.has(coordToIdx('h2')), 'Quiet move must remain context-free legal without active Hao')
 
     const rekPieceMoves = getMoveResults(board, coordToIdx('c1'), 'MIN_REK_CHANH')
-    expect(rekPieceMoves.has(coordToIdx('c4')), 'The actual compulsory Rek destination must remain legal')
+    expect(rekPieceMoves.has(coordToIdx('c4')), 'Existing Rek remains an available tactical move')
 
-    return 'The obligation is side-wide: if any Rek exists, ordinary moves from other pieces are suppressed.'
+    return 'Board-only Rek existence is no longer treated as the Hao trigger.'
   })
 
-  run('SPEC-06', 'Ignoring a Rek available elsewhere is an immediate Min Rek Chanh forfeit', () => {
+  run('SPEC-06', 'Ignoring an active transition-owned Hao response is an immediate forfeit', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true, 'you_king')
     put(board, 'd8', 'opp', true, 'opp_king')
@@ -194,14 +194,19 @@ export function runSpecLockTests(): {
     put(board, 'd4', 'opp')
 
     const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
     const next = executeMove(state, coordToIdx('h1'), coordToIdx('h2'))
 
-    expect(next.status === 'won', 'A compulsory-Rek violation must end the game')
+    expect(next.status === 'won', 'Ignoring active Hao must end the game')
     expect(next.winner === 'opp', 'The violating side must lose')
-    expect(next.board[coordToIdx('h1')]?.player === 'you', 'The illegal move must not be executed')
-    expect(next.board[coordToIdx('h2')] === null, 'The illegal destination must remain empty')
+    expect(next.board[coordToIdx('h1')]?.player === 'you', 'The forfeiting move must not execute')
+    expect(next.board[coordToIdx('h2')] === null, 'The forfeiting destination must remain empty')
 
-    return 'Forfeit enforcement uses the globally available Rek set, not only the selected piece.'
+    return 'Forfeit enforcement is owned by active Hao transition context.'
   })
 
   run('SPEC-07', 'Ordinary moves remain legal in MIN_REK_CHANH when no Rek exists', () => {
