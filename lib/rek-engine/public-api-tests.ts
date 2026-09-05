@@ -14,7 +14,12 @@ import {
   getRuleSetMetadata,
   listRuleSets,
 } from './catalog'
-import { coordToIdx, createPositionKey, getAllRekOpportunities } from './engine'
+import {
+  RekEngine,
+  coordToIdx,
+  createPositionKey,
+  getAllRekOpportunities,
+} from './engine'
 import {
   REK_GAME_SNAPSHOT_VERSION,
   RekGame,
@@ -312,6 +317,30 @@ export function runPublicApiTests(): {
     expect(reloadedMode === 'REK_STANDARD', 'Canonical deserialize return type must never expose legacy mode')
 
     return 'Typecheck now proves compatibility input is separate from canonical session output.'
+  })
+
+  run('API-11', 'legacy RekEngine reports Min forfeit adjudication as a state change', () => {
+    const legacy = new RekEngine('MIN_REK_CHANH')
+    legacy.loadCustomSetup((board) => {
+      put(board, 'd1', 'you', true, 'you_king')
+      put(board, 'd8', 'opp', true, 'opp_king')
+      put(board, 'c1', 'you', false, 'you_rek')
+      put(board, 'h1', 'you', false, 'you_quiet')
+      put(board, 'b4', 'opp', false, 'opp_b4')
+      put(board, 'd4', 'opp', false, 'opp_d4')
+    })
+
+    expect(
+      legacy.makeMove(coordToIdx('h1'), coordToIdx('h2')),
+      'Legacy facade must return true when current Min adjudication changes the game state'
+    )
+    const terminal = legacy.getState()
+    expect(terminal.status === 'won' && terminal.winner === 'opp', 'Legacy facade must preserve the same Min forfeit result')
+    expect(terminal.board[coordToIdx('h1')]?.id === 'you_quiet', 'Forfeited quiet move must not alter the board')
+    expect(legacy.undo(), 'Legacy facade must retain undo history for the adjudicated state change')
+    expect(legacy.getState().status === 'playing', 'Undo must restore the pre-adjudication state')
+
+    return 'Deprecated RekEngine now matches RekGame boolean semantics without changing gameplay adjudication.'
   })
 
   const passed = results.filter((result) => result.passed).length

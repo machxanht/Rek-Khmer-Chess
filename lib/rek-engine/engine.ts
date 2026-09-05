@@ -554,7 +554,12 @@ export function countTotalLegalMoves(
   return total
 }
 
-/** Complete RekEngine class wrapping pure engine functions. */
+/**
+ * Legacy stateful engine facade kept for source compatibility.
+ *
+ * @deprecated Prefer `RekGame` from `session.ts` for application/session use.
+ * Rule adjudication remains owned by the pure functions in this module.
+ */
 export class RekEngine {
   private state: GameState
   private history: GameState[] = []
@@ -594,12 +599,13 @@ export class RekEngine {
     if (!geometric.includes(to)) return false
 
     const before = this.state
-    const preview = previewMove(before.board, from, to, before.turn, before.mode)
 
     this.history.push(before)
     this.state = executeMove(before, from, to)
 
-    return !preview.isHaoRekViolation && this.state !== before
+    // Match RekGame semantics: return true whenever adjudication changes state,
+    // including the current MIN_REK_CHANH forfeit path.
+    return this.state !== before
   }
 
   public undo(): boolean {
