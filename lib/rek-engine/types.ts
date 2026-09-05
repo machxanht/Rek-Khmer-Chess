@@ -14,7 +14,24 @@ export interface Piece {
 
 export type Cell = Piece | null
 
-export type GameMode = 'REK_POAT' | 'MIN_REK_CHANH'
+/** Canonical rule sets exposed by the engine. */
+export type RuleSet = 'REK_STANDARD' | 'MIN_REK_CHANH'
+
+/**
+ * Legacy identifier kept only for backward-compatible callers/snapshots.
+ * `REK_POAT` is not treated as a separate traditional game mode; it maps to
+ * the canonical `REK_STANDARD` rule set.
+ */
+export type LegacyGameMode = 'REK_POAT'
+
+/** @deprecated Prefer `RuleSet` for new code. */
+export type GameMode = RuleSet | LegacyGameMode
+
+export const DEFAULT_RULESET: RuleSet = 'REK_STANDARD'
+
+export function normalizeRuleSet(mode: GameMode = DEFAULT_RULESET): RuleSet {
+  return mode === 'REK_POAT' ? 'REK_STANDARD' : mode
+}
 
 export interface MoveCoordinate {
   fromRow: number
@@ -43,6 +60,7 @@ export interface GameState {
   status: GameStatus
   winner: PlayerColor | 'draw' | null
   winReason: string | null
+  /** Canonical sessions store `REK_STANDARD` or `MIN_REK_CHANH`; legacy states may still deserialize from `REK_POAT`. */
   mode: GameMode
   lastMove: { from: number; to: number } | null
   lastCaptured: number[]
@@ -67,8 +85,8 @@ export interface GameState {
   loneKingMoveCount?: number
 
   /**
-   * Regional rules vary (the research guide records 24/32/44). The technical
-   * SPEC selects 32, so 32 is the engine default while remaining configurable.
+   * Project extension currently used by the engine. Traditional Rek evidence
+   * for this exact limit remains unverified; see the evidence-based rule guide.
    */
   drawMoveLimit?: number
 }
