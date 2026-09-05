@@ -18,7 +18,7 @@ Engine và regression tests phải tuân theo các tài liệu này; UI/server v
 - `lib/rek-engine/captures.ts` — Rek (Gánh) và Poat (Bao Vây/Flood Fill).
 - `lib/rek-engine/engine.ts` — thiết lập bàn cờ, sinh nước đi, thực thi lượt, thắng/thua/hòa.
 - `lib/rek-engine/session.ts` — public facade cho UI/server/CLI: game session, undo và save/load.
-- `lib/rek-engine/ai.ts` — AI dựa trên tập nước đi hợp lệ của engine.
+- `lib/rek-engine/ai.ts` — AI dựa hoàn toàn trên tập nước đi hợp lệ của engine.
 - `lib/rek-engine/puzzles.ts` — dữ liệu/thế cờ dùng bởi engine.
 - `lib/rek-engine/*-tests.ts` — regression, specification lock, rule-guide lock, public API, simulation, AI và draw tests.
 
@@ -49,6 +49,21 @@ loaded.undo() // false: undo history is process-local and is not serialized
 `RekGame` không tự quyết luật. `getLegalMoves()` dùng tập rule-legal từ core engine và `makeMove()` chuyển toàn bộ adjudication sang `executeMove()`. Trong `MIN_REK_CHANH`, UI có thể chỉ hiển thị nước Rek bắt buộc, nhưng nếu client/server vẫn gửi một nước bỏ qua Hao Rek thì core engine sẽ xử thua đúng luật.
 
 Snapshot save/load dùng schema version `1`, validate cấu trúc board/state, piece ID, King count, status/winner và metadata trước khi cho state quay lại session.
+
+## AI và search contract
+
+AI không tự viết lại luật di chuyển/Rek/Poat. Tất cả candidate moves và tactical metadata đều lấy từ `getMoveResults()` của core engine.
+
+- `easy`: cố ý có randomness; ưu tiên capture với xác suất nhưng không đảm bảo chiến thuật tối ưu.
+- `medium`: deterministic alpha-beta, depth `2`; nhìn đủ một phản đòn trực tiếp để tránh các nước kiểu “ăn quân rồi mất Vua ngay”.
+- `hard`: deterministic alpha-beta, depth `3` ở thế nhiều nhánh; tự tăng lên depth `4` khi root có tối đa 10 nước và depth `5` khi tối đa 4 nước.
+- Mobility heuristic dùng **rule-legal moves**, nên trong `MIN_REK_CHANH` các quiet move bị Hao Rek cấm không còn được tính nhầm vào điểm thế trận.
+- Terminal immobilization được kiểm tra trước depth cutoff.
+- Horizon có tactical extension cho Royal capture ngay lượt kế tiếp.
+- Transposition cache chỉ lưu node đã search đầy đủ; node bị alpha-beta prune không bị ghi như một exact score.
+- `analyzeAiMove()` trả cùng quyết định với `chooseAiMove()` cho Medium/Hard nhưng kèm deterministic search counters (`nodes`, `leaves`, `cutoffs`, `cacheHits`, `legalMoveGenerations`) để benchmark/regression mà không phụ thuộc tốc độ runner.
+
+`ai-search-regression-tests.ts` khóa tactical safety và node-count budget để thay đổi AI về sau không vô tình làm yếu logic hoặc gây search explosion.
 
 ## Rule lock theo hướng dẫn Khmer
 
@@ -87,4 +102,4 @@ npm run typecheck
 npm test
 ```
 
-Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/rule-guide/public-API/AI/state/draw/puzzle/simulation/movement.
+Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/rule-guide/public-API/AI/state/draw/puzzle/simulation/movement, gồm cả AI search regression và deterministic node-count benchmark.
