@@ -19,10 +19,8 @@ import {
 import {
   createPositionKey,
   getMoveResults,
-  previewMove,
   hasKing,
   countPieces,
-  getAllRekOpportunities,
 } from './engine'
 
 export type AiDifficulty = 'easy' | 'medium' | 'hard'
@@ -36,6 +34,8 @@ export interface AiMove {
 export interface AiLegalMove {
   from: number
   to: number
+  /** Exact capture squares produced by the core engine for this legal move. */
+  captures: readonly number[]
   capturesCount: number
   capturesKing: boolean
   rek: boolean
@@ -68,33 +68,63 @@ function createSearchStats(): AiSearchStats {
 }
 
 /**
- * Count rule-legal moves rather than merely geometric sliding destinations.
- * This matters in MIN_REK_CHANH because the current engine contract can
- * suppress geometric quiet moves when a compulsory Rek obligation exists.
+ * Collects all rule-legal moves for a player with engine-produced tactical
+ * metadata. getMoveResults() is the single legality boundary.
  */
+export function getAllLegalMoves(
+  board: Cell[],
+  player: PlayerColor,
+  mode: RuleSet = DEFAULT_RULESET
+): AiLegalMove[] {
+  const moves: AiLegalMove[] = []
+
+  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
+    const piece = board[from]
+    if (!piece || piece.player !== player) continue
+
+    const legalResults = getMoveResults(board, from, mode)
+    for (const [to, result] of legalResults) {
+      moves.push({
+        from,
+        to,
+        captures: [...result.captures],
+        capturesCount: result.captures.length,
+        capturesKing: result.captures.some((square) => board[square]?.king === true),
+        rek: result.rek,
+        poat: result.poat,
+      })
+    }
+  }
+
+  return moves.sort((a, b) => {
+    if (a.capturesKing !== b.capturesKing) return a.capturesKing ? -1 : 1
+    if (a.capturesCount !== b.capturesCount) return b.capturesCount - a.capturesCount
+    if (a.poat !== b.poat) return a.poat ? -1 : 1
+    if (a.rek !== b.rek) return a.rek ? -1 : 1
+    if (a.from !== b.from) return a.from - b.from
+    return a.to - b.to
+  })
+}
+
+/** Count rule-legal moves from the same engine-backed move projection used by search. */
 export function countRuleLegalMoves(
   board: Cell[],
   player: PlayerColor,
   mode: RuleSet = DEFAULT_RULESET
 ): number {
-  let total = 0
-  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
-    const piece = board[from]
-    if (!piece || piece.player !== player) continue
-    total += getMoveResults(board, from, mode).size
-  }
-  return total
+  return getAllLegalMoves(board, player, mode).length
 }
 
-/**
- * Positional evaluation. Legality/capture resolution still belongs entirely to
- * engine.ts; this function only assigns strategic values to an already-valid
- * board position.
- */
-export function evaluateBoard(
+interface KnownLegalMoves {
+  player: PlayerColor
+  moves: readonly AiLegalMove[]
+}
+
+function evaluateBoardInternal(
   board: Cell[],
   aiColor: PlayerColor,
-  mode: RuleSet = DEFAULT_RULESET
+  mode: RuleSet,
+  known?: KnownLegalMoves
 ): number {
   const oppColor = opponent(aiColor)
 
@@ -133,66 +163,45 @@ export function evaluateBoard(
     }
   }
 
-  const aiMobility = countRuleLegalMoves(board, aiColor, mode)
-  const oppMobility = countRuleLegalMoves(board, oppColor, mode)
-  score += (aiMobility - oppMobility) * 2
+  const aiMoves = known?.player === aiColor
+    ? known.moves
+    : getAllLegalMoves(board, aiColor, mode)
+  const oppMoves = known?.player === oppColor
+    ? known.moves
+    : getAllLegalMoves(board, oppColor, mode)
 
-  const aiReks = getAllRekOpportunities(board, aiColor, mode).length
-  const oppReks = getAllRekOpportunities(board, oppColor, mode).length
+  score += (aiMoves.length - oppMoves.length) * 2
+
+  const aiReks = aiMoves.reduce((count, move) => count + (move.rek ? 1 : 0), 0)
+  const oppReks = oppMoves.reduce((count, move) => count + (move.rek ? 1 : 0), 0)
   score += (aiReks - oppReks) * 24
 
   return score
 }
 
 /**
- * Collects all rule-legal moves for a player with engine-produced tactical
- * metadata. getMoveResults() is the single legality boundary.
+ * Positional evaluation. Legality/capture resolution still belongs entirely to
+ * engine.ts; this function only assigns strategic values to an already-valid
+ * board position.
  */
-export function getAllLegalMoves(
+export function evaluateBoard(
   board: Cell[],
-  player: PlayerColor,
+  aiColor: PlayerColor,
   mode: RuleSet = DEFAULT_RULESET
-): AiLegalMove[] {
-  const moves: AiLegalMove[] = []
-
-  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
-    const piece = board[from]
-    if (!piece || piece.player !== player) continue
-
-    const legalResults = getMoveResults(board, from, mode)
-    for (const [to, result] of legalResults) {
-      moves.push({
-        from,
-        to,
-        capturesCount: result.captures.length,
-        capturesKing: result.captures.some((square) => board[square]?.king === true),
-        rek: result.rek,
-        poat: result.poat,
-      })
-    }
-  }
-
-  return moves.sort((a, b) => {
-    if (a.capturesKing !== b.capturesKing) return a.capturesKing ? -1 : 1
-    if (a.capturesCount !== b.capturesCount) return b.capturesCount - a.capturesCount
-    if (a.poat !== b.poat) return a.poat ? -1 : 1
-    if (a.rek !== b.rek) return a.rek ? -1 : 1
-    if (a.from !== b.from) return a.from - b.from
-    return a.to - b.to
-  })
+): number {
+  return evaluateBoardInternal(board, aiColor, mode)
 }
 
-function simulateMove(
-  board: Cell[],
-  move: AiLegalMove,
-  mover: PlayerColor,
-  mode: RuleSet
-): Cell[] {
-  const result = previewMove(board, move.from, move.to, mover, mode)
+/**
+ * Applies an already engine-legal move using the exact capture squares returned
+ * by the core engine. This avoids calling previewMove() a second time for every
+ * searched edge and does not duplicate any capture rule in AI.
+ */
+function simulateMove(board: Cell[], move: AiLegalMove): Cell[] {
   const nextBoard = [...board]
   nextBoard[move.to] = nextBoard[move.from]
   nextBoard[move.from] = null
-  for (const cap of result.captures) nextBoard[cap] = null
+  for (const cap of move.captures) nextBoard[cap] = null
   return nextBoard
 }
 
@@ -230,7 +239,8 @@ export function minimax(
   aiColor: PlayerColor,
   mode: RuleSet,
   cache: Map<string, number> = new Map(),
-  stats?: AiSearchStats
+  stats?: AiSearchStats,
+  knownMoves?: readonly AiLegalMove[]
 ): number {
   const oppColor = opponent(aiColor)
   const currentTurn = isMaximizing ? aiColor : oppColor
@@ -248,8 +258,8 @@ export function minimax(
     return cached
   }
 
-  const moves = getAllLegalMoves(board, currentTurn, mode)
-  if (stats) stats.legalMoveGenerations++
+  const moves = knownMoves ?? getAllLegalMoves(board, currentTurn, mode)
+  if (stats && !knownMoves) stats.legalMoveGenerations++
 
   if (moves.length === 0) {
     if (stats) stats.leaves++
@@ -267,7 +277,10 @@ export function minimax(
       return tactical
     }
 
-    const evaluated = evaluateBoard(board, aiColor, mode)
+    const evaluated = evaluateBoardInternal(board, aiColor, mode, {
+      player: currentTurn,
+      moves,
+    })
     cache.set(cacheKey, evaluated)
     return evaluated
   }
@@ -280,7 +293,7 @@ export function minimax(
       if (move.capturesKing) {
         maxEval = Math.max(maxEval, 100000 + depth)
       } else {
-        const nextBoard = simulateMove(board, move, aiColor, mode)
+        const nextBoard = simulateMove(board, move)
         maxEval = Math.max(
           maxEval,
           minimax(nextBoard, depth - 1, alpha, beta, false, aiColor, mode, cache, stats)
@@ -304,7 +317,7 @@ export function minimax(
     if (move.capturesKing) {
       minEval = Math.min(minEval, -100000 - depth)
     } else {
-      const nextBoard = simulateMove(board, move, oppColor, mode)
+      const nextBoard = simulateMove(board, move)
       minEval = Math.min(
         minEval,
         minimax(nextBoard, depth - 1, alpha, beta, true, aiColor, mode, cache, stats)
@@ -376,11 +389,12 @@ export function analyzeAiMove(
   let bestScore = -Infinity
 
   for (const move of moves) {
-    const nextBoard = simulateMove(board, move, aiColor, mode)
+    const nextBoard = simulateMove(board, move)
     const oppColor = opponent(aiColor)
+    const opponentMoves = getAllLegalMoves(nextBoard, oppColor, mode)
 
     let searchScore: number
-    if (!hasKing(nextBoard, oppColor) || countRuleLegalMoves(nextBoard, oppColor, mode) === 0) {
+    if (!hasKing(nextBoard, oppColor) || opponentMoves.length === 0) {
       searchScore = 99000 + searchDepth
     } else {
       searchScore = minimax(
@@ -392,7 +406,8 @@ export function analyzeAiMove(
         aiColor,
         mode,
         cache,
-        stats
+        stats,
+        opponentMoves
       )
     }
 
