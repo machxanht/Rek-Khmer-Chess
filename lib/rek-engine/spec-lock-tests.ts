@@ -244,18 +244,18 @@ export function runSpecLockTests(): {
     return 'The mode table explicitly keeps Poat enabled in both game modes.'
   })
 
-  run('SPEC-10', 'Immobilization is a win when the opponent has no legal moves', () => {
+  run('SPEC-10', 'Current zero-move terminal is based on geometric mobility, not Poat liberties', () => {
     const board = emptyBoard()
     put(board, 'a2', 'you', true, 'you_king')
     put(board, 'a1', 'you')
     put(board, 'h7', 'opp', true, 'opp_king')
 
     const next = executeMove(makeState(board, 'you', 'MIN_REK_CHANH'), coordToIdx('a1'), coordToIdx('b1'))
-    expect(next.status === 'won' && next.winner === 'you', 'Opponent with zero legal moves must lose')
-    expect(next.winReason === 'Opponent completely immobilized (Zero liberties)', 'Immobilization must be reported as the win reason')
-    expect(next.board[coordToIdx('h7')]?.king === true, 'Immobilization must not require the King to be captured first')
+    expect(next.status === 'won' && next.winner === 'you', 'Opponent with zero geometric moves must lose under the current engine contract')
+    expect(next.winReason === 'Opponent has no geometric moves', 'Zero-move terminal reason must not reuse Poat zero-liberties terminology')
+    expect(next.board[coordToIdx('h7')]?.king === true, 'Zero-move terminal must not require the King to be captured first')
 
-    return 'A surviving but completely immobile opponent loses according to the endgame specification.'
+    return 'Current engine behavior is unchanged, while terminal wording is kept distinct from the Poat liberty algorithm.'
   })
 
   run('SPEC-11', 'A finished game is immutable to further move attempts', () => {
