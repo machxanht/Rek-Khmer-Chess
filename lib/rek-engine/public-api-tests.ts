@@ -14,7 +14,12 @@ import {
   getRuleSetMetadata,
   listRuleSets,
 } from './catalog'
-import { coordToIdx, createPositionKey, getAllRekOpportunities } from './engine'
+import {
+  RekEngine,
+  coordToIdx,
+  createPositionKey,
+  getAllRekOpportunities,
+} from './engine'
 import {
   REK_GAME_SNAPSHOT_VERSION,
   RekGame,
@@ -345,6 +350,37 @@ export function runPublicApiTests(): {
     )
 
     return 'Snapshot v1 remains backward-compatible because Hao context is an additive optional field normalized to null when absent.'
+  })
+
+  run('API-12', 'legacy RekEngine matches RekGame state-change semantics for active Hao forfeit', () => {
+    const legacy = new RekEngine('MIN_REK_CHANH')
+    legacy.loadCustomSetup((board) => {
+      put(board, 'a2', 'you', true, 'you_king')
+      put(board, 'h7', 'opp', true, 'opp_king')
+      put(board, 'd3', 'you', false, 'you_d3')
+      put(board, 'd4', 'you', false, 'you_blocker')
+      put(board, 'd5', 'you', false, 'you_d5')
+      put(board, 'h4', 'opp', false, 'opp_h4')
+      put(board, 'a8', 'opp', false, 'opp_quiet')
+    })
+
+    expect(
+      legacy.makeMove(coordToIdx('d4'), coordToIdx('c4')),
+      'Opening move must execute and create the active Hao response'
+    )
+    expect(
+      legacy.makeMove(coordToIdx('a8'), coordToIdx('a7')),
+      'Legacy facade must return true when ignored active Hao changes state to a forfeit'
+    )
+
+    const terminal = legacy.getState()
+    expect(terminal.status === 'won' && terminal.winner === 'you', 'Ignoring active Hao must award the game to the caller')
+    expect(terminal.board[coordToIdx('a8')]?.id === 'opp_quiet', 'Forfeiting quiet move must not alter the board')
+    expect(terminal.board[coordToIdx('a7')] === null, 'Forfeiting destination must remain empty')
+    expect(legacy.undo(), 'Legacy facade must retain undo history for the adjudicated state change')
+    expect(legacy.getState().status === 'playing', 'Undo must restore the pre-forfeit active-Hao state')
+
+    return 'Deprecated RekEngine now matches RekGame boolean semantics under the transition-owned Hao contract.'
   })
 
   const passed = results.filter((result) => result.passed).length
