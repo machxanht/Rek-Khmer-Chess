@@ -614,7 +614,12 @@ export function countTotalLegalMoves(
   return total
 }
 
-/** Complete RekEngine class wrapping pure engine functions. */
+/**
+ * Legacy stateful engine facade kept for source compatibility.
+ *
+ * @deprecated Prefer `RekGame` from `session.ts` for application/session use.
+ * Rule adjudication remains owned by the pure functions in this module.
+ */
 export class RekEngine {
   private state: GameState
   private history: GameState[] = []
