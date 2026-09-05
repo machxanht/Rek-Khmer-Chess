@@ -312,14 +312,6 @@ function normalizeState(state: GameState): CanonicalGameState {
   assertGameState(state)
   const normalized = cloneGameState(state)
   normalized.mode = normalizeRuleSet(normalized.mode)
-
-  if (
-    normalized.haoRekContext?.active &&
-    (normalized.mode !== 'MIN_REK_CHANH' || normalized.status !== 'playing')
-  ) {
-    throw new Error('active Hao Rek context requires a playing MIN_REK_CHANH state')
-  }
-
   normalized.positionCounts = normalized.positionCounts
     ? normalizePositionCounts(normalized.positionCounts)
     : normalized.positionCounts
@@ -359,6 +351,13 @@ export function deserializeGameState(serialized: string): CanonicalGameState {
   }
 
   assertGameState(decoded.state)
+  if (
+    decoded.state.haoRekContext?.active &&
+    (normalizeRuleSet(decoded.state.mode) !== 'MIN_REK_CHANH' || decoded.state.status !== 'playing')
+  ) {
+    throw new Error('active Hao Rek context requires a playing MIN_REK_CHANH snapshot')
+  }
+
   const normalized = normalizeState(decoded.state)
   assertPersistedGameStateSemantics(normalized)
   return normalized
