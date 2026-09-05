@@ -434,6 +434,54 @@ Core engine chỉ cần board, turn, state, ruleset và — nếu future evidenc
 
 ---
 
+## 14.1. Media evidence update — reconstructed Hao Rek events
+
+User-supplied real-board footage `1000009344.mp4` đã cho nhiều event reconstruct được:
+
+- ~89–97s: một Red blocker rời ô giữa pair; Blue đã có một Rek cũ ở nơi khác nhưng đáp đúng **Rek mới vừa được mở** và capture hai Red;
+- ~186.5–194s: quiet opener tạo Rek mới → response capture 2 → response lại tạo counter-Rek → counter-response → hết new call thì chain dừng;
+- ~550.5–563s: opponent **đi vào** vị trí mới để tạo pair quanh một gap; responder vào gap và Rek 2 quân;
+- ~1027–1041s: thêm một quiet opener → exactly one new Rek → immediate Rek response.
+
+Claim-level status:
+
+| Claim | Evidence label |
+|---|---|
+| Hao Rek gắn với opponent action / transition | `STRONG EVIDENCE` |
+| New Rek opportunity được tạo bởi move là candidate trigger | `STRONG EVIDENCE candidate` |
+| Blocker-leaves có thể tạo call | `STRONG EVIDENCE candidate` |
+| Mover-enters-to-create-pair cũng có thể tạo call | `STRONG EVIDENCE candidate` |
+| Pre-existing Rek không tự động là target của call mới | `STRONG EVIDENCE candidate` |
+| Hao response có thể chain | `STRONG EVIDENCE candidate` + `SECONDARY` textual support |
+| Chain dừng khi đối phương ngừng mở Rek mới | `STRONG EVIDENCE candidate` + `SECONDARY` textual support |
+| Multiple NEW targets choice rule | `UNVERIFIED` |
+| Verbal call bắt buộc | `UNVERIFIED` |
+| Không đáp => automatic loss | `SECONDARY` |
+
+### Proposed historical interpretation — NOT IMPLEMENTED
+
+Model hiện phù hợp evidence nhất:
+
+```text
+BEFORE = responder Rek opportunities before opponent move
+opponent makes move
+AFTER = responder Rek opportunities after opponent move
+NEW = AFTER - BEFORE
+
+NEW non-empty
+→ active Hao Rek call
+→ responder must answer newly-created Rek response(s)
+→ response may create NEW responses for other side
+→ continue chain
+→ stop when no new call is created
+```
+
+Điểm này **challenge trực tiếp** current engine interpretation `ANY current-board Rek → compulsory`.
+
+Tuy nhiên chưa sửa engine vì chưa khóa multiple-new-target choice, verbal declaration requirement và interaction với Poat/multi-axis.
+
+---
+
 ## 15. Promote workflow
 
 Không nhảy thẳng từ research vào code:
