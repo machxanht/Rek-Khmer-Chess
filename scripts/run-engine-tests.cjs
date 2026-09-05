@@ -34,6 +34,8 @@ function printReport(label, report) {
     console.log(`[${mark}] ${result.id} - ${result.title}`)
     if (!result.passed && result.error) {
       console.error(`       ${result.error}`)
+    } else if (label === 'Rek AI search regression' && result.passed && result.details) {
+      console.log(`       ${result.details}`)
     }
   }
 }
