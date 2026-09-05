@@ -334,14 +334,19 @@ export function minimax(
   return minEval
 }
 
-function chooseSearchDepth(difficulty: AiDifficulty, rootMoves: number): number {
+function chooseSearchDepth(
+  difficulty: AiDifficulty,
+  rootMoves: number,
+  totalPieces: number
+): number {
   if (difficulty === 'easy') return 0
   if (difficulty === 'medium') return 2
 
-  // Hard keeps the established depth-3 search in broad positions, but spends
-  // the saved branching budget on deeper endgame/tactical calculation.
-  if (rootMoves <= 4) return 5
-  if (rootMoves <= 10) return 4
+  // Hard keeps depth 3 in broad/high-material positions. Extra depth is spent
+  // only when both branching and material have already fallen enough to keep
+  // the deterministic search budget bounded.
+  if (rootMoves <= 4 && totalPieces <= 10) return 5
+  if (rootMoves <= 10 && totalPieces <= 18) return 4
   return 3
 }
 
@@ -357,7 +362,8 @@ export function analyzeAiMove(
 ): AiAnalysis {
   const stats = createSearchStats()
   const moves = getAllLegalMoves(board, aiColor, mode)
-  const searchDepth = chooseSearchDepth(difficulty, moves.length)
+  const totalPieces = countPieces(board, 'you') + countPieces(board, 'opp')
+  const searchDepth = chooseSearchDepth(difficulty, moves.length, totalPieces)
 
   if (moves.length === 0) return { move: null, depth: searchDepth, stats }
 
