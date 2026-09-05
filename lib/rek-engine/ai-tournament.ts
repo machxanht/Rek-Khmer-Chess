@@ -1,4 +1,4 @@
-import { GameMode, PlayerColor } from './types'
+import { GameMode, PlayerColor, RuleSet, normalizeRuleSet } from './types'
 import { analyzeAiMove, getAllLegalMoves, AiDifficulty } from './ai'
 import { createGame } from './session'
 
@@ -18,7 +18,7 @@ export interface TournamentSeriesOptions {
 }
 
 export interface TournamentGameResult {
-  mode: GameMode
+  mode: RuleSet
   seed: number
   winner: PlayerColor | 'draw' | null
   winReason: string | null
@@ -32,7 +32,7 @@ export interface TournamentGameResult {
 }
 
 export interface TournamentSummary {
-  mode: GameMode
+  mode: RuleSet
   games: number
   hardWins: number
   mediumWins: number
@@ -53,16 +53,13 @@ function nextSeed(value: number): number {
 
 /**
  * Runs one deterministic engine-owned AI game.
- *
- * Opening diversity never invents chess rules: the seeded opening selector can
- * choose only from getAllLegalMoves(), and every selected move is still applied
- * through RekGame.makeMove()/executeMove(). After the opening, Medium/Hard use
- * the same analyzeAiMove() entry point used by normal AI consumers.
+ * Opening diversity chooses only from core-engine legal moves.
  */
 export function playTournamentGame(config: TournamentGameConfig): TournamentGameResult {
+  const mode = normalizeRuleSet(config.mode)
   const openingPlies = config.openingPlies ?? 4
   const maxPlies = config.maxPlies ?? 160
-  const game = createGame(config.mode)
+  const game = createGame(mode)
   let seed = config.seed >>> 0
   let illegalMoves = 0
   let maxSearchNodes = 0
@@ -119,7 +116,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
 
   const finalState = game.getState()
   return {
-    mode: config.mode,
+    mode,
     seed: config.seed,
     winner: finalState.winner,
     winReason: finalState.winReason,
@@ -139,14 +136,15 @@ export function runTournamentSeries(
   games: number,
   options: TournamentSeriesOptions = {}
 ): TournamentSummary {
+  const ruleset = normalizeRuleSet(mode)
   const results: TournamentGameResult[] = []
-  const baseSeed = options.baseSeed ?? (mode === 'REK_POAT' ? 0x52454b : 0x4d494e)
+  const baseSeed = options.baseSeed ?? (ruleset === 'REK_STANDARD' ? 0x52454b : 0x4d494e)
 
   for (let gameIndex = 0; gameIndex < games; gameIndex++) {
     const hardIsYou = gameIndex % 2 === 0
     results.push(
       playTournamentGame({
-        mode,
+        mode: ruleset,
         seed: nextSeed(baseSeed + gameIndex * 7919),
         youDifficulty: hardIsYou ? 'hard' : 'medium',
         oppDifficulty: hardIsYou ? 'medium' : 'hard',
@@ -186,7 +184,7 @@ export function runTournamentSeries(
   })
 
   return {
-    mode,
+    mode: ruleset,
     games,
     hardWins,
     mediumWins,
@@ -202,13 +200,13 @@ export function runTournamentSeries(
   }
 }
 
-/** Runs the same deterministic Hard-vs-Medium series in both game modes. */
+/** Runs the same deterministic Hard-vs-Medium series in both canonical rule sets. */
 export function runAiTournamentBaseline(
   gamesPerMode: number,
   options: TournamentSeriesOptions = {}
 ): TournamentSummary[] {
   return [
-    runTournamentSeries('REK_POAT', gamesPerMode, options),
+    runTournamentSeries('REK_STANDARD', gamesPerMode, options),
     runTournamentSeries('MIN_REK_CHANH', gamesPerMode, options),
   ]
 }

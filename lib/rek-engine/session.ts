@@ -1,17 +1,20 @@
 import {
   BOARD_SIZE,
+  DEFAULT_RULESET,
   Cell,
   GameMode,
   GameState,
   MoveResult,
   Piece,
   PlayerColor,
+  normalizeRuleSet,
 } from './types'
 import {
   createInitialState,
   executeMove,
   getAllRekOpportunities,
   getMoveResults,
+  normalizePositionCounts,
 } from './engine'
 
 export const REK_GAME_SNAPSHOT_VERSION = 1 as const
@@ -30,7 +33,7 @@ function isPlayerColor(value: unknown): value is PlayerColor {
 }
 
 function isGameMode(value: unknown): value is GameMode {
-  return value === 'REK_POAT' || value === 'MIN_REK_CHANH'
+  return value === 'REK_STANDARD' || value === 'REK_POAT' || value === 'MIN_REK_CHANH'
 }
 
 function isBoardIndex(value: unknown): value is number {
@@ -188,9 +191,18 @@ function assertGameState(value: unknown): asserts value is GameState {
   }
 }
 
+/**
+ * Canonicalize all public/session state. Legacy `REK_POAT` snapshots remain
+ * readable but are rewritten in memory as `REK_STANDARD`; repetition keys are
+ * migrated into the same canonical namespace so draw bookkeeping is preserved.
+ */
 function normalizeState(state: GameState): GameState {
   assertGameState(state)
   const normalized = cloneGameState(state)
+  normalized.mode = normalizeRuleSet(normalized.mode)
+  normalized.positionCounts = normalized.positionCounts
+    ? normalizePositionCounts(normalized.positionCounts)
+    : normalized.positionCounts
   normalized.availableRekMovesCount =
     normalized.status === 'playing'
       ? getAllRekOpportunities(normalized.board, normalized.turn, normalized.mode).length
@@ -232,8 +244,10 @@ export class RekGame {
   private state: GameState
   private history: GameState[] = []
 
-  constructor(initial: GameMode | GameState = 'REK_POAT') {
-    this.state = typeof initial === 'string' ? createInitialState(initial) : normalizeState(initial)
+  constructor(initial: GameMode | GameState = DEFAULT_RULESET) {
+    this.state = typeof initial === 'string'
+      ? createInitialState(normalizeRuleSet(initial))
+      : normalizeState(initial)
   }
 
   public static deserialize(serialized: string): RekGame {
@@ -264,14 +278,14 @@ export class RekGame {
     if (next === before) return false
 
     this.history.push(before)
-    this.state = next
+    this.state = normalizeState(next)
     return true
   }
 
   public undo(): boolean {
     const previous = this.history.pop()
     if (!previous) return false
-    this.state = previous
+    this.state = normalizeState(previous)
     return true
   }
 
@@ -280,7 +294,7 @@ export class RekGame {
   }
 
   public reset(mode: GameMode = this.state.mode): void {
-    this.state = createInitialState(mode)
+    this.state = createInitialState(normalizeRuleSet(mode))
     this.history = []
   }
 
@@ -289,7 +303,7 @@ export class RekGame {
   }
 }
 
-export function createGame(mode: GameMode = 'REK_POAT'): RekGame {
+export function createGame(mode: GameMode = DEFAULT_RULESET): RekGame {
   return new RekGame(mode)
 }
 

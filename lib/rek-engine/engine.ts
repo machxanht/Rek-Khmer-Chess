@@ -1,16 +1,19 @@
 // Pure TypeScript Engine for Rek Khmer (ល្បែងរែក)
 // 100% independent from React / DOM / UI frameworks.
-// Implements all specifications from /SPEC_ENGINE_CO_REK_KHMER.md and /HUONG_DAN_LUAT_CO_REK_KHMER.md.
+// Implements the technical contract from /SPEC_ENGINE_CO_REK_KHMER.md while
+// keeping evidence confidence separate in /HUONG_DAN_LUAT_CO_REK_KHMER.md.
 
 import {
   BOARD_SIZE,
   DEFAULT_LONE_KING_DRAW_LIMIT,
+  DEFAULT_RULESET,
   Cell,
   PlayerColor,
   Piece,
   GameMode,
   GameState,
   MoveResult,
+  normalizeRuleSet,
 } from './types'
 import {
   DIRS,
@@ -42,7 +45,8 @@ export function idxToCoord(index: number): string {
 
 /**
  * A repetition position is defined by board occupancy/type, side to move and
- * game mode. Piece IDs, move counters and UI metadata do not affect legality.
+ * canonical rule set. Legacy `REK_POAT` keys normalize to `REK_STANDARD` so
+ * compatibility aliases never create a second logical position namespace.
  */
 export function createPositionKey(
   board: Cell[],
@@ -56,7 +60,7 @@ export function createPositionKey(
       return `${side}${piece.king ? 'K' : 'M'}`
     })
     .join(',')
-  return `${mode}|${turn}|${cells}`
+  return `${normalizeRuleSet(mode)}|${turn}|${cells}`
 }
 
 export function hasLoneKing(board: Cell[]): boolean {
@@ -66,7 +70,10 @@ export function hasLoneKing(board: Cell[]): boolean {
   })
 }
 
-export function createInitialBoard(mode: GameMode = 'REK_POAT'): Cell[] {
+export function createInitialBoard(mode: GameMode = DEFAULT_RULESET): Cell[] {
+  // Normalize for compatibility even though setup is currently shared by both
+  // rule sets and does not otherwise branch on the value.
+  normalizeRuleSet(mode)
   pieceIdCounter = 0
   const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
 
@@ -92,8 +99,9 @@ export function createInitialBoard(mode: GameMode = 'REK_POAT'): Cell[] {
   return board
 }
 
-export function createInitialState(mode: GameMode = 'REK_POAT'): GameState {
-  const board = createInitialBoard(mode)
+export function createInitialState(mode: GameMode = DEFAULT_RULESET): GameState {
+  const ruleset = normalizeRuleSet(mode)
+  const board = createInitialBoard(ruleset)
   const turn: PlayerColor = 'you'
   return {
     board,
@@ -101,7 +109,7 @@ export function createInitialState(mode: GameMode = 'REK_POAT'): GameState {
     status: 'playing',
     winner: null,
     winReason: null,
-    mode,
+    mode: ruleset,
     lastMove: null,
     lastCaptured: [],
     lastRek: false,
@@ -109,7 +117,7 @@ export function createInitialState(mode: GameMode = 'REK_POAT'): GameState {
     captured: { you: [], opp: [] },
     moveCount: 0,
     availableRekMovesCount: 0,
-    positionCounts: { [createPositionKey(board, turn, mode)]: 1 },
+    positionCounts: { [createPositionKey(board, turn, ruleset)]: 1 },
     loneKingMoveCount: 0,
     drawMoveLimit: DEFAULT_LONE_KING_DRAW_LIMIT,
   }
@@ -131,19 +139,22 @@ function emptyMoveResult(from: number, to: number): MoveResult {
  * Computes geometrically legal sliding destinations for a piece at `from`.
  * Pieces slide like Rooks across empty orthogonal squares.
  *
- * This function deliberately does not apply the global compulsory-Rek rule;
- * callers that need rule-legal moves should use getMoveResults().
+ * This function deliberately does not apply the current project interpretation
+ * of compulsory Rek; callers that need rule-legal moves use getMoveResults().
  */
 export function getLegalMoves(
   board: Cell[],
   from: number,
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = DEFAULT_RULESET
 ): number[] {
   const piece = board[from]
   if (!piece) return []
 
-  // In Min Rek Chanh mode, Palace King is stationary on the throne.
-  if (mode === 'MIN_REK_CHANH' && piece.king) {
+  const ruleset = normalizeRuleSet(mode)
+
+  // Current MIN_REK_CHANH engine contract: King is stationary. Exact historical
+  // semantics remain under research and are not duplicated outside the engine.
+  if (ruleset === 'MIN_REK_CHANH' && piece.king) {
     return []
   }
 
@@ -166,21 +177,20 @@ export function getLegalMoves(
   return moves
 }
 
-/**
- * Returns all geometrically legal moves for a player that trigger Rek.
- */
+/** Returns all geometrically legal moves for a player that trigger Rek. */
 export function getAllRekOpportunities(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = DEFAULT_RULESET
 ): { from: number; to: number; captures: number[] }[] {
+  const ruleset = normalizeRuleSet(mode)
   const opportunities: { from: number; to: number; captures: number[] }[] = []
 
   for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
     const piece = board[from]
     if (!piece || piece.player !== player) continue
 
-    const legal = getLegalMoves(board, from, mode)
+    const legal = getLegalMoves(board, from, ruleset)
     for (const to of legal) {
       const tempBoard = [...board]
       tempBoard[to] = piece
@@ -206,10 +216,12 @@ export function previewMove(
   from: number,
   to: number,
   moverPlayer?: PlayerColor,
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = DEFAULT_RULESET
 ): MoveResult {
   const piece = board[from]
   if (!piece) return emptyMoveResult(from, to)
+
+  const ruleset = normalizeRuleSet(mode)
 
   // Backward compatibility: callers from the pre-refactor UI passed only
   // (board, from, to). The piece itself is the authoritative mover color.
@@ -217,14 +229,14 @@ export function previewMove(
 
   if (piece.player !== mover) return emptyMoveResult(from, to)
 
-  // A preview is still an engine operation: never simulate jumping, diagonal
-  // motion, landing on occupied cells, or a stationary Min Rek Chanh King.
-  const legal = getLegalMoves(board, from, mode)
+  const legal = getLegalMoves(board, from, ruleset)
   if (!legal.includes(to)) return emptyMoveResult(from, to)
 
-  // Check Hao Rek obligation in Min Rek Chanh mode.
-  if (mode === 'MIN_REK_CHANH') {
-    const rekMoves = getAllRekOpportunities(board, mover, mode)
+  // Current project interpretation for MIN_REK_CHANH: if any Rek opportunity
+  // exists, a submitted quiet move is a forfeit. The exact traditional trigger
+  // is still UNVERIFIED in the evidence guide and may be refined later.
+  if (ruleset === 'MIN_REK_CHANH') {
+    const rekMoves = getAllRekOpportunities(board, mover, ruleset)
     if (rekMoves.length > 0) {
       const isRekMove = rekMoves.some((m) => m.from === from && m.to === to)
       if (!isRekMove) {
@@ -241,13 +253,13 @@ export function previewMove(
   tempBoard[to] = piece
   tempBoard[from] = null
 
-  // 2. Rek first.
+  // 2. Rek first (current engine ordering).
   const rekCaptures = checkRekCaptures(tempBoard, to, mover)
   for (const v of rekCaptures) {
     tempBoard[v] = null
   }
 
-  // 3. Poat second on the post-Rek board.
+  // 3. Poat second on the post-Rek board (current engine interpretation).
   const opp = opponent(mover)
   const poatCaptures = checkPoatCaptures(tempBoard, opp)
 
@@ -274,9 +286,7 @@ export function previewMove(
   }
 }
 
-/**
- * Executes a move and produces a new immutable game state.
- */
+/** Executes a move and produces a new immutable game state. */
 export function executeMove(
   state: GameState,
   from: number,
@@ -284,21 +294,20 @@ export function executeMove(
 ): GameState {
   if (state.status !== 'playing') return state
 
+  const ruleset = normalizeRuleSet(state.mode)
   const mover = state.turn
   const piece = state.board[from]
   if (!piece || piece.player !== mover) return state
 
-  // Core validation is mandatory; UI previews are not a security boundary.
-  const legal = getLegalMoves(state.board, from, state.mode)
+  const legal = getLegalMoves(state.board, from, ruleset)
   if (!legal.includes(to)) return state
 
-  const result = previewMove(state.board, from, to, mover, state.mode)
+  const result = previewMove(state.board, from, to, mover, ruleset)
 
-  // Min Rek Chanh is a forfeit rule, not merely a disabled UI action.
-  // The board is left untouched because the illegal move never occurs.
   if (result.isHaoRekViolation) {
     return {
       ...state,
+      mode: ruleset,
       status: 'won',
       winner: opponent(mover),
       winReason: 'Min Rek Chanh violation: compulsory Rek was ignored',
@@ -346,7 +355,7 @@ export function executeMove(
       winner = mover
       winReason = 'All enemy pieces wiped out'
     } else {
-      const oppLegalCount = countTotalLegalMoves(newBoard, opp, state.mode)
+      const oppLegalCount = countTotalLegalMoves(newBoard, opp, ruleset)
       if (oppLegalCount === 0) {
         status = 'won'
         winner = mover
@@ -355,13 +364,11 @@ export function executeMove(
     }
   }
 
-  // Draw bookkeeping is evaluated only after decisive win/forfeit conditions.
-  // Old/custom states may not carry these fields, so reconstruct a safe base.
-  const currentPositionKey = createPositionKey(state.board, state.turn, state.mode)
+  const currentPositionKey = createPositionKey(state.board, state.turn, ruleset)
   const positionCounts: Record<string, number> = state.positionCounts
-    ? { ...state.positionCounts }
+    ? normalizePositionCounts(state.positionCounts)
     : { [currentPositionKey]: 1 }
-  const nextPositionKey = createPositionKey(newBoard, nextTurn, state.mode)
+  const nextPositionKey = createPositionKey(newBoard, nextTurn, ruleset)
   positionCounts[nextPositionKey] = (positionCounts[nextPositionKey] ?? 0) + 1
 
   const hadLoneKing = hasLoneKing(state.board)
@@ -370,8 +377,6 @@ export function executeMove(
   if (!hasLoneKingNow) {
     loneKingMoveCount = 0
   } else if (!hadLoneKing) {
-    // The move that creates a lone-King position starts the count; it is not
-    // itself counted as one of the survival plies.
     loneKingMoveCount = 0
   } else {
     loneKingMoveCount += 1
@@ -394,7 +399,7 @@ export function executeMove(
   }
 
   const availableReks =
-    status === 'playing' ? getAllRekOpportunities(newBoard, nextTurn, state.mode).length : 0
+    status === 'playing' ? getAllRekOpportunities(newBoard, nextTurn, ruleset).length : 0
 
   return {
     board: newBoard,
@@ -402,7 +407,7 @@ export function executeMove(
     status,
     winner,
     winReason,
-    mode: state.mode,
+    mode: ruleset,
     lastMove: { from, to },
     lastCaptured: result.captures,
     lastRek: result.rek,
@@ -414,6 +419,18 @@ export function executeMove(
     loneKingMoveCount,
     drawMoveLimit,
   }
+}
+
+/** Merge legacy REK_POAT repetition keys into the canonical REK_STANDARD namespace. */
+export function normalizePositionCounts(counts: Record<string, number>): Record<string, number> {
+  const normalized: Record<string, number> = {}
+  for (const [key, count] of Object.entries(counts)) {
+    const canonicalKey = key.startsWith('REK_POAT|')
+      ? `REK_STANDARD|${key.slice('REK_POAT|'.length)}`
+      : key
+    normalized[canonicalKey] = (normalized[canonicalKey] ?? 0) + count
+  }
+  return normalized
 }
 
 export function hasKing(board: Cell[], player: PlayerColor): boolean {
@@ -435,26 +452,25 @@ export function countPieces(board: Cell[], player: PlayerColor): number {
 export function countTotalLegalMoves(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = DEFAULT_RULESET
 ): number {
+  const ruleset = normalizeRuleSet(mode)
   let total = 0
   for (let i = 0; i < board.length; i++) {
     const c = board[i]
     if (c && c.player === player) {
-      total += getLegalMoves(board, i, mode).length
+      total += getLegalMoves(board, i, ruleset).length
     }
   }
   return total
 }
 
-/**
- * Complete RekEngine class wrapping pure engine functions.
- */
+/** Complete RekEngine class wrapping pure engine functions. */
 export class RekEngine {
   private state: GameState
   private history: GameState[] = []
 
-  constructor(mode: GameMode = 'REK_POAT') {
+  constructor(mode: GameMode = DEFAULT_RULESET) {
     this.state = createInitialState(mode)
   }
 
@@ -485,8 +501,6 @@ export class RekEngine {
     const piece = this.state.board[from]
     if (!piece || piece.player !== this.state.turn) return false
 
-    // Use geometric legality here so a compulsory-Rek violation can be
-    // adjudicated by executeMove as a forfeit instead of silently disappearing.
     const geometric = getLegalMoves(this.state.board, from, this.state.mode)
     if (!geometric.includes(to)) return false
 
@@ -517,21 +531,22 @@ export class RekEngine {
     const board: Cell[] = Array(BOARD_SIZE * BOARD_SIZE).fill(null)
     setupFn(board)
     const turn: PlayerColor = 'you'
+    const ruleset = normalizeRuleSet(this.state.mode)
     this.state = {
       board,
       turn,
       status: 'playing',
       winner: null,
       winReason: null,
-      mode: this.state.mode,
+      mode: ruleset,
       lastMove: null,
       lastCaptured: [],
       lastRek: false,
       lastPoat: false,
       captured: { you: [], opp: [] },
       moveCount: 0,
-      availableRekMovesCount: getAllRekOpportunities(board, turn, this.state.mode).length,
-      positionCounts: { [createPositionKey(board, turn, this.state.mode)]: 1 },
+      availableRekMovesCount: getAllRekOpportunities(board, turn, ruleset).length,
+      positionCounts: { [createPositionKey(board, turn, ruleset)]: 1 },
       loneKingMoveCount: 0,
       drawMoveLimit: this.state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT,
     }
@@ -545,20 +560,22 @@ export const getAvailableRekMoves = getAllRekOpportunities
 
 /**
  * Returns actual rule-legal destinations for a selected piece.
- * In Min Rek Chanh, ordinary moves disappear while any Rek is compulsory.
+ * In MIN_REK_CHANH, the current project contract suppresses quiet moves while
+ * a Rek opportunity exists; exact traditional Hao Rek semantics remain pending.
  */
 export function getMoveResults(
   board: Cell[],
   from: number,
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = DEFAULT_RULESET
 ): Map<number, MoveResult> {
+  const ruleset = normalizeRuleSet(mode)
   const map = new Map<number, MoveResult>()
   const piece = board[from]
   if (!piece) return map
 
-  const destinations = getLegalMoves(board, from, mode)
+  const destinations = getLegalMoves(board, from, ruleset)
   for (const to of destinations) {
-    const res = previewMove(board, from, to, piece.player, mode)
+    const res = previewMove(board, from, to, piece.player, ruleset)
     if (res.isHaoRekViolation) continue
     map.set(to, res)
   }

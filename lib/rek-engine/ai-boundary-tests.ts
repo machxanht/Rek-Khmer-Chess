@@ -72,7 +72,7 @@ export function runAiBoundaryTests(): {
     }
   }
 
-  run('AI-BOUNDARY-01', 'AI legal set exactly matches engine in REK_POAT', () => {
+  run('AI-BOUNDARY-01', 'AI legal set exactly matches engine in REK_STANDARD', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true)
     put(board, 'd8', 'opp', true)
@@ -83,14 +83,14 @@ export function runAiBoundaryTests(): {
     put(board, 'f3', 'opp')
     put(board, 'f5', 'opp')
 
-    const expected = engineMoveKeys(board, 'you', 'REK_POAT')
-    const actual = aiMoveKeys(board, 'you', 'REK_POAT')
+    const expected = engineMoveKeys(board, 'you', 'REK_STANDARD')
+    const actual = aiMoveKeys(board, 'you', 'REK_STANDARD')
 
-    expect(actual.size === expected.size, 'AI and engine move counts must match in REK_POAT')
+    expect(actual.size === expected.size, 'AI and engine move counts must match in REK_STANDARD')
     for (const key of expected) expect(actual.has(key), `AI is missing engine-legal move ${key}`)
     for (const key of actual) expect(expected.has(key), `AI exposed non-engine move ${key}`)
 
-    return 'AI move generation is a projection of engine move results in standard mode.'
+    return 'AI move generation is a projection of engine move results in the canonical Standard ruleset.'
   })
 
   run('AI-BOUNDARY-02', 'AI legal set exactly matches engine in MIN_REK_CHANH', () => {
@@ -109,12 +109,12 @@ export function runAiBoundaryTests(): {
     for (const key of expected) expect(actual.has(key), `AI is missing compulsory Rek move ${key}`)
     for (const key of actual) expect(expected.has(key), `AI exposed a forbidden non-Rek move ${key}`)
     expect(actual.has(`${coordToIdx('c1')}-${coordToIdx('c4')}`), 'Compulsory c1 -> c4 Rek must remain available')
-    expect(!Array.from(actual).some((key) => key.startsWith(`${coordToIdx('h1')}-`)), 'Ordinary h1 moves must disappear while a Rek exists elsewhere')
+    expect(!Array.from(actual).some((key) => key.startsWith(`${coordToIdx('h1')}-`)), 'Ordinary h1 moves must disappear while current Min obligation is active')
 
-    return 'AI inherits the engine-wide compulsory Rek rule without re-implementing it.'
+    return 'AI inherits the current Min engine contract without re-implementing it.'
   })
 
-  run('AI-BOUNDARY-03', 'AI never moves the Palace King in MIN_REK_CHANH', () => {
+  run('AI-BOUNDARY-03', 'AI never moves the stationary King in current MIN_REK_CHANH contract', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true)
     put(board, 'd8', 'opp', true)
@@ -124,7 +124,7 @@ export function runAiBoundaryTests(): {
     expect(!moves.some((move) => move.from === coordToIdx('d1')), 'Stationary d1 King must never appear in AI legal moves')
     expect(moves.some((move) => move.from === coordToIdx('a2')), 'Other movable pieces should remain available')
 
-    return 'Palace King immobility comes from engine legal results and is preserved by AI.'
+    return 'Current Min King immobility comes from engine legal results and is preserved by AI.'
   })
 
   run('AI-BOUNDARY-04', 'Every AI difficulty returns only an engine-legal move', () => {
@@ -135,11 +135,11 @@ export function runAiBoundaryTests(): {
     put(board, 'b5', 'you')
     put(board, 'd5', 'you')
 
-    const legal = engineMoveKeys(board, 'opp', 'REK_POAT')
+    const legal = engineMoveKeys(board, 'opp', 'REK_STANDARD')
     expect(legal.size > 0, 'Fixture must expose at least one legal opponent move')
 
     for (const difficulty of ['easy', 'medium', 'hard'] as AiDifficulty[]) {
-      const move = chooseAiMove(board, 'opp', 'REK_POAT', difficulty)
+      const move = chooseAiMove(board, 'opp', 'REK_STANDARD', difficulty)
       expect(move !== null, `${difficulty} AI must return a move when legal moves exist`)
       expect(legal.has(`${move.from}-${move.to}`), `${difficulty} AI returned a move outside the engine legal set`)
     }
@@ -153,7 +153,7 @@ export function runAiBoundaryTests(): {
     put(board, 'd8', 'opp', true)
 
     const moves = getAllLegalMoves(board, 'opp', 'MIN_REK_CHANH')
-    expect(moves.length === 0, 'A side with only its stationary Palace King has zero legal moves')
+    expect(moves.length === 0, 'A side with only its stationary King has zero legal moves under current Min contract')
 
     for (const difficulty of ['easy', 'medium', 'hard'] as AiDifficulty[]) {
       expect(chooseAiMove(board, 'opp', 'MIN_REK_CHANH', difficulty) === null, `${difficulty} AI must return null at zero legal moves`)
@@ -172,10 +172,10 @@ export function runAiBoundaryTests(): {
 
     const targetFrom = coordToIdx('a6')
     const targetTo = coordToIdx('a7')
-    const engineResult = getMoveResults(board, targetFrom, 'REK_POAT').get(targetTo)
+    const engineResult = getMoveResults(board, targetFrom, 'REK_STANDARD').get(targetTo)
     expect(engineResult?.poat === true, 'Fixture must be a Poat capture in the engine')
 
-    const aiMove = getAllLegalMoves(board, 'you', 'REK_POAT').find(
+    const aiMove = getAllLegalMoves(board, 'you', 'REK_STANDARD').find(
       (move) => move.from === targetFrom && move.to === targetTo
     )
     expect(aiMove !== undefined, 'AI legal list must include the engine Poat move')

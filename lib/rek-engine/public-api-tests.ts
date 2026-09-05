@@ -37,7 +37,7 @@ function put(
 function makeState(
   board: Cell[],
   turn: PlayerColor = 'you',
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = 'REK_STANDARD'
 ): GameState {
   return {
     board,
@@ -87,12 +87,12 @@ export function runPublicApiTests(): {
     }
   }
 
-  run('API-01', 'createGame exposes a rule-legal canonical initial session without UI dependencies', () => {
-    const game = createGame('REK_POAT')
+  run('API-01', 'createGame exposes REK_STANDARD as the canonical default rule set', () => {
+    const game = createGame()
     const state = game.getState()
     const moves = new Set(game.getLegalMoves(coordToIdx('a3')))
 
-    expect(state.mode === 'REK_POAT', 'createGame must preserve requested mode')
+    expect(state.mode === 'REK_STANDARD', 'Default public session must expose REK_STANDARD')
     expect(state.turn === 'you' && state.status === 'playing', 'New session must start with White/you to move')
     for (const coord of ['a4', 'a5']) {
       expect(moves.has(coordToIdx(coord)), `Initial public API must expose ${coord}`)
@@ -101,11 +101,11 @@ export function runPublicApiTests(): {
     expect(state.board[coordToIdx('a2')]?.king === true, 'Public initial state must expose White King on a2')
     expect(state.board[coordToIdx('h7')]?.king === true, 'Public initial state must expose Black King on h7')
 
-    return 'New callers see the corrected canonical setup and query legal moves through one stable facade.'
+    return 'New callers see the canonical setup under the canonical REK_STANDARD ruleset.'
   })
 
   run('API-02', 'makeMove and undo update session state atomically', () => {
-    const game = new RekGame('REK_POAT')
+    const game = new RekGame('REK_STANDARD')
     const before = game.getState()
     const from = coordToIdx('a3')
     const to = coordToIdx('a4')
@@ -123,7 +123,7 @@ export function runPublicApiTests(): {
     expect(
       createPositionKey(restored.board, restored.turn, restored.mode) ===
         createPositionKey(before.board, before.turn, before.mode),
-      'Undo must restore the exact prior board/turn/mode position'
+      'Undo must restore the exact prior board/turn/ruleset position'
     )
     expect(restored.moveCount === before.moveCount, 'Undo must restore move count')
 
@@ -151,14 +151,15 @@ export function runPublicApiTests(): {
     return 'Consumers receive a deep-enough snapshot instead of mutable engine-owned arrays/objects.'
   })
 
-  run('API-04', 'serialize and deserialize round-trip a live game state with versioned snapshots', () => {
-    const game = createGame('REK_POAT')
+  run('API-04', 'serialize and deserialize round-trip a live canonical rule-set state', () => {
+    const game = createGame('REK_STANDARD')
     expect(game.makeMove(coordToIdx('a3'), coordToIdx('a4')), 'First fixture move must execute')
     expect(game.makeMove(coordToIdx('a6'), coordToIdx('a5')), 'Second fixture move must execute')
 
     const serialized = game.serialize()
-    const envelope = JSON.parse(serialized) as { version?: unknown }
+    const envelope = JSON.parse(serialized) as { version?: unknown; state?: { mode?: unknown } }
     expect(envelope.version === REK_GAME_SNAPSHOT_VERSION, 'Snapshot must carry the current schema version')
+    expect(envelope.state?.mode === 'REK_STANDARD', 'New snapshots must emit canonical REK_STANDARD')
 
     const loaded = deserializeGame(serialized)
     expect(
@@ -167,7 +168,7 @@ export function runPublicApiTests(): {
     )
     expect(!loaded.canUndo(), 'Persistence stores game state, not process-local undo history')
 
-    return 'Save/load preserves board, turn, captures, counters, and draw bookkeeping in schema v1.'
+    return 'Save/load preserves canonical ruleset, board, turn, captures, counters, and draw bookkeeping.'
   })
 
   run('API-05', 'snapshot loader rejects malformed, unsupported, or structurally unsafe state', () => {
@@ -200,7 +201,7 @@ export function runPublicApiTests(): {
     return 'Persistence boundary rejects corrupt JSON, schema mismatch, malformed board size, and duplicate identities.'
   })
 
-  run('API-06', 'public legal moves honor Min Rek Chanh while submitted violations are adjudicated by core engine', () => {
+  run('API-06', 'public legal moves honor current Min Rek Chanh engine contract', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true, 'you_king')
     put(board, 'd8', 'opp', true, 'opp_king')
@@ -210,7 +211,7 @@ export function runPublicApiTests(): {
     put(board, 'd4', 'opp', false, 'opp_d4')
 
     const game = new RekGame(makeState(board, 'you', 'MIN_REK_CHANH'))
-    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no legal moves under compulsory Rek')
+    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no legal moves under current compulsory-Rek contract')
     expect(
       game.getLegalMoves(coordToIdx('c1')).includes(coordToIdx('c4')),
       'Actual Rek move must remain exposed'
@@ -221,7 +222,39 @@ export function runPublicApiTests(): {
     expect(terminal.status === 'won' && terminal.winner === 'opp', 'Core engine must award the violation to opponent')
     expect(terminal.board[coordToIdx('h1')]?.id === 'you_quiet', 'Illegal quiet move must not alter board')
 
-    return 'UI/server can display only legal moves while the engine still adjudicates illegal submitted moves safely.'
+    return 'Current Min variant remains behaviorally unchanged while its exact historical trigger stays under research.'
+  })
+
+  run('API-07', 'legacy REK_POAT callers and snapshots migrate to REK_STANDARD', () => {
+    const legacyCaller = createGame('REK_POAT')
+    expect(legacyCaller.getState().mode === 'REK_STANDARD', 'Legacy createGame alias must canonicalize to REK_STANDARD')
+
+    const canonicalEnvelope = JSON.parse(legacyCaller.serialize()) as {
+      version: number
+      state: GameState
+    }
+    canonicalEnvelope.state.mode = 'REK_POAT'
+    if (canonicalEnvelope.state.positionCounts) {
+      canonicalEnvelope.state.positionCounts = Object.fromEntries(
+        Object.entries(canonicalEnvelope.state.positionCounts).map(([key, value]) => [
+          key.replace(/^REK_STANDARD\|/, 'REK_POAT|'),
+          value,
+        ])
+      )
+    }
+
+    const migrated = deserializeGameState(JSON.stringify(canonicalEnvelope))
+    expect(migrated.mode === 'REK_STANDARD', 'Legacy snapshot mode must migrate to REK_STANDARD')
+    expect(
+      Object.keys(migrated.positionCounts ?? {}).every((key) => !key.startsWith('REK_POAT|')),
+      'Legacy repetition keys must migrate to canonical namespace'
+    )
+    expect(
+      JSON.parse(serializeGameState(migrated)).state.mode === 'REK_STANDARD',
+      'Re-serialized migrated snapshot must contain only canonical ruleset name'
+    )
+
+    return 'REK_POAT remains a compatibility alias only; public state and new snapshots are canonical.'
   })
 
   const passed = results.filter((result) => result.passed).length

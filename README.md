@@ -1,34 +1,30 @@
 # រែកខ្មែរ - Rek Khmer Engine
 
-Repository này là **game engine TypeScript thuần** cho Rek Khmer. UI/UX cũ đã được loại để core rules, state, AI và regression tests có thể được kiểm thử độc lập.
+Pure TypeScript game engine cho **Rek Khmer (ល្បែងរែក)**. Repository này chỉ giữ engine, AI, test, puzzle và tài liệu luật; UI/UX không nằm trong scope hiện tại.
 
-## Tài liệu nền tảng
+## Cách phân chia game chuẩn của project
 
-- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — **evidence-based rule guide**: tách `CONFIRMED`, `STRONG EVIDENCE`, `ENGINE INTERPRETATION`, `UNVERIFIED` và project extensions.
-- `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mô tả behavior mà engine hiện đang chạy.
-- `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, public call-flow, turn pipeline và ranh giới evidence của từng rule.
-- `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển nền tảng.
+Project chỉ có **một game: Rek Khmer**. Bên trong engine hiện có hai **rule set**:
 
-### Chính sách nguồn luật
+- `REK_STANDARD` — rule set chuẩn/mặc định của Rek Khmer. Rek và Poat là **cơ chế bắt quân**, không phải hai game mode độc lập.
+- `MIN_REK_CHANH` — variant có thêm rule bắt buộc Rek theo current engine contract. Exact historical Hao Rek trigger vẫn đang được research và chưa được tuyên bố là fully confirmed.
 
-Project **không dùng Google Play, App Store hoặc app game có sẵn làm bằng chứng luật**. Ưu tiên tư liệu Khmer, Buddhist Institute/Chuon Nath, tài liệu văn hóa độc lập, thư viện Khmer và ván bàn thật có thể tái dựng.
+Identifier cũ `REK_POAT` được giữ **chỉ để backward compatibility**. Mọi public session/snapshot mới sẽ canonicalize nó thành `REK_STANDARD`.
 
-Một rule đang chạy trong code **không tự động đồng nghĩa** với “luật Khmer truyền thống đã được chứng minh”. Các điểm đang cần research sâu nhất là exact `Hao Rek / Min Rek Chanh`, Rek dual-axis 4 quân, exact Poat timing, zero-move terminal và draw rules.
+`Local`, `Online`, `vs AI`, `AI vs AI`, `Easy/Medium/Hard` là match type hoặc AI difficulty, **không phải rule set của cờ Rek** và không được nhét vào core rule engine.
 
-## Engine modules
+## Nguồn luật và độ tin cậy
 
-- `lib/rek-engine/types.ts` — `GameState`, piece/move types.
-- `lib/rek-engine/captures.ts` — Rek và Poat primitives.
-- `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw.
-- `lib/rek-engine/session.ts` — `RekGame` facade, undo, serialize/deserialize.
-- `lib/rek-engine/ai.ts` — AI search chỉ dùng legal moves từ core engine.
-- `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium regression harness.
-- `lib/rek-engine/puzzles.ts` — tactical fixtures.
-- `lib/rek-engine/*-tests.ts` — core/spec/guide/state/public API/AI/simulation regressions.
+- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide: CONFIRMED / STRONG EVIDENCE / ENGINE INTERPRETATION / UNVERIFIED.
+- `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mà engine hiện thực thi.
+- `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, turn flow và ranh giới rule research.
+- `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển.
 
-## Setup canonical của project
+Game/app trên Google Play, App Store hoặc app clone **không được dùng làm positive rule evidence**.
 
-Bàn 8×8, mỗi bên **16 quân = 1 King + 15 Men**. Setup đã được chủ project xác nhận trực tiếp bằng ảnh bàn thật và phù hợp với nguồn game-history thứ cấp độc lập:
+## Setup canonical
+
+Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you`):
 
 ```text
     a   b   c   d   e   f   g   h
@@ -42,39 +38,28 @@ Bàn 8×8, mỗi bên **16 quân = 1 King + 15 Men**. Setup đã được chủ 
 1   .   ○   ○   ○   ○   ○   ○   ○
 ```
 
-- Trắng (`you`): King `a2`; Men `b1-h1`, `a3-h3`; `a1` trống.
-- Đen (`opp`): King `h7`; Men `a6-h6`, `a8-g8`; `h8` trống.
-- Hai đội hình đối xứng quay 180°.
+- Trắng: King `a2`; Men `b1-h1`, `a3-h3`; `a1` trống.
+- Đen: King `h7`; Men `a6-h6`, `a8-g8`; `h8` trống.
+- Hai bên đối xứng quay 180°.
 
-## Rule confidence tóm tắt
+## Core engine
 
-| Rule | Status nghiên cứu | Engine hiện tại |
-|---|---|---|
-| Bàn 8×8 | `CONFIRMED` | Có |
-| 1 King + 15 Men mỗi bên | `CONFIRMED` | Có |
-| Mục tiêu bắt King | `CONFIRMED` | Có |
-| Rek ăn cặp hai phía | `CONFIRMED` | Có |
-| Bao/vây quân bị bí | `CONFIRMED principle` | Có |
-| Setup 7+King+8 `a2/h7` | `PROJECT-CONFIRMED + STRONG` | Có |
-| Đi trực giao nhiều ô | `STRONG EVIDENCE` | Có |
-| Poat BFS / zero liberties | `STRONG ENGINE INTERPRETATION` | Có |
-| Rek 4 do hai trục đồng thời | `INFERRED` | Có |
-| Global compulsory Rek trong Min | `UNVERIFIED exact rule` | Có |
-| Min violation = thua ngay | `UNVERIFIED exact semantics` | Có |
-| Zero legal moves = instant win | `UNVERIFIED` | Có |
-| Threefold repetition | `PROJECT EXTENSION` | Có |
-| Lone King 32 | `PROJECT EXTENSION` | Có |
-
-Chi tiết evidence và source links nằm trong `HUONG_DAN_LUAT_CO_REK_KHMER.md`.
+- `lib/rek-engine/types.ts` — `GameState`, `RuleSet`, compatibility aliases.
+- `lib/rek-engine/captures.ts` — primitive Rek + Poat.
+- `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw adjudication.
+- `lib/rek-engine/session.ts` — `RekGame`, undo, snapshot migration/save/load.
+- `lib/rek-engine/ai.ts` — AI chỉ search trên legal moves từ core engine.
+- `lib/rek-engine/ai-tournament.ts` — deterministic AI tournament regression.
+- `lib/rek-engine/puzzles.ts` — tactical fixtures.
 
 ## Public API
 
-Consumer nên đi qua `RekGame`; UI/server không được duplicate luật:
-
 ```ts
-import { coordToIdx, createGame, deserializeGame } from './lib/rek-engine'
+import { coordToIdx, createGame } from './lib/rek-engine'
 
-const game = createGame('REK_POAT')
+// Canonical default
+const game = createGame('REK_STANDARD')
+
 const from = coordToIdx('a3')
 const to = coordToIdx('a4')
 
@@ -82,55 +67,42 @@ if (game.getLegalMoves(from).includes(to)) {
   game.makeMove(from, to)
 }
 
-const state = game.getState()
-const snapshot = game.serialize()
-const loaded = deserializeGame(snapshot)
+console.log(game.getState().mode) // REK_STANDARD
 ```
 
-`session.ts` chỉ quản current state, undo và persistence. Rule legality/adjudication phải đi qua core engine.
+Legacy callers vẫn chạy:
 
-## Current turn pipeline
-
-```text
-input from/to
-→ validate status + side to move
-→ geometric movement
-→ current Min Rek compulsory filter
-→ move piece
-→ Rek captures
-→ Poat captures
-→ King / piece / immobilization terminal checks
-→ current draw extensions
-→ switch turn
+```ts
+const legacy = createGame('REK_POAT')
+console.log(legacy.getState().mode) // REK_STANDARD
 ```
 
-Xem `ENGINE_ARCHITECTURE_REK_KHMER.md` để biết khối nào đã có evidence mạnh và khối nào còn là project interpretation.
+Snapshot schema vẫn là version `1`; loader nhận snapshot cũ có `mode: "REK_POAT"`, migrate mode + repetition keys sang `REK_STANDARD`, và khi serialize lại chỉ phát canonical identifier.
 
-## AI contract
+## Rule boundary quan trọng
 
-AI không tự định nghĩa luật. Candidate moves và tactical metadata đến từ `getMoveResults()` / core preview logic.
+Những phần đã có evidence mạnh: bàn 8×8, 16 quân/bên, setup 7+King+8 của project, movement trực giao, Rek ăn cặp hai phía, nguyên lý vây/bí, bắt King là mục tiêu.
 
-- `easy`: intentional randomness.
+Những phần **current engine đang chạy nhưng chưa được coi là historical truth**:
+
+- exact Hao Rek trigger trong `MIN_REK_CHANH`;
+- global compulsory Rek interpretation;
+- dual-axis Rek = 4 captures;
+- exact Rek → Poat ordering/timing;
+- zero-move instant win;
+- threefold repetition;
+- lone-King draw limit.
+
+Không thay các rule này chỉ vì suy đoán. Khi research đủ mạnh, cập nhật guide → SPEC → code → regression tests theo đúng thứ tự.
+
+## AI
+
+- `easy`: random có bias capture.
 - `medium`: deterministic alpha-beta depth 2.
-- `hard`: depth 3 mặc định; adaptive depth 4/5 ở position hẹp/endgame.
-- rule-legal mobility được dùng trong evaluation.
-- terminal immobilization được kiểm tra trước depth cutoff.
-- có immediate Royal-capture horizon extension.
-- pruned alpha-beta bounds không được cache như exact value.
-- `analyzeAiMove()` trả search diagnostics deterministic.
+- `hard`: deterministic depth 3, adaptive depth 4/5 ở narrow endgame.
+- AI không tự viết movement/Rek/Poat/Hao Rek riêng; legal set lấy từ core engine.
 
-**Lưu ý:** AI Min Rek Chanh hiện search theo compulsory-Rek model của engine. Không nên tune chiến lược Min sâu hơn trước khi exact Hao Rek semantics được khóa bằng evidence.
-
-## AI tournament regression
-
-Tournament harness:
-
-- seeded opening chỉ lấy từ legal moves của engine;
-- Hard/Medium đổi bên để giảm color bias;
-- mọi AI move được xác nhận legality trước khi execute;
-- theo dõi wins/draws/capped/illegal moves/plies/search nodes.
-
-CI chỉ chạy smoke nhỏ. Benchmark lớn chạy thủ công:
+Tournament baseline chạy cả `REK_STANDARD` và `MIN_REK_CHANH`.
 
 ```bash
 npm run tournament:ai
@@ -138,7 +110,7 @@ node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-p
 npm run tournament:ai:200
 ```
 
-## Testing
+## Test
 
 ```bash
 npm install --no-package-lock
@@ -146,18 +118,4 @@ npm run typecheck
 npm test
 ```
 
-Bộ regression hiện bao phủ core/spec/guide/public API/state/draw/puzzles/simulation/movement/AI search/tournament.
-
-Khi research thay đổi rule:
-
-```text
-Evidence mới
-→ update HUONG_DAN_LUAT_CO_REK_KHMER.md
-→ update SPEC_ENGINE_CO_REK_KHMER.md
-→ add reproduction fixture
-→ sửa core engine tối thiểu
-→ update affected tests
-→ full CI + tournament smoke
-```
-
-Không sửa engine chỉ để khớp một app game có sẵn.
+Rule changes phải giữ engine pure TypeScript và không được duplicate legality/capture logic ở UI, server hoặc AI.
