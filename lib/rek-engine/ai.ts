@@ -626,7 +626,11 @@ export function analyzeAiState(
       cache,
       stats
     )
-    const score = searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
+    // Engine terminal outcomes are authoritative. In particular, an immediate
+    // draw must remain exactly 0 instead of being perturbed by tactical bonuses.
+    const score = immediate !== null
+      ? searchScore
+      : searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
 
     if (score > bestScore) {
       bestScore = score
