@@ -12,6 +12,7 @@ const sourceFiles = [
   'lib/rek-engine/engine.ts',
   'lib/rek-engine/session.ts',
   'lib/rek-engine/ai.ts',
+  'lib/rek-engine/ai-tournament.ts',
   'lib/rek-engine/puzzles.ts',
   'lib/rek-engine/tests.ts',
   'lib/rek-engine/spec-lock-tests.ts',
@@ -22,6 +23,7 @@ const sourceFiles = [
   'lib/rek-engine/simulation-tests.ts',
   'lib/rek-engine/ai-quality-tests.ts',
   'lib/rek-engine/ai-search-regression-tests.ts',
+  'lib/rek-engine/ai-tournament-tests.ts',
   'lib/rek-engine/move-regression-tests.ts',
   'lib/rek-engine/rule-guide-lock-tests.ts',
   'lib/rek-engine/public-api-tests.ts',
@@ -34,7 +36,11 @@ function printReport(label, report) {
     console.log(`[${mark}] ${result.id} - ${result.title}`)
     if (!result.passed && result.error) {
       console.error(`       ${result.error}`)
-    } else if (label === 'Rek AI search regression' && result.passed && result.details) {
+    } else if (
+      (label === 'Rek AI search regression' || label === 'Rek AI tournament regression') &&
+      result.passed &&
+      result.details
+    ) {
       console.log(`       ${result.details}`)
     }
   }
@@ -77,6 +83,7 @@ try {
   const { runSimulationTests } = load('simulation-tests.js')
   const { runAiQualityTests } = load('ai-quality-tests.js')
   const { runAiSearchRegressionTests } = load('ai-search-regression-tests.js')
+  const { runAiTournamentTests } = load('ai-tournament-tests.js')
   const { runMoveRegressionTests } = load('move-regression-tests.js')
   const { runRuleGuideLockTests } = load('rule-guide-lock-tests.js')
   const { runPublicApiTests } = load('public-api-tests.js')
@@ -91,6 +98,7 @@ try {
     ['Rek long-run simulations', runSimulationTests()],
     ['Rek AI tactical quality', runAiQualityTests()],
     ['Rek AI search regression', runAiSearchRegressionTests()],
+    ['Rek AI tournament regression', runAiTournamentTests()],
     ['Rek movement regression', runMoveRegressionTests()],
     ['Rek Khmer guide lock', runRuleGuideLockTests()],
     ['Rek public session API', runPublicApiTests()],
