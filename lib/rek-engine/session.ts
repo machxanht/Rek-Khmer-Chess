@@ -14,7 +14,7 @@ import {
   createInitialState,
   executeMove,
   getAllRekOpportunities,
-  getMoveResults,
+  getStateMoveResults,
   normalizePositionCounts,
 } from './engine'
 
@@ -63,6 +63,15 @@ export function cloneGameState(state: GameState): GameState {
       opp: state.captured.opp.map(clonePiece),
     },
     positionCounts: state.positionCounts ? { ...state.positionCounts } : undefined,
+    haoRekContext: state.haoRekContext
+      ? {
+          active: state.haoRekContext.active,
+          createdByMove: state.haoRekContext.createdByMove
+            ? { ...state.haoRekContext.createdByMove }
+            : null,
+          allowedResponses: state.haoRekContext.allowedResponses.map((move) => ({ ...move })),
+        }
+      : null,
   }
 }
 
@@ -192,6 +201,33 @@ function assertGameState(value: unknown): asserts value is GameState {
   ) {
     throw new Error('snapshot.state.drawMoveLimit must be a positive integer')
   }
+
+  if (value.haoRekContext !== undefined && value.haoRekContext !== null) {
+    if (!isRecord(value.haoRekContext)) throw new Error('snapshot.state.haoRekContext must be an object or null')
+    if (typeof value.haoRekContext.active !== 'boolean') {
+      throw new Error('snapshot.state.haoRekContext.active must be boolean')
+    }
+    if (value.haoRekContext.createdByMove !== null) {
+      if (
+        !isRecord(value.haoRekContext.createdByMove) ||
+        !isBoardIndex(value.haoRekContext.createdByMove.from) ||
+        !isBoardIndex(value.haoRekContext.createdByMove.to)
+      ) {
+        throw new Error('snapshot.state.haoRekContext.createdByMove is invalid')
+      }
+    }
+    if (!Array.isArray(value.haoRekContext.allowedResponses)) {
+      throw new Error('snapshot.state.haoRekContext.allowedResponses must be an array')
+    }
+    for (const response of value.haoRekContext.allowedResponses) {
+      if (!isRecord(response) || !isBoardIndex(response.from) || !isBoardIndex(response.to)) {
+        throw new Error('snapshot.state.haoRekContext.allowedResponses contains an invalid move')
+      }
+    }
+    if (value.haoRekContext.active && value.haoRekContext.allowedResponses.length === 0) {
+      throw new Error('active Hao Rek context must contain at least one response')
+    }
+  }
 }
 
 /**
@@ -210,6 +246,10 @@ function normalizeState(state: GameState): CanonicalGameState {
     normalized.status === 'playing'
       ? getAllRekOpportunities(normalized.board, normalized.turn, normalized.mode).length
       : 0
+  normalized.haoRekContext =
+    normalized.mode === 'MIN_REK_CHANH' && normalized.status === 'playing'
+      ? normalized.haoRekContext ?? null
+      : null
   return normalized as CanonicalGameState
 }
 
@@ -265,12 +305,12 @@ export class RekGame {
     if (this.state.status !== 'playing' || !isBoardIndex(from)) return []
     const piece = this.state.board[from]
     if (!piece || piece.player !== this.state.turn) return []
-    return Array.from(getMoveResults(this.state.board, from, this.state.mode).keys())
+    return Array.from(getStateMoveResults(this.state, from).keys())
   }
 
   public previewMove(from: number, to: number): MoveResult | null {
     if (!isBoardIndex(from) || !isBoardIndex(to)) return null
-    return getMoveResults(this.state.board, from, this.state.mode).get(to) ?? null
+    return getStateMoveResults(this.state, from).get(to) ?? null
   }
 
   public makeMove(from: number, to: number): boolean {

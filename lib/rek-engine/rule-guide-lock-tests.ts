@@ -14,6 +14,7 @@ import {
   getAllRekOpportunities,
   getLegalMoves,
   getMoveResults,
+  getStateMoveResults,
   previewMove,
 } from './engine'
 
@@ -251,20 +252,30 @@ export function runRuleGuideLockTests(): {
     return 'Regression locks move -> Rek -> Poat as the current technical pipeline, not as settled historical proof.'
   })
 
-  run('GUIDE-08', 'Current MIN_REK_CHANH contract exposes only Rek moves and forfeits a quiet response', () => {
+  run('GUIDE-08', 'MIN_REK_CHANH obligation is transition-owned instead of board-global', () => {
     const state = setupCompulsoryRekFixture('MIN_REK_CHANH')
-    expect(state.availableRekMovesCount > 0, 'Fixture must contain at least one Rek opportunity')
+    expect(state.availableRekMovesCount > 0, 'Fixture must contain a pre-existing Rek opportunity')
     expect(
-      getMoveResults(state.board, coordToIdx('h1'), state.mode).size === 0,
-      'Quiet h1 moves must disappear while current Min obligation is active'
+      getMoveResults(state.board, coordToIdx('h1'), state.mode).has(coordToIdx('h2')),
+      'Pre-existing Rek alone must not suppress quiet h1 moves'
+    )
+
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
+    expect(
+      getStateMoveResults(state, coordToIdx('h1')).size === 0,
+      'Quiet h1 moves must disappear only while active Hao context exists'
     )
 
     const next = executeMove(state, coordToIdx('h1'), coordToIdx('h2'))
-    expect(next.status === 'won' && next.winner === 'opp', 'Current Min contract must forfeit ignored Rek')
+    expect(next.status === 'won' && next.winner === 'opp', 'Ignoring active Hao must forfeit')
     expect(next.board[coordToIdx('h1')]?.id === 'you_quiet', 'Forfeited quiet move must not alter the board')
     expect(next.board[coordToIdx('h2')] === null, 'Forfeited quiet move must never reach h2')
 
-    return 'This locks current software behavior while exact traditional Hao Rek trigger remains UNVERIFIED.'
+    return 'Guide lock now matches event-triggered Hao evidence and the explicit forfeit technical policy.'
   })
 
   run('GUIDE-09', 'Rek remains optional in REK_STANDARD even when a capture is available', () => {
