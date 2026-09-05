@@ -56,14 +56,14 @@ export function runAiQualityTests(): {
   }
 
   run('AIQ-01', 'Medium AI never overlooks an immediate legal King capture', () => {
-    const move = chooseAiMove(royalCaptureFixture(), 'you', 'REK_POAT', 'medium')
+    const move = chooseAiMove(royalCaptureFixture(), 'you', 'REK_STANDARD', 'medium')
     expect(move, 'Medium AI must return a move')
     expect(move.from === coordToIdx('a4') && move.to === coordToIdx('d4'), 'Medium AI must play a4→d4 Royal Rek')
     return 'Immediate Royal capture bypasses lower-value positional alternatives.'
   })
 
   run('AIQ-02', 'Hard AI never overlooks an immediate legal King capture', () => {
-    const move = chooseAiMove(royalCaptureFixture(), 'you', 'REK_POAT', 'hard')
+    const move = chooseAiMove(royalCaptureFixture(), 'you', 'REK_STANDARD', 'hard')
     expect(move, 'Hard AI must return a move')
     expect(move.from === coordToIdx('a4') && move.to === coordToIdx('d4'), 'Hard AI must play a4→d4 Royal Rek')
     return 'Hard search recognizes the same forced Royal finish before deeper search.'
@@ -72,7 +72,7 @@ export function runAiQualityTests(): {
   run('AIQ-03', 'AI tactical metadata comes from the legal Rek→Poat master puzzle', () => {
     const board = emptyBoard()
     KHMER_PUZZLES[6].setup(board)
-    const move = getAllLegalMoves(board, 'you', 'REK_POAT').find(
+    const move = getAllLegalMoves(board, 'you', 'REK_STANDARD').find(
       (candidate) => candidate.from === coordToIdx('c1') && candidate.to === coordToIdx('c4')
     )
     expect(move, 'Level 7 solution must appear in AI engine-legal set')
@@ -84,10 +84,10 @@ export function runAiQualityTests(): {
 
   run('AIQ-04', 'Medium and hard selection are deterministic on equal input', () => {
     const board = royalCaptureFixture()
-    const mediumA = chooseAiMove(board, 'you', 'REK_POAT', 'medium')
-    const mediumB = chooseAiMove(board, 'you', 'REK_POAT', 'medium')
-    const hardA = chooseAiMove(board, 'you', 'REK_POAT', 'hard')
-    const hardB = chooseAiMove(board, 'you', 'REK_POAT', 'hard')
+    const mediumA = chooseAiMove(board, 'you', 'REK_STANDARD', 'medium')
+    const mediumB = chooseAiMove(board, 'you', 'REK_STANDARD', 'medium')
+    const hardA = chooseAiMove(board, 'you', 'REK_STANDARD', 'hard')
+    const hardB = chooseAiMove(board, 'you', 'REK_STANDARD', 'hard')
     expect(JSON.stringify(mediumA) === JSON.stringify(mediumB), 'Medium AI should be deterministic')
     expect(JSON.stringify(hardA) === JSON.stringify(hardB), 'Hard AI should be deterministic')
     return 'Only easy mode intentionally uses randomness.'
@@ -99,8 +99,8 @@ export function runAiQualityTests(): {
     put(board, 'c3', 'you', false, 'you_man')
     put(board, 'h8', 'opp', true, 'opp_king')
     put(board, 'f6', 'opp', false, 'opp_man')
-    const youScore = evaluateBoard(board, 'you', 'REK_POAT')
-    const oppScore = evaluateBoard(board, 'opp', 'REK_POAT')
+    const youScore = evaluateBoard(board, 'you', 'REK_STANDARD')
+    const oppScore = evaluateBoard(board, 'opp', 'REK_STANDARD')
     expect(youScore === -oppScore, `Expected symmetric scores, got ${youScore} / ${oppScore}`)
     return 'Evaluation has no hidden first-player bias on a mirrored ownership view.'
   })

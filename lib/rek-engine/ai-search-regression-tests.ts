@@ -1,8 +1,8 @@
 import {
   BOARD_SIZE,
   Cell,
-  GameMode,
   PlayerColor,
+  RuleSet,
   TestResult,
 } from './types'
 import {
@@ -40,7 +40,7 @@ function applyAiMove(
   board: Cell[],
   move: AiMove,
   mover: PlayerColor,
-  mode: GameMode
+  mode: RuleSet
 ): Cell[] {
   const result = previewMove(board, move.from, move.to, mover, mode)
   const next = [...board]
@@ -152,7 +152,7 @@ export function runAiSearchRegressionTests(): {
       Infinity,
       true,
       'you',
-      'REK_POAT'
+      'REK_STANDARD'
     )
 
     expect(score > 90000, `Immediate Royal Rek at horizon must receive a winning score, got ${score}`)
@@ -161,21 +161,21 @@ export function runAiSearchRegressionTests(): {
 
   run('AIS-04', 'Medium and Hard refuse a tempting Rek that loses their King next move', () => {
     const board = royalThreatFixture()
-    const tempting = getAllLegalMoves(board, 'you', 'REK_POAT').find(
+    const tempting = getAllLegalMoves(board, 'you', 'REK_STANDARD').find(
       (move) => move.from === coordToIdx('a4') && move.to === coordToIdx('b4')
     )
     expect(tempting?.capturesCount === 2, 'Fixture must contain the tempting a4→b4 two-piece Rek')
 
     for (const difficulty of ['medium', 'hard'] as const) {
-      const analysis = analyzeAiMove(board, 'you', 'REK_POAT', difficulty)
+      const analysis = analyzeAiMove(board, 'you', 'REK_STANDARD', difficulty)
       expect(analysis.move, `${difficulty} must return a move`)
       expect(
         !(analysis.move.from === coordToIdx('a4') && analysis.move.to === coordToIdx('b4')),
         `${difficulty} must not take material while leaving c8→c1 Royal Rek`
       )
 
-      const next = applyAiMove(board, analysis.move, 'you', 'REK_POAT')
-      const opponentCanTakeKing = getAllLegalMoves(next, 'opp', 'REK_POAT').some(
+      const next = applyAiMove(board, analysis.move, 'you', 'REK_STANDARD')
+      const opponentCanTakeKing = getAllLegalMoves(next, 'opp', 'REK_STANDARD').some(
         (move) => move.capturesKing
       )
       expect(!opponentCanTakeKing, `${difficulty} selected a move allowing immediate Royal capture`)
@@ -211,9 +211,9 @@ export function runAiSearchRegressionTests(): {
     const board = benchmarkFixture()
     const cache = new Map<string, number>()
     const stats = { nodes: 0, leaves: 0, cutoffs: 0, cacheHits: 0, legalMoveGenerations: 0 }
-    const rootKey = `1|max|${createPositionKey(board, 'you', 'REK_POAT')}`
+    const rootKey = `1|max|${createPositionKey(board, 'you', 'REK_STANDARD')}`
 
-    minimax(board, 1, 0, 0, true, 'you', 'REK_POAT', cache, stats)
+    minimax(board, 1, 0, 0, true, 'you', 'REK_STANDARD', cache, stats)
 
     expect(stats.cutoffs > 0, 'Zero-width alpha-beta window must produce a cutoff in this fixture')
     expect(!cache.has(rootKey), 'A cutoff root is a bound and must not be stored in the exact numeric cache')
@@ -222,10 +222,10 @@ export function runAiSearchRegressionTests(): {
 
   run('AIS-07', 'Medium/Hard search benchmark is deterministic and bounded by node count', () => {
     const board = benchmarkFixture()
-    const mediumA = analyzeAiMove(board, 'you', 'REK_POAT', 'medium')
-    const mediumB = analyzeAiMove(board, 'you', 'REK_POAT', 'medium')
-    const hardA = analyzeAiMove(board, 'you', 'REK_POAT', 'hard')
-    const hardB = analyzeAiMove(board, 'you', 'REK_POAT', 'hard')
+    const mediumA = analyzeAiMove(board, 'you', 'REK_STANDARD', 'medium')
+    const mediumB = analyzeAiMove(board, 'you', 'REK_STANDARD', 'medium')
+    const hardA = analyzeAiMove(board, 'you', 'REK_STANDARD', 'hard')
+    const hardB = analyzeAiMove(board, 'you', 'REK_STANDARD', 'hard')
 
     expect(JSON.stringify(mediumA) === JSON.stringify(mediumB), 'Medium analysis and counters must be deterministic')
     expect(JSON.stringify(hardA) === JSON.stringify(hardB), 'Hard analysis and counters must be deterministic')

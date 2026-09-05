@@ -7,7 +7,7 @@ import {
   DEFAULT_RULESET,
   Cell,
   PlayerColor,
-  GameMode,
+  RuleSet,
 } from './types'
 import {
   rc,
@@ -75,7 +75,7 @@ function createSearchStats(): AiSearchStats {
 export function countRuleLegalMoves(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSet = DEFAULT_RULESET
 ): number {
   let total = 0
   for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
@@ -94,7 +94,7 @@ export function countRuleLegalMoves(
 export function evaluateBoard(
   board: Cell[],
   aiColor: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSet = DEFAULT_RULESET
 ): number {
   const oppColor = opponent(aiColor)
 
@@ -151,7 +151,7 @@ export function evaluateBoard(
 export function getAllLegalMoves(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSet = DEFAULT_RULESET
 ): AiLegalMove[] {
   const moves: AiLegalMove[] = []
 
@@ -186,7 +186,7 @@ function simulateMove(
   board: Cell[],
   move: AiLegalMove,
   mover: PlayerColor,
-  mode: GameMode
+  mode: RuleSet
 ): Cell[] {
   const result = previewMove(board, move.from, move.to, mover, mode)
   const nextBoard = [...board]
@@ -228,7 +228,7 @@ export function minimax(
   beta: number,
   isMaximizing: boolean,
   aiColor: PlayerColor,
-  mode: GameMode,
+  mode: RuleSet,
   cache: Map<string, number> = new Map(),
   stats?: AiSearchStats
 ): number {
@@ -342,7 +342,7 @@ function chooseSearchDepth(
 export function analyzeAiMove(
   board: Cell[],
   aiColor: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET,
+  mode: RuleSet = DEFAULT_RULESET,
   difficulty: AiDifficulty = 'medium'
 ): AiAnalysis {
   const stats = createSearchStats()
@@ -416,7 +416,7 @@ export function analyzeAiMove(
 export function chooseAiMove(
   board: Cell[],
   aiColor: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET,
+  mode: RuleSet = DEFAULT_RULESET,
   difficulty: AiDifficulty = 'medium'
 ): AiMove | null {
   return analyzeAiMove(board, aiColor, mode, difficulty).move

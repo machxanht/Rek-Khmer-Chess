@@ -10,7 +10,7 @@ import {
   Cell,
   PlayerColor,
   Piece,
-  GameMode,
+  RuleSetInput,
   GameState,
   MoveResult,
   normalizeRuleSet,
@@ -45,13 +45,13 @@ export function idxToCoord(index: number): string {
 
 /**
  * A repetition position is defined by board occupancy/type, side to move and
- * canonical rule set. Legacy `REK_POAT` keys normalize to `REK_STANDARD` so
- * compatibility aliases never create a second logical position namespace.
+ * canonical rule set. Compatibility inputs are normalized immediately so the
+ * legacy `REK_POAT` alias never creates a second logical position namespace.
  */
 export function createPositionKey(
   board: Cell[],
   turn: PlayerColor,
-  mode: GameMode
+  mode: RuleSetInput
 ): string {
   const cells = board
     .map((piece) => {
@@ -70,7 +70,7 @@ export function hasLoneKing(board: Cell[]): boolean {
   })
 }
 
-export function createInitialBoard(mode: GameMode = DEFAULT_RULESET): Cell[] {
+export function createInitialBoard(mode: RuleSetInput = DEFAULT_RULESET): Cell[] {
   // Normalize for compatibility even though setup is currently shared by both
   // rule sets and does not otherwise branch on the value.
   normalizeRuleSet(mode)
@@ -99,7 +99,7 @@ export function createInitialBoard(mode: GameMode = DEFAULT_RULESET): Cell[] {
   return board
 }
 
-export function createInitialState(mode: GameMode = DEFAULT_RULESET): GameState {
+export function createInitialState(mode: RuleSetInput = DEFAULT_RULESET): GameState {
   const ruleset = normalizeRuleSet(mode)
   const board = createInitialBoard(ruleset)
   const turn: PlayerColor = 'you'
@@ -145,7 +145,7 @@ function emptyMoveResult(from: number, to: number): MoveResult {
 export function getLegalMoves(
   board: Cell[],
   from: number,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSetInput = DEFAULT_RULESET
 ): number[] {
   const piece = board[from]
   if (!piece) return []
@@ -181,7 +181,7 @@ export function getLegalMoves(
 export function getAllRekOpportunities(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSetInput = DEFAULT_RULESET
 ): { from: number; to: number; captures: number[] }[] {
   const ruleset = normalizeRuleSet(mode)
   const opportunities: { from: number; to: number; captures: number[] }[] = []
@@ -216,7 +216,7 @@ export function previewMove(
   from: number,
   to: number,
   moverPlayer?: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSetInput = DEFAULT_RULESET
 ): MoveResult {
   const piece = board[from]
   if (!piece) return emptyMoveResult(from, to)
@@ -452,7 +452,7 @@ export function countPieces(board: Cell[], player: PlayerColor): number {
 export function countTotalLegalMoves(
   board: Cell[],
   player: PlayerColor,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSetInput = DEFAULT_RULESET
 ): number {
   const ruleset = normalizeRuleSet(mode)
   let total = 0
@@ -470,7 +470,7 @@ export class RekEngine {
   private state: GameState
   private history: GameState[] = []
 
-  constructor(mode: GameMode = DEFAULT_RULESET) {
+  constructor(mode: RuleSetInput = DEFAULT_RULESET) {
     this.state = createInitialState(mode)
   }
 
@@ -478,7 +478,7 @@ export class RekEngine {
     return this.state
   }
 
-  public reset(mode?: GameMode): void {
+  public reset(mode?: RuleSetInput): void {
     this.state = createInitialState(mode || this.state.mode)
     this.history = []
   }
@@ -566,7 +566,7 @@ export const getAvailableRekMoves = getAllRekOpportunities
 export function getMoveResults(
   board: Cell[],
   from: number,
-  mode: GameMode = DEFAULT_RULESET
+  mode: RuleSetInput = DEFAULT_RULESET
 ): Map<number, MoveResult> {
   const ruleset = normalizeRuleSet(mode)
   const map = new Map<number, MoveResult>()
