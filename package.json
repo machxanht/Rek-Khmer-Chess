@@ -7,6 +7,7 @@
     "test": "npm run test:engine",
     "test:engine": "node scripts/run-engine-tests.cjs",
     "tournament:ai": "node scripts/run-ai-tournament.cjs",
+    "tournament:ai:200": "node scripts/run-ai-tournament.cjs --games-per-mode=100 --max-plies=160",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
