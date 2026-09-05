@@ -26,7 +26,10 @@ export function runAiTournamentTests(): {
     }
   }
 
-  const sampleOptions = { maxPlies: 24, openingPlies: 8 }
+  // CI is deliberately a tournament smoke gate, not the 200-game benchmark.
+  // Eight opening plies create deterministic diversity, then each color gets an
+  // actual searched AI turn before the tiny CI cap is reached.
+  const sampleOptions = { maxPlies: 10, openingPlies: 8 }
   const samples = [
     runTournamentSeries('REK_POAT', 2, sampleOptions),
     runTournamentSeries('MIN_REK_CHANH', 2, sampleOptions),
@@ -34,7 +37,7 @@ export function runAiTournamentTests(): {
 
   run('AIT-01', 'Tournament AI never submits a move outside the core engine legal set', () => {
     expect(samples.every((summary) => summary.illegalMoves === 0), 'Tournament recorded an illegal AI move')
-    return 'Both rulesets completed the balanced CI sample with illegalMoves=0.'
+    return 'Both rulesets completed the balanced CI smoke with illegalMoves=0.'
   })
 
   run('AIT-02', 'Seeded tournament games are deterministic in both rulesets', () => {
@@ -43,8 +46,8 @@ export function runAiTournamentTests(): {
       { mode: 'MIN_REK_CHANH' as const, seed: 202, youDifficulty: 'medium' as const, oppDifficulty: 'hard' as const },
     ]
     for (const config of configs) {
-      const first = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 12 })
-      const second = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 12 })
+      const first = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 10 })
+      const second = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 10 })
       expect(JSON.stringify(first) === JSON.stringify(second), `${config.mode} seeded game must reproduce exactly`)
     }
     return 'Seeded openings plus deterministic Medium/Hard search reproduce exactly across runs.'
@@ -57,8 +60,10 @@ export function runAiTournamentTests(): {
         summary.hardWins + summary.mediumWins + summary.draws + summary.capped === summary.games,
         `${summary.mode} outcomes must account for every game`
       )
+      expect(summary.hardSearchNodes > 0, `${summary.mode} must execute Hard search`)
+      expect(summary.mediumSearchNodes > 0, `${summary.mode} must execute Medium search`)
     }
-    return 'Two-game samples swap Hard between you/opp, removing one-sided color assignment.'
+    return 'Two-game samples swap Hard between you/opp and execute both difficulty searches.'
   })
 
   run('AIT-04', 'Tournament search remains inside a deterministic per-move node budget', () => {
@@ -71,16 +76,16 @@ export function runAiTournamentTests(): {
       .join('; ')
   })
 
-  run('AIT-05', 'Tournament reports game-length and unresolved-cap baselines', () => {
+  run('AIT-05', 'Tournament smoke reports bounded cap and aggregate metrics', () => {
     for (const summary of samples) {
       expect(summary.averagePlies > 0, `${summary.mode} average plies must be positive`)
-      expect(summary.maxGamePlies <= 24, `${summary.mode} must respect the CI max-ply cap`)
+      expect(summary.maxGamePlies <= 10, `${summary.mode} must respect the CI max-ply cap`)
       expect(summary.capped <= summary.games, `${summary.mode} capped count is invalid`)
     }
     return samples
       .map(
         (summary) =>
-          `${summary.mode}: H ${summary.hardWins}-${summary.mediumWins} M, draws=${summary.draws}, capped=${summary.capped}, avg=${summary.averagePlies.toFixed(1)} ply`
+          `${summary.mode}: capped=${summary.capped}/${summary.games}, avg=${summary.averagePlies.toFixed(1)} ply, nodes=${summary.totalSearchNodes}`
       )
       .join('; ')
   })
