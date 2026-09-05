@@ -8,6 +8,7 @@ import {
   DEFAULT_RULESET,
   Cell,
   GameState,
+  MoveResult,
   PlayerColor,
   RuleSet,
   normalizeRuleSet,
@@ -21,7 +22,7 @@ import {
 } from './captures'
 import {
   createPositionKey,
-  executeMove,
+  executeMoveResult,
   getAllMoveResults,
   hasKing,
   countPieces,
@@ -45,6 +46,11 @@ export interface AiLegalMove {
   capturesKing: boolean
   rek: boolean
   poat: boolean
+}
+
+interface AiResolvedMove extends AiLegalMove {
+  /** Exact engine-owned result used by the trusted state-transition fast path. */
+  result: MoveResult
 }
 
 /** Deterministic counters for search-quality/performance regression tests. */
@@ -72,17 +78,27 @@ function createSearchStats(): AiSearchStats {
   }
 }
 
+function sortAiMoves<T extends AiLegalMove>(moves: T[]): T[] {
+  return moves.sort((a, b) => {
+    if (a.capturesKing !== b.capturesKing) return a.capturesKing ? -1 : 1
+    if (a.capturesCount !== b.capturesCount) return b.capturesCount - a.capturesCount
+    if (a.poat !== b.poat) return a.poat ? -1 : 1
+    if (a.rek !== b.rek) return a.rek ? -1 : 1
+    if (a.from !== b.from) return a.from - b.from
+    return a.to - b.to
+  })
+}
+
 /**
- * Collects all rule-legal moves for a player with engine-produced tactical
- * metadata. The bulk engine result is the single legality boundary and computes
- * side-wide Min Rek Chanh obligations once per position.
+ * Internal state-search projection that preserves the exact MoveResult object
+ * returned by the engine so child transitions do not need a second preview.
  */
-export function getAllLegalMoves(
+function getAllResolvedMoves(
   board: Cell[],
   player: PlayerColor,
-  mode: RuleSet = DEFAULT_RULESET
-): AiLegalMove[] {
-  const moves: AiLegalMove[] = []
+  mode: RuleSet
+): AiResolvedMove[] {
+  const moves: AiResolvedMove[] = []
 
   for (const [from, legalResults] of getAllMoveResults(board, player, mode)) {
     for (const [to, result] of legalResults) {
@@ -94,18 +110,25 @@ export function getAllLegalMoves(
         capturesKing: result.captures.some((square) => board[square]?.king === true),
         rek: result.rek,
         poat: result.poat,
+        result,
       })
     }
   }
 
-  return moves.sort((a, b) => {
-    if (a.capturesKing !== b.capturesKing) return a.capturesKing ? -1 : 1
-    if (a.capturesCount !== b.capturesCount) return b.capturesCount - a.capturesCount
-    if (a.poat !== b.poat) return a.poat ? -1 : 1
-    if (a.rek !== b.rek) return a.rek ? -1 : 1
-    if (a.from !== b.from) return a.from - b.from
-    return a.to - b.to
-  })
+  return sortAiMoves(moves)
+}
+
+/**
+ * Collects all rule-legal moves for a player with engine-produced tactical
+ * metadata. The bulk engine result is the single legality boundary and computes
+ * side-wide Min Rek Chanh obligations once per position.
+ */
+export function getAllLegalMoves(
+  board: Cell[],
+  player: PlayerColor,
+  mode: RuleSet = DEFAULT_RULESET
+): AiLegalMove[] {
+  return getAllResolvedMoves(board, player, mode).map(({ result: _result, ...move }) => move)
 }
 
 /** Count rule-legal moves from the same engine-backed move projection used by search. */
@@ -196,11 +219,8 @@ export function evaluateBoard(
 
 /**
  * Applies an already engine-legal move using the exact capture squares returned
- * by the core engine. This avoids calling previewMove() a second time for every
- * searched edge and does not duplicate any capture rule in AI.
- *
- * This board-only helper intentionally does not carry repetition/lone-King
- * history. Stateful search uses executeMove() instead.
+ * by the core engine. This board-only helper intentionally does not carry
+ * repetition/lone-King history. Stateful search uses executeMoveResult().
  */
 function simulateMove(board: Cell[], move: AiLegalMove): Cell[] {
   const nextBoard = [...board]
@@ -233,12 +253,6 @@ function royalHorizonScore(
  * stability. It does not model session history such as repetition counters or
  * the project lone-King clock; use minimaxState()/analyzeAiState() when a live
  * GameState is available.
- *
- * Important correctness details:
- * - Terminal immobilization is checked before the depth cutoff under the current
- *   engine contract.
- * - At the horizon, an immediate legal Royal capture receives a mate-like score.
- * - Nodes pruned by alpha-beta are bounds, not exact values, and are not cached.
  */
 export function minimax(
   board: Cell[],
@@ -348,8 +362,7 @@ export function minimax(
 /**
  * Draw history is rule-relevant search state. Two identical boards are not
  * interchangeable if their repetition counts, lone-King clocks, or configured
- * draw limits differ. Callers that explicitly opt into state transposition
- * caching therefore need this exact history-aware key.
+ * draw limits differ. Keep this exact key separate from the board-only cache.
  */
 function createStateSearchKey(state: GameState, depth: number): string {
   const ruleset = normalizeRuleSet(state.mode)
@@ -383,14 +396,9 @@ function terminalStateScore(
 /**
  * State-aware alpha-beta search for live games.
  *
- * Every searched transition is delegated to executeMove(), so repetition,
- * lone-King bookkeeping, terminal ordering, Rek/Poat captures, and current Min
- * adjudication remain owned by the core engine instead of being copied into AI.
- *
- * Exact state caching is optional rather than automatic: serializing the full
- * repetition history at every node is expensive and live searches commonly have
- * history-distinct transpositions. Pass a Map only when a caller has evidence
- * that exact-history cache reuse is beneficial for its workload.
+ * Legal generation preserves the engine's exact MoveResult and every child is
+ * applied through executeMoveResult(), so rule/history adjudication stays in the
+ * core engine without repeating preview/capture scans for each searched edge.
  */
 export function minimaxState(
   state: GameState,
@@ -398,7 +406,7 @@ export function minimaxState(
   alpha: number,
   beta: number,
   aiColor: PlayerColor,
-  cache?: Map<string, number>,
+  cache: Map<string, number> = new Map(),
   stats?: AiSearchStats
 ): number {
   if (stats) stats.nodes++
@@ -412,30 +420,25 @@ export function minimaxState(
   const mode = normalizeRuleSet(state.mode)
   const oppColor = opponent(aiColor)
 
-  // Preserve board-only resilience for custom/malformed playing states while
-  // normal live states are expected to reach terminal status through executeMove().
   if (!hasKing(state.board, aiColor) || !hasKing(state.board, oppColor)) {
     if (stats) stats.leaves++
     return evaluateBoard(state.board, aiColor, mode)
   }
 
-  let cacheKey: string | null = null
-  if (cache) {
-    cacheKey = createStateSearchKey(state, depth)
-    const cached = cache.get(cacheKey)
-    if (cached !== undefined) {
-      if (stats) stats.cacheHits++
-      return cached
-    }
+  const cacheKey = createStateSearchKey(state, depth)
+  const cached = cache.get(cacheKey)
+  if (cached !== undefined) {
+    if (stats) stats.cacheHits++
+    return cached
   }
 
-  const moves = getAllLegalMoves(state.board, state.turn, mode)
+  const moves = getAllResolvedMoves(state.board, state.turn, mode)
   if (stats) stats.legalMoveGenerations++
 
   if (moves.length === 0) {
     if (stats) stats.leaves++
     const score = terminalNoMoveScore(state.turn, aiColor, depth)
-    if (cache && cacheKey) cache.set(cacheKey, score)
+    cache.set(cacheKey, score)
     return score
   }
 
@@ -444,7 +447,7 @@ export function minimaxState(
 
     if (moves.some((move) => move.capturesKing)) {
       const tactical = royalHorizonScore(state.turn, aiColor, depth)
-      if (cache && cacheKey) cache.set(cacheKey, tactical)
+      cache.set(cacheKey, tactical)
       return tactical
     }
 
@@ -452,7 +455,7 @@ export function minimaxState(
       player: state.turn,
       moves,
     })
-    if (cache && cacheKey) cache.set(cacheKey, evaluated)
+    cache.set(cacheKey, evaluated)
     return evaluated
   }
 
@@ -462,7 +465,7 @@ export function minimaxState(
     let cutoff = false
 
     for (const move of moves) {
-      const next = executeMove(state, move.from, move.to)
+      const next = executeMoveResult(state, move.result)
       const score = terminalStateScore(next, aiColor, depth - 1)
       const value = score ?? minimaxState(next, depth - 1, alpha, beta, aiColor, cache, stats)
       maxEval = Math.max(maxEval, value)
@@ -474,14 +477,14 @@ export function minimaxState(
       }
     }
 
-    if (!cutoff && cache && cacheKey) cache.set(cacheKey, maxEval)
+    if (!cutoff) cache.set(cacheKey, maxEval)
     return maxEval
   }
 
   let minEval = Infinity
   let cutoff = false
   for (const move of moves) {
-    const next = executeMove(state, move.from, move.to)
+    const next = executeMoveResult(state, move.result)
     const score = terminalStateScore(next, aiColor, depth - 1)
     const value = score ?? minimaxState(next, depth - 1, alpha, beta, aiColor, cache, stats)
     minEval = Math.min(minEval, value)
@@ -493,7 +496,7 @@ export function minimaxState(
     }
   }
 
-  if (!cutoff && cache && cacheKey) cache.set(cacheKey, minEval)
+  if (!cutoff) cache.set(cacheKey, minEval)
   return minEval
 }
 
@@ -596,8 +599,8 @@ export function analyzeAiMove(
 /**
  * State-aware analysis for a live engine session.
  *
- * The root and every searched child use executeMove(), so project draw
- * extensions are visible to search without duplicating their adjudication in AI.
+ * The root and every searched child reuse engine-resolved MoveResult objects, so
+ * project draw extensions are visible without duplicating or re-previewing rules.
  */
 export function analyzeAiState(
   state: GameState,
@@ -612,7 +615,7 @@ export function analyzeAiState(
     return { move: null, depth: chooseSearchDepth(difficulty, 0, totalPieces), stats }
   }
 
-  const moves = getAllLegalMoves(state.board, aiColor, mode)
+  const moves = getAllResolvedMoves(state.board, aiColor, mode)
   const searchDepth = chooseSearchDepth(difficulty, moves.length, totalPieces)
   if (moves.length === 0) return { move: null, depth: searchDepth, stats }
 
@@ -635,11 +638,12 @@ export function analyzeAiState(
     }
   }
 
+  const cache = new Map<string, number>()
   let bestMove: AiMove | null = null
   let bestScore = -Infinity
 
   for (const move of moves) {
-    const next = executeMove(state, move.from, move.to)
+    const next = executeMoveResult(state, move.result)
     if (next === state) continue
 
     const terminal = terminalStateScore(next, aiColor, searchDepth - 1)
@@ -649,7 +653,7 @@ export function analyzeAiState(
       -Infinity,
       Infinity,
       aiColor,
-      undefined,
+      cache,
       stats
     )
 
