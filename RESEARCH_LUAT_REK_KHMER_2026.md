@@ -1,79 +1,99 @@
 # RESEARCH LUẬT REK KHMER — Evidence Matrix 2026
 
-> **Ngày rà soát:** 2026-09-05  
-> **Mục đích:** tách rule evidence khỏi engine implementation và ghi rõ mức độ tin cậy của từng luật.  
+> **Ngày rà soát:** 2026-09-06  
+> **Mục đích:** tách historical/cultural rule evidence khỏi engine implementation và ghi rõ confidence theo từng claim.  
 > **Không phải SPEC:** tài liệu này không tự động thay đổi gameplay.
 
 ---
 
-## 1. Source policy
+## 1. Evidence labels canonical
 
-### Tier A — Native / institutional / primary-like evidence
+| Label | Ý nghĩa |
+|---|---|
+| `CONFIRMED` | Nguồn Khmer/institutional mạnh xác nhận trực tiếp claim. |
+| `STRONG EVIDENCE` | Bằng chứng độc lập phù hợp, nhưng chưa khóa mọi edge case. |
+| `SECONDARY` | Corroboration hữu ích từ nguồn độc lập, không phải authoritative rule text. |
+| `ENGINE INTERPRETATION` | Cách project hiện thực hóa nguyên lý chưa có mô tả lịch sử đủ chi tiết. |
+| `COMMUNITY SIGNAL` | Comment/forum/oral recollection dùng tạo hypothesis, keyword, fixture. |
+| `UNVERIFIED` | Có dấu hiệu/implementation nhưng chưa đủ evidence. |
+| `UNSUPPORTED` | Chưa tìm thấy Rek-specific evidence. |
+| `REJECTED AS POSITIVE EVIDENCE` | App-store developer text, tutorial/screenshot/app behavior và scraper của chúng. |
 
-Ưu tiên cao nhất:
+Không gộp label. Label theo **claim**, không theo toàn source.
 
-- Buddhist Institute / Chuon Nath;
-- MoEYS Digital School;
-- Center for Khmer Studies catalog + original holdings;
-- Ministry of Culture / institutional archives;
-- original Khmer books/scans;
-- archival publications such as `កម្ពុជសុរិយា` khi truy được bài gốc.
+---
 
-### Tier B — Independent cultural/educational source
+## 2. Source policy
 
-Nguồn không phải rulebook nhưng độc lập với app/game implementation, ví dụ tài liệu văn hóa/giáo dục có mô tả Rek.
+### Tier A — native / institutional / archival
 
-### Tier C — Secondary reconstruction
+Ưu tiên:
 
-Nguồn game-history/board-game research có thể hỗ trợ setup/movement/capture interpretation, nhưng không được nâng lên ngang native rule text nếu chưa có corroboration.
+1. Buddhist Institute;
+2. Chuon Nath Dictionary bản gốc/scan;
+3. Center for Khmer Studies;
+4. MoEYS Cambodia;
+5. Ministry of Culture / Khmer archival sources;
+6. `កម្ពុជសុរិយា`;
+7. sách/scan Khmer cũ.
 
-### Tier D — Community signal
+### Tier B — independent cultural / educational
 
-Comment/review, forum post, oral anecdote chưa được xác minh.
+Ví dụ: tài liệu văn hóa, giáo dục, academic source độc lập với app/game implementation.
 
-Dùng để:
+### Tier C — secondary reconstruction
 
-- phát hiện edge case;
-- tìm từ khóa Khmer;
-- tạo board fixtures để hỏi người chơi khác.
+Game-history/board-game research có thể corroborate setup/movement/capture, nhưng không được nâng ngang native rule text.
 
-Không dùng một mình để khóa SPEC.
+### Tier D — community signal
 
-### EXCLUDED
+Comment/review/forum/oral anecdote chưa xác minh. Dùng để phát hiện edge case, keyword và dựng board fixtures.
 
-Không dùng làm positive rule evidence:
+### Excluded
+
+`REJECTED AS POSITIVE EVIDENCE`:
 
 - Google Play / Apple App Store developer descriptions;
 - app tutorial/screenshot;
 - app behavior;
-- scraper/copy của store description.
+- website scrape/copy store description.
 
-Comment của người dùng **bên dưới app** được phép ghi riêng như `COMMUNITY SIGNAL`, nhưng storefront/app không trở thành rule source vì vậy.
+User comment dưới app vẫn có thể ghi riêng là `COMMUNITY SIGNAL`.
 
 ---
 
-## 2. Source registry
+## 3. Source registry
 
 ### S1 — Chuon Nath / Buddhist Institute dictionary tradition
 
-Mirror Khmer hiện truy được:
+Exact Khmer reproduction của entry `រែក`:
+
+> `រែក (ន.) ឈ្មោះល្បែងមួយប្រភេទ ស្រដៀងនឹងចត្រង្គ ខុសគ្នាតែឈ្មោះកូន និងការឈ្នះចាញ់, មានបែបឲ្យស៊ីរែកទាំងពីរខាង ឬបើអ្នកម្ខាងទាល់ច្រក ត្រូវអ្នកម្ខាងកៀរក្រសោបស៊ីបានទាំងអស់ : លេងរែក (ជាល្បែងសម្រាប់ពួកទាហានដូច ចត្រង្គ ដែរ) ។`
+
+Literal VN gần nhất:
+
+> “Rek: tên một loại trò chơi, tương tự Chatrang nhưng khác ở tên quân và cách thắng thua; có lối ăn Rek ở cả hai phía; hoặc nếu một bên bị dồn/bế tắc thì bên kia có thể dồn, khép vây và ăn hết tất cả. Chơi Rek là trò cho quân lính, giống Chatrang.”
+
+Digital reproduction currently accessible:
 
 https://phkaslapartner.com/learn/khmerwords-7764/
 
-Trang ghi rõ phần giải nghĩa được lấy từ `វចនានុក្រមខ្មែរ` của Samdech Chuon Nath / Buddhist Institute.
+Edition provenance corroborated:
 
-Mục `រែក` cho biết:
+- Buddhist Institute;
+- 5th edition;
+- 1967–1968;
+- 2 volumes;
+- vol.2 (`យ-អ`) 1968 contains alphabetic range of `រែក`.
 
-- Rek là một trò chơi tương tự `ចត្រង្គ` nhưng khác tên quân và thắng/thua;
-- có `ស៊ីរែកទាំងពីរខាង` — ăn/bắt hai phía;
-- khi một bên `ទាល់ច្រក`, bên kia có thể `កៀរ/ក្រសោប` để bắt;
-- Rek được nhắc như trò dành cho quân lính tương tự Chaktrang.
+Claims:
 
-**Tác động:** nguồn native mạnh nhất hiện có cho core Rek + trapping/encirclement concept.
-
-**Chưa chứng minh:** exact setup, exact movement distance, Hao Rek, draw, Rek-4 simultaneity.
-
-Confidence: `CONFIRMED CORE CONCEPT`.
+- Rek identity: `CONFIRMED`;
+- `ស៊ីរែកទាំងពីរខាង`: `CONFIRMED` two-sided/intervention capture principle;
+- `ទាល់ច្រក` + `កៀរក្រសោបស៊ីបានទាំងអស់`: `CONFIRMED` trapping/encirclement concept;
+- exact BFS/liberties algorithm: `UNSUPPORTED` by dictionary;
+- exact Hao Rek: `UNSUPPORTED` by dictionary;
+- exact scan page for `រែក`: unresolved; **không bịa page number**.
 
 ---
 
@@ -83,77 +103,66 @@ ERIC:
 
 https://eric.ed.gov/?id=ED334342
 
-Direct indexed PDF:
-
-https://hslb.org/wp-content/uploads/Cambodian-American-Collection/Building-Community/Cultural-Reproduction/Public/Introduction-to-Cambodian-Culture1-1.pdf
-
-CKS catalog bản gộp 1989:
+CKS catalog:
 
 https://library.khmerstudies.org/bib/14710
 
-Section `V. REK`, page 48 xác nhận:
+Section `V. REK`, page 48 supports:
 
 - board 8×8;
-- hai bên, mỗi bên 1 King + 15 soldiers;
-- một quân được đi mỗi lượt;
-- mục tiêu capture opposing King.
+- 1 King + 15 soldiers mỗi bên;
+- one piece per turn;
+- objective capture opposing King.
 
-Nguồn còn nêu claim Rek bắt đầu khoảng thế kỷ II, nhưng claim này **chưa có independent historical corroboration**, nên không đưa vào canonical guide như fact.
+Classification: `STRONG EVIDENCE`.
 
-Confidence: `STRONG INDEPENDENT CULTURAL SOURCE` cho board/army/objective.
+Claim game bắt đầu khoảng thế kỷ II: `UNVERIFIED` single-source historical claim.
 
 ---
 
-### S3 — Buddhist Institute, *ល្បែងប្រជាប្រិយខ្មែរ* (1964)
+### S3 — Buddhist Institute, `ល្បែងប្រជាប្រិយខ្មែរ` (1964)
 
-MoEYS Digital School:
+MoEYS:
 
 https://sala.moeys.gov.kh/kh/library/00002631
 
-CKS catalog:
+CKS:
 
 https://library.khmerstudies.org/bib/6505
 
-Bibliographic corroboration khác:
+Đây là official folk-game publication. Secondary lists không có Rek, nhưng research đã xác nhận compilation chỉ thu thập `មួយចំនួនតូច` — một số ít trò.
 
-https://ci.nii.ac.jp/ncid/BA64035767
+Kết luận:
 
-Nguồn Khmer hiện đại trích danh sách 22 trò trong sách:
-
-https://thmeythmey.com/detail/135581
-
-Danh sách 22 trò **không có `ល្បែងរែក`**; có `ល្បែងចត្រង្គ`.
-
-Vì vậy:
-
-- đây là source authoritative cho context bảo tồn folk games Khmer;
-- **không được cite như direct Rek rule source** nếu chưa tìm thấy trang scan riêng về Rek;
-- absence của Rek trong danh sách còn là lý do phải tránh suy diễn rằng mọi sách folk games của Buddhist Institute đều bao phủ Rek.
-
-Confidence: `AUTHORITATIVE CONTEXT / NOT DIRECT REK EVIDENCE`.
+- provenance/context: `CONFIRMED`;
+- absence khỏi secondary list **không** chứng minh Rek không truyền thống;
+- direct Rek mechanics: `UNSUPPORTED` cho tới khi khóa page scan.
 
 ---
 
-### S4 — *ប្រជុំវប្បធម៌ទូទៅ* — Luch Plaeng, 1973
+### S4 — `ប្រជុំវប្បធម៌ទូទៅ`, ឡុច ផ្លែង, 1973
 
-Web transcription:
+Transcription:
 
 https://savenkhknowlege.blogspot.com/2013/07/blog-post_5384.html
 
-Transcription tự ghi metadata:
+Metadata transcription:
 
 - author `ឡុច ផ្លែង`;
 - publisher `វិទ្យាស្ថានជាតិខេមរយានកម្ម`;
-- Phnom Penh, 1973.
+- Phnom Penh;
+- 1973.
 
-Danh sách trò Khmer trong transcription có `ល្បែងរែក`.
+Danh sách có:
 
-Điều này hỗ trợ **cultural existence** của Rek trong compilation được gán cho năm 1973, nhưng vì chưa truy được original scan nên:
+> `... ល្បែងរាវបង្កង, ល្បែងរែក, ល្បែងលាក់កន្សែង ...`
 
-- không dùng để xác nhận mechanics;
-- không dùng để xác nhận Hao Rek.
+Claim Rek được liệt kê như một trò Khmer: `SECONDARY` historical corroboration.
 
-Confidence: `HISTORICAL CORROBORATION ONLY`.
+Research 2026-09-06 đã tìm được exact eLibrary Cambodia ebook object/path nhưng chưa lấy được stable page image/PDF asset.
+
+- exact page: unresolved;
+- rule detail: `UNSUPPORTED`.
 
 ---
 
@@ -161,229 +170,257 @@ Confidence: `HISTORICAL CORROBORATION ONLY`.
 
 https://news.sabay.com.kh/article/1045095
 
-Bài Khmer nhắc Rek tương tự Chaktrang nhưng khác quân/thắng thua; có ăn hai phía và khi một bên bị bí thì bên kia có thể bao/bắt.
+Corroborate wording gần Chuon Nath về Rek, two-sided capture và `ទាល់ច្រក`.
 
-Nội dung này gần với wording Chuon Nath nên dùng như **secondary Khmer corroboration**, không phải primary rulebook.
-
-Confidence: `SECONDARY KHMER CORROBORATION`.
+Classification: `SECONDARY` Khmer corroboration.
 
 ---
 
-### S6 — Secondary game-history reconstruction
+### S6 — independent secondary reconstruction
 
-Các nguồn reconstruction phi-app hỗ trợ mạnh cho:
+Non-app game-history reconstruction hỗ trợ:
 
-- 8×8;
-- 16 quân/bên;
-- 7 men ở rear row + King ở cực trái/phải second row + 8 men front row;
-- regular Rek pieces move orthogonally any unobstructed distance;
+- setup 7 + King + 8;
+- regular pieces move orthogonally any unobstructed distance;
 - intervention capture;
-- surround capture trên piece/group và board edge.
+- surrounding capture concept.
 
-Nhóm này hữu ích để corroborate setup user đã xác nhận và movement hiện tại, nhưng vẫn là secondary.
-
-Confidence: `STRONG SECONDARY`, không thay native source.
+Classification: `STRONG EVIDENCE` cho setup/movement ở cấp secondary, không thay native source.
 
 ---
 
-## 3. Community comparison — không phải evidence tier chính
+### S7 — Visal Odom / Phnom Penh Post attribution, 2013-11-06
 
-### CS1 — Google Play user comment `bou senghy`, 2025-02-16
+Bài Khmer ghi tác giả `វិសាល ឧត្តម / Visal Odom`, attribution `ភ្នំពេញប៉ុស្តិ៍ / Phnom Penh Post`.
 
-Comment Khmer phản biện implementation Hao Rek và mô tả candidate semantics:
+Exact phrases:
 
-- pre-existing open pair không tự được tính là call;
-- call có thể phát sinh khi quân che rời đi làm lộ pair;
-- khi nhiều pair mở, responder có thể được quyền chọn;
-- khi call chỉ tạo một pair, pair đó phải được Rek.
+> `បើមានគេបើកឲ្យរែក ខ្លួនត្រូវតែរែក`
+
+Literal:
+
+> “Nếu có người mở cho mình Rek, mình phải Rek.”
+
+> `បើមិនរែក ត្រូវតែចាញ់ ដោយស្វ័យប្រវត្តិ`
+
+Literal:
+
+> “Nếu không Rek thì phải thua một cách tự động.”
+
+Claim classification:
+
+- `បើកឲ្យរែក` là action của opponent tạo nghĩa vụ response: `SECONDARY`;
+- responder phải Rek: `SECONDARY`;
+- không Rek => automatic loss: `SECONDARY`;
+- exact geometry của “mở”: `UNVERIFIED`;
+- piece-count claim khác trong bài không được dùng nếu mâu thuẫn nguồn mạnh hơn.
+
+VOD 2016 có text gần giống và cùng Visal Odom lineage; không tính là independent second source.
+
+---
+
+## 4. Kambuja Suriya research
+
+CKS corroborate hai index:
+
+1. `កម្រងមាតិកា កម្ពុជសុរិយា (១៩២៦–២០០០)` — khoảng 331 trang.
+2. `កម្ពុជសុរិយា (១៩២៦–១៩៧៤): មាតិកា និងអក្ខរក្រម` — catalog khoảng 575 trang; searchable scan khoảng 599 scan pages.
+
+Claim được phép:
+
+> **The 1926–1974 Kambuja Suriya alphabetical index contains no indexed article/title named `ល្បែងរែក`.**
+
+Classification: `CONFIRMED ABOUT INDEX ONLY`.
+
+Không được kết luận “Kambuja Suriya không có Rek”, vì Rek có thể nằm trong body bài khác, `ល្បែងផ្សេងៗ`, `ល្បែងចត្រង្គ`, customs/culture headings hoặc title không chứa `រែក`.
+
+Corpus Buddhist Institute cho thấy magazine có article riêng về folk game, ví dụ:
+
+- `ល្បែងអៀវ`;
+- năm 1961;
+- tác giả `ញូង សឿង`.
+
+Research 2026-09-06 còn khóa:
+
+- 1964 = `ឆ្នាំទី៣៦`;
+- có 6 issues;
+- đã tìm pointer `1964.pdf`;
+- host hiện trả 502 nên chưa kiểm body `ល្បែងចត្រង្គ` / `ល្បែងផ្សេងៗ`.
+
+Status body mention Rek: `UNVERIFIED`.
+
+---
+
+## 5. Community comparison — không phải source of truth
+
+### CS1 — user comment 2025-02-16
+
+Candidate Hao Rek semantics:
+
+- pre-existing open pair không tự tạo call;
+- blocking/covering piece moves away;
+- newly exposed pair tạo call;
+- nhiều pair có thể cho responder chọn;
+- một called pair thì pair đó bắt buộc.
 
 Classification: `COMMUNITY SIGNAL — DETAILED`.
 
-Không dùng để sửa engine nếu chưa corroborate ngoài storefront.
+### CS2 — user comment 2026-06-08
 
-### CS2 — Google Play user comment `UN BUNTHEN`, 2026-06-08
-
-Comment nói `ក្បួនហៅរែក` trong app đang sắp/implement sai.
+Nói `ក្បួនហៅរែក` trong app implement sai.
 
 Classification: `COMMUNITY SIGNAL — IMPLEMENTATION DISPUTED`.
 
-Không đủ chi tiết để định nghĩa replacement rule.
+### CS3 — community wording khoảng 2013
 
-### CS3 — Apple App Store indexed reviews
+> `ហៅ រែកចាញ់ រឺ បើករែក ... បើ A បើកអោយរែក B មិនរែក នេាះ B នឹងចាញ់។`
 
-Search pass hiện thấy chủ yếu:
+Classification: `COMMUNITY SIGNAL`.
 
-- bug/network khi Hao Rek;
-- lỗi/single-player;
-- nhận xét chung.
+Support nhẹ cho action/event wording và terminology `រែកចាញ់ / បើករែក`; không support exact geometry.
 
-Không có rule sequence chi tiết độc lập corroborate CS1 trong tập review đã index.
+### CS4 — recollection khoảng 2010
 
-Classification: `NO SEMANTIC CORROBORATION FOUND`.
+First-person memory về `មួយអម្រែកចាញ់ / បើមិនរែកចាញ់` và `បើកអោយគេរែក` nhiều lần trước khi Rek trúng King.
+
+Classification: `COMMUNITY SIGNAL`.
+
+Cho thấy terminology/cultural memory predate modern app lineage, nhưng không đủ technical precision.
 
 ---
 
-## 4. Rule evidence matrix
+## 6. Rule evidence matrix
 
-| Rule / behavior | Status 2026-09-05 | Evidence basis | Engine action |
+| Rule / behavior | Status 2026-09-06 | Evidence basis | Engine action |
 |---|---|---|---|
-| Rek là trò Khmer truyền thống | CONFIRMED | S1 + S2 + S4/S5 | Giữ |
-| Board 8×8 | STRONG | S2 + secondary reconstruction | Giữ |
-| 1 King + 15 Men mỗi bên | STRONG | S2 + secondary reconstruction | Giữ |
-| Mỗi lượt đi một quân | STRONG | S2 | Giữ |
-| Mục tiêu capture King | STRONG | S2 + secondary | Giữ |
-| Regular Rek movement trực giao nhiều ô, không jump | STRONG SECONDARY | reconstruction + current project setup tests | Giữ, không gọi primary-confirmed |
-| Setup 7 + King + 8 với King a2/h7 theo orientation project | STRONG SECONDARY + PROJECT-CONFIRMED | reconstruction + user-confirmed board + regression | Giữ |
-| Rek bắt hai phía | CONFIRMED | S1 | Giữ |
-| Rek có thể bắt đồng thời 4 trên hai trục | INFERRED | geometric extension, chưa native-confirmed | Giữ implementation nhưng label inferred |
-| Có capture do bị bí/bao | CONFIRMED CONCEPT | S1 + S5 | Giữ concept |
-| Poat = connected group + zero orthogonal liberties + edge wall | STRONG ENGINE INTERPRETATION | native concept + secondary reconstruction | Giữ, tiếp tục tìm primary detail |
-| Rek xử trước Poat tự động trong cùng move | UNVERIFIED ORDERING | engine contract | Không quảng bá historical fact |
-| `MIN_REK_CHANH` tồn tại như variant | STRONG SECONDARY / COMMUNITY KNOWN | non-app secondary mention; terminology widespread | Giữ variant label, tiếp tục primary search |
-| King stationary trong Min | STRONG SECONDARY, NOT NATIVE-CONFIRMED | non-app reconstruction; app descriptions excluded | Giữ current contract, tiếp tục verify |
-| Bất kỳ Rek nào trên board => compulsory | UNVERIFIED / DISPUTED | current engine; CS1 mâu thuẫn | Không đổi chưa đủ evidence |
-| Hao Rek event-triggered khi làm lộ pair | UNVERIFIED HYPOTHESIS | CS1 | Không code |
-| Multiple Rek pairs => responder tự chọn | UNVERIFIED HYPOTHESIS | CS1 | Không code |
-| Không đáp Hao Rek => instant loss | UNVERIFIED exact adjudication | chưa authoritative | Không đổi chưa đủ evidence |
-| Poat hoạt động trong Min | UNVERIFIED | current engine only | Không gọi traditional truth |
-| Opponent zero legal moves => instant win | UNVERIFIED / POSSIBLE CONFLATION | native source nói stuck/encircled capture | Audit sau |
-| Threefold repetition | UNSUPPORTED TRADITIONAL CLAIM | không tìm được Rek-specific source | Xem là project extension |
-| Lone-King 32 | UNSUPPORTED TRADITIONAL CLAIM | không tìm được Rek-specific source | Xem là project extension |
+| Rek là trò Khmer | `CONFIRMED` | S1 + S2 + S4/S5 | Giữ |
+| Board 8×8 | `STRONG EVIDENCE` | S2 | Giữ |
+| 1 King + 15 Men mỗi bên | `STRONG EVIDENCE` | S2 | Giữ |
+| Mỗi lượt đi một quân | `STRONG EVIDENCE` | S2 | Giữ |
+| Mục tiêu capture King | `STRONG EVIDENCE` | S2 | Giữ |
+| Setup 7 + King + 8, project orientation a2/h7 | `STRONG EVIDENCE` + project lock | S6 + regression | Giữ |
+| Regular movement trực giao nhiều ô, không jump | `STRONG EVIDENCE` secondary | S6 | Giữ |
+| Rek bắt cặp hai phía | `CONFIRMED` | S1 | Giữ |
+| Dual-axis Rek => bắt 4 | `ENGINE INTERPRETATION / UNVERIFIED` | code geometry | Giữ implementation, không quảng bá historical truth |
+| Có capture khi bị bí/bao | `CONFIRMED` concept | S1 + S5 | Giữ concept |
+| Poat = connected group + zero orthogonal liberties | `ENGINE INTERPRETATION` | code + secondary reconstruction | Giữ implementation, research exact semantics |
+| Rek resolve trước Poat | `ENGINE INTERPRETATION` | current pipeline | Giữ implementation |
+| `MIN_REK_CHANH` / “không Rek thì thua” concept | `SECONDARY` + community corroboration | S7 + CS3/CS4 | Giữ variant label |
+| `បើកឲ្យរែក` => responder phải Rek | `SECONDARY` | S7 | Ghi vào docs, chưa code trigger |
+| Không Rek sau call => automatic loss | `SECONDARY` | S7 | Current consequence có support; exact trigger chưa khóa |
+| Board có bất kỳ Rek => compulsory globally | `ENGINE INTERPRETATION / UNVERIFIED` | current engine only; evidence mới challenge | Không đổi code chưa đủ geometry |
+| Hao Rek triggered bởi previous/opponent action | `SECONDARY` candidate historical model | S7 | Research tiếp, chưa code |
+| Blocking piece moves away -> newly exposed pair | `COMMUNITY SIGNAL / UNVERIFIED` | CS1 | Không code |
+| Pre-existing open pair không call | `COMMUNITY SIGNAL / UNVERIFIED` | CS1 | Không code |
+| Multiple pairs => responder chọn | `COMMUNITY SIGNAL / UNVERIFIED` | CS1 | Không code |
+| King stationary trong Min | `STRONG EVIDENCE` secondary, native confirmation thiếu | reconstruction | Giữ current contract |
+| Poat áp dụng trong Min | `UNVERIFIED` | current engine only | Không gọi traditional truth |
+| Zero legal moves => instant win | `UNVERIFIED` | current engine; có nguy cơ conflation với `ទាល់ច្រក` | Audit/research |
+| Threefold repetition | `UNSUPPORTED` traditional claim | project extension | Giữ technical extension |
+| Lone King draw 32 | `UNSUPPORTED` traditional claim | project extension | Giữ technical extension |
 
 ---
 
-## 5. Các điểm gameplay đã đủ an toàn để xây UI quanh chúng
+## 7. Stable project contract để UI/server có thể dựa vào
 
-UI/server có thể coi những phần sau là ổn định ở cấp project contract:
+Ở cấp **project contract**, UI/server có thể dựa vào:
 
 1. board 8×8;
 2. 16 quân/bên;
-3. canonical project setup đã test;
-4. regular Standard movement trực giao;
-5. Rek capture hai phía;
-6. Poat hiện do engine sở hữu;
-7. capture King quyết định trận theo current contract;
-8. `REK_STANDARD` là canonical default ruleset;
-9. `MIN_REK_CHANH` phải được hiển thị là variant đang còn historical validation cho exact Hao Rek.
+3. canonical initial setup a2/h7;
+4. `REK_STANDARD` và `MIN_REK_CHANH` là hai canonical rulesets;
+5. `REK_POAT` chỉ là legacy compatibility alias → `REK_STANDARD`;
+6. movement/Rek/Poat legality do core engine sở hữu;
+7. capture King là decisive terminal theo current contract;
+8. AI không được duplicate rule logic.
 
-UI **không được tự viết** Hao Rek/Poat logic dựa trên text docs.
+UI phải hiển thị Min Rek Chanh là variant có **exact Hao Rek semantics pending historical validation**.
 
 ---
 
-## 6. Những thứ không được gọi là “luật Khmer chuẩn” lúc này
+## 8. Không được gọi là “luật Khmer chuẩn” lúc này
 
-Không dùng wording kiểu `100% traditional/canonical` cho:
+Không dùng wording `canonical traditional / 100% historical` cho:
 
-- global compulsory Rek;
-- event-triggered Hao Rek hypothesis;
-- Rek-4 simultaneity;
+- board-global compulsory Rek;
+- newly-exposed-pair geometry;
+- dual-axis Rek = 4;
 - exact Rek→Poat order;
+- BFS zero-liberties Poat;
+- Poat trong Min;
 - zero-move instant win;
-- threefold draw;
+- threefold;
 - lone-King 32;
-- Poat trong Min Rek Chanh;
-- bất kỳ historical origin date cụ thể nào như “thế kỷ II” nếu chưa có corroboration khác.
+- century-II origin claim.
 
 ---
 
-## 7. Research gaps còn mở
+## 9. Research gaps ưu tiên
 
-### G1 — Original Chuon Nath scan
+### G1 — exact Hao Rek geometry
 
-Cần original Buddhist Institute/dictionary scan cho mục `រែក`, thay vì chỉ mirror.
+Cần nguồn Khmer độc lập xác nhận:
 
-### G2 — Original 1973 compilation
+```text
+previous board
+→ opponent move/action
+→ what exactly counts as បើកឲ្យរែក
+→ response set
+→ violation consequence
+```
 
-Cần original `ប្រជុំវប្បធម៌ទូទៅ` để biết Rek chỉ được liệt kê hay có section riêng.
+### G2 — Kambuja Suriya 1964 body
 
-### G3 — `កម្ពុជសុរិយា`
+Ưu tiên `ល្បែងចត្រង្គ`, `ល្បែងផ្សេងៗ`, `ល្បែង`, `ទំនៀមទម្លាប់`, `ប្រពៃណី`, `វប្បធម៌`, `កីឡា`.
 
-Tra index/bản scan theo từ khóa:
+### G3 — 1973 original scan
 
-- `រែក`
-- `ល្បែងរែក`
-- `ស៊ីរែក`
-- `ហៅរែក`
-- `មិនរែកចាញ់`
+Lấy exact page `ល្បែងរែក`, xác định chỉ listing hay có rule section.
 
-### G4 — Real-board Hao Rek sequence
+### G4 — Chuon Nath exact scan page
 
-Cần video/oral explanation có thể reconstruct:
+Khóa original vol.2 scan page chứa entry `រែក`. Không nội suy page từ alphabetical order.
 
-- board trước call;
-- move tạo call;
-- response choices;
+### G5 — real-board video
+
+Chỉ dùng event có thể record:
+
+- source/date/timecode;
+- position;
+- move before;
+- pair before/after;
+- response;
+- quiet alternative;
+- verbal terminology;
 - capture result;
-- lời gọi nếu audible.
+- confidence.
 
-### G5 — Min Rek Chanh details
+### G6 — terminology
 
-Cần independent native evidence cho:
-
-- exact Hao Rek trigger;
-- King immobility;
-- Poat availability;
-- multi-pair choice;
-- immediate-loss semantics;
-- chain calls;
-- win condition.
-
-### G6 — Draw/endgame
-
-Cần Rek-specific source trước khi gọi threefold/lone-King counters là traditional.
+Tiếp tục exact search `រែកហែក`, `រែកព័ទ្ធ`, `មិនរែកចាញ់`, `រែកចាញ់`, `ហៅរែក`, `បើកឲ្យរែក`, `មួយអម្រែកចាញ់`.
 
 ---
 
-## 8. Evidence gate cho future rule changes
+## 10. Change-control gate
 
-Rule historical chỉ được promote khi đạt một trong các gate:
+Khi evidence đủ mạnh:
 
-### Gate A
-
-Authoritative Khmer text đủ cụ thể để dựng board tests.
-
-### Gate B
-
-Hai nguồn native độc lập, ngoài app implementation, cùng mô tả được board sequence/edge case.
-
-### Gate C
-
-Expert Khmer player/teacher xác nhận board fixtures trực tiếp và lời giải có thể tái tạo.
-
-Community comments chỉ tạo hypothesis; **không tự vượt gate**.
-
----
-
-## 9. Quy trình nếu tìm được evidence mới
-
-Không sửa code trước docs.
-
-Thứ tự bắt buộc:
-
-1. cập nhật research note + source metadata;
-2. cập nhật `HUONG_DAN_LUAT_CO_REK_KHMER.md` và confidence;
-3. nếu rule đủ evidence, cập nhật `SPEC_ENGINE_CO_REK_KHMER.md`;
-4. viết regression tests từ board examples;
+1. update research note + source metadata;
+2. update `HUONG_DAN_LUAT_CO_REK_KHMER.md` confidence;
+3. update `SPEC_ENGINE_CO_REK_KHMER.md` nếu exact behavior đã đủ rõ;
+4. viết board regression trước;
 5. sửa core engine;
-6. verify AI chỉ consume engine legality;
-7. tournament + snapshot/replay regression;
-8. merge khi CI xanh.
+6. session/snapshot migration nếu cần stateful Hao Rek context;
+7. AI chỉ consume new engine legality;
+8. tournament + replay regression;
+9. merge khi CI xanh.
 
 ---
 
-## 10. Kết luận pass 2026-09-05
+## 11. Kết luận 2026-09-06
 
-Core Rek hiện có nền evidence khá tốt cho:
+Core Rek có evidence tốt cho identity, 8×8, 1 King + 15 Men, one-piece-per-turn, capture-King objective, two-sided Rek và trapping/encirclement concept. Setup/movement hiện có secondary support mạnh.
 
-- identity/traditional existence;
-- 8×8, 16 quân/bên;
-- capture King objective;
-- two-sided Rek;
-- trapping/encirclement concept;
-- project setup/movement ở mức strong secondary.
+Finding mới quan trọng nhất là S7: wording `បើកឲ្យរែក → ត្រូវតែរែក → មិនរែក = ចាញ់ដោយស្វ័យប្រវត្តិ` tạo **SECONDARY evidence trực tiếp** rằng Hao Rek được mô tả như nghĩa vụ phát sinh từ action của opponent.
 
-Rủi ro rule lớn nhất vẫn là **exact Hao Rek / Min Rek Chanh semantics**.
-
-Community comments bên dưới app cho tín hiệu rất đáng nghiên cứu rằng current global compulsory implementation có thể quá rộng, nhưng **chưa đủ để sửa engine**.
-
-Vì vậy gameplay `MIN_REK_CHANH` tiếp tục là **current project interpretation / pending historical validation** cho tới khi vượt evidence gate.
+Điều này làm current **board-global compulsory scan** yếu hơn về mặt historical model. Tuy nhiên exact geometry của `បើកឲ្យរែក` vẫn chưa chứng minh; vì vậy **không thay SPEC gameplay/engine semantics trong pass này**.
