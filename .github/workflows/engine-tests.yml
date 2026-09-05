@@ -4,14 +4,14 @@ on:
   push:
     paths:
       - 'lib/rek-engine/**'
-      - 'scripts/run-engine-tests.cjs'
+      - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
       - '.github/workflows/engine-tests.yml'
   pull_request:
     paths:
       - 'lib/rek-engine/**'
-      - 'scripts/run-engine-tests.cjs'
+      - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
       - '.github/workflows/engine-tests.yml'
