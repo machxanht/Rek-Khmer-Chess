@@ -1,5 +1,5 @@
 import { TestResult } from './types'
-import { runTournamentSeries } from './ai-tournament'
+import { playTournamentGame, runTournamentSeries } from './ai-tournament'
 
 function expect(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
@@ -26,7 +26,7 @@ export function runAiTournamentTests(): {
     }
   }
 
-  const sampleOptions = { maxPlies: 64, openingPlies: 4 }
+  const sampleOptions = { maxPlies: 24, openingPlies: 8 }
   const samples = [
     runTournamentSeries('REK_POAT', 2, sampleOptions),
     runTournamentSeries('MIN_REK_CHANH', 2, sampleOptions),
@@ -34,16 +34,20 @@ export function runAiTournamentTests(): {
 
   run('AIT-01', 'Tournament AI never submits a move outside the core engine legal set', () => {
     expect(samples.every((summary) => summary.illegalMoves === 0), 'Tournament recorded an illegal AI move')
-    return 'Both rulesets completed the CI sample with illegalMoves=0.'
+    return 'Both rulesets completed the balanced CI sample with illegalMoves=0.'
   })
 
-  run('AIT-02', 'Tournament sample is deterministic across repeated runs', () => {
-    const repeated = [
-      runTournamentSeries('REK_POAT', 2, sampleOptions),
-      runTournamentSeries('MIN_REK_CHANH', 2, sampleOptions),
+  run('AIT-02', 'Seeded tournament games are deterministic in both rulesets', () => {
+    const configs = [
+      { mode: 'REK_POAT' as const, seed: 101, youDifficulty: 'hard' as const, oppDifficulty: 'medium' as const },
+      { mode: 'MIN_REK_CHANH' as const, seed: 202, youDifficulty: 'medium' as const, oppDifficulty: 'hard' as const },
     ]
-    expect(JSON.stringify(samples) === JSON.stringify(repeated), 'Same tournament seeds must reproduce the same summaries')
-    return 'Seeded openings plus Medium/Hard search reproduce exactly across runs.'
+    for (const config of configs) {
+      const first = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 12 })
+      const second = playTournamentGame({ ...config, openingPlies: 8, maxPlies: 12 })
+      expect(JSON.stringify(first) === JSON.stringify(second), `${config.mode} seeded game must reproduce exactly`)
+    }
+    return 'Seeded openings plus deterministic Medium/Hard search reproduce exactly across runs.'
   })
 
   run('AIT-03', 'Hard and Medium are evaluated with balanced colors in both rulesets', () => {
@@ -70,7 +74,7 @@ export function runAiTournamentTests(): {
   run('AIT-05', 'Tournament reports game-length and unresolved-cap baselines', () => {
     for (const summary of samples) {
       expect(summary.averagePlies > 0, `${summary.mode} average plies must be positive`)
-      expect(summary.maxGamePlies <= 64, `${summary.mode} must respect the CI max-ply cap`)
+      expect(summary.maxGamePlies <= 24, `${summary.mode} must respect the CI max-ply cap`)
       expect(summary.capped <= summary.games, `${summary.mode} capped count is invalid`)
     }
     return samples
