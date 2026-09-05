@@ -4,10 +4,13 @@
 
 import {
   BOARD_SIZE,
+  DEFAULT_LONE_KING_DRAW_LIMIT,
   DEFAULT_RULESET,
   Cell,
+  GameState,
   PlayerColor,
   RuleSet,
+  normalizeRuleSet,
 } from './types'
 import {
   rc,
@@ -18,9 +21,11 @@ import {
 } from './captures'
 import {
   createPositionKey,
+  executeMove,
   getAllMoveResults,
   hasKing,
   countPieces,
+  normalizePositionCounts,
 } from './engine'
 
 export type AiDifficulty = 'easy' | 'medium' | 'hard'
@@ -193,6 +198,9 @@ export function evaluateBoard(
  * Applies an already engine-legal move using the exact capture squares returned
  * by the core engine. This avoids calling previewMove() a second time for every
  * searched edge and does not duplicate any capture rule in AI.
+ *
+ * This board-only helper intentionally does not carry repetition/lone-King
+ * history. Stateful search uses executeMove() instead.
  */
 function simulateMove(board: Cell[], move: AiLegalMove): Cell[] {
   const nextBoard = [...board]
@@ -220,6 +228,11 @@ function royalHorizonScore(
 
 /**
  * Alpha-Beta minimax with an exact-only transposition cache.
+ *
+ * This board-only API is retained for compatibility and deterministic benchmark
+ * stability. It does not model session history such as repetition counters or
+ * the project lone-King clock; use minimaxState()/analyzeAiState() when a live
+ * GameState is available.
  *
  * Important correctness details:
  * - Terminal immobilization is checked before the depth cutoff under the current
@@ -332,6 +345,149 @@ export function minimax(
   return minEval
 }
 
+/**
+ * Draw history is rule-relevant search state. Two identical boards are not
+ * interchangeable if their repetition counts, lone-King clocks, or configured
+ * draw limits differ. Keep this exact key separate from the board-only cache.
+ */
+function createStateSearchKey(state: GameState, depth: number): string {
+  const ruleset = normalizeRuleSet(state.mode)
+  const counts = normalizePositionCounts(state.positionCounts ?? {})
+  const repetition = Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, count]) => `${key}=${count}`)
+    .join(';')
+
+  return [
+    depth,
+    createPositionKey(state.board, state.turn, ruleset),
+    `lk=${state.loneKingMoveCount ?? 0}`,
+    `limit=${state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT}`,
+    `pc=${repetition}`,
+  ].join('|')
+}
+
+function terminalStateScore(
+  state: GameState,
+  aiColor: PlayerColor,
+  depth: number
+): number | null {
+  if (state.status === 'draw') return 0
+  if (state.status === 'won') {
+    return state.winner === aiColor ? 100000 + depth : -100000 - depth
+  }
+  return null
+}
+
+/**
+ * State-aware alpha-beta search for live games.
+ *
+ * Every searched transition is delegated to executeMove(), so repetition,
+ * lone-King bookkeeping, terminal ordering, Rek/Poat captures, and current Min
+ * adjudication remain owned by the core engine instead of being copied into AI.
+ */
+export function minimaxState(
+  state: GameState,
+  depth: number,
+  alpha: number,
+  beta: number,
+  aiColor: PlayerColor,
+  cache: Map<string, number> = new Map(),
+  stats?: AiSearchStats
+): number {
+  if (stats) stats.nodes++
+
+  const terminal = terminalStateScore(state, aiColor, depth)
+  if (terminal !== null) {
+    if (stats) stats.leaves++
+    return terminal
+  }
+
+  const mode = normalizeRuleSet(state.mode)
+  const oppColor = opponent(aiColor)
+
+  // Preserve board-only resilience for custom/malformed playing states while
+  // normal live states are expected to reach terminal status through executeMove().
+  if (!hasKing(state.board, aiColor) || !hasKing(state.board, oppColor)) {
+    if (stats) stats.leaves++
+    return evaluateBoard(state.board, aiColor, mode)
+  }
+
+  const cacheKey = createStateSearchKey(state, depth)
+  const cached = cache.get(cacheKey)
+  if (cached !== undefined) {
+    if (stats) stats.cacheHits++
+    return cached
+  }
+
+  const moves = getAllLegalMoves(state.board, state.turn, mode)
+  if (stats) stats.legalMoveGenerations++
+
+  if (moves.length === 0) {
+    if (stats) stats.leaves++
+    const score = terminalNoMoveScore(state.turn, aiColor, depth)
+    cache.set(cacheKey, score)
+    return score
+  }
+
+  if (depth === 0) {
+    if (stats) stats.leaves++
+
+    if (moves.some((move) => move.capturesKing)) {
+      const tactical = royalHorizonScore(state.turn, aiColor, depth)
+      cache.set(cacheKey, tactical)
+      return tactical
+    }
+
+    const evaluated = evaluateBoardInternal(state.board, aiColor, mode, {
+      player: state.turn,
+      moves,
+    })
+    cache.set(cacheKey, evaluated)
+    return evaluated
+  }
+
+  const isMaximizing = state.turn === aiColor
+  if (isMaximizing) {
+    let maxEval = -Infinity
+    let cutoff = false
+
+    for (const move of moves) {
+      const next = executeMove(state, move.from, move.to)
+      const score = terminalStateScore(next, aiColor, depth - 1)
+      const value = score ?? minimaxState(next, depth - 1, alpha, beta, aiColor, cache, stats)
+      maxEval = Math.max(maxEval, value)
+      alpha = Math.max(alpha, maxEval)
+      if (beta <= alpha) {
+        cutoff = true
+        if (stats) stats.cutoffs++
+        break
+      }
+    }
+
+    if (!cutoff) cache.set(cacheKey, maxEval)
+    return maxEval
+  }
+
+  let minEval = Infinity
+  let cutoff = false
+  for (const move of moves) {
+    const next = executeMove(state, move.from, move.to)
+    const score = terminalStateScore(next, aiColor, depth - 1)
+    const value = score ?? minimaxState(next, depth - 1, alpha, beta, aiColor, cache, stats)
+    minEval = Math.min(minEval, value)
+    beta = Math.min(beta, minEval)
+    if (beta <= alpha) {
+      cutoff = true
+      if (stats) stats.cutoffs++
+      break
+    }
+  }
+
+  if (!cutoff) cache.set(cacheKey, minEval)
+  return minEval
+}
+
 function chooseSearchDepth(
   difficulty: AiDifficulty,
   rootMoves: number,
@@ -346,8 +502,8 @@ function chooseSearchDepth(
 }
 
 /**
- * Deterministic analysis entry point for Medium/Hard plus search diagnostics.
- * Easy intentionally remains random and therefore reports zero searched nodes.
+ * Deterministic board-only analysis entry point for backward compatibility and
+ * stable performance benchmarks. Live sessions should prefer analyzeAiState().
  */
 export function analyzeAiMove(
   board: Cell[],
@@ -428,6 +584,87 @@ export function analyzeAiMove(
   }
 }
 
+/**
+ * State-aware analysis for a live engine session.
+ *
+ * The root and every searched child use executeMove(), so project draw
+ * extensions are visible to search without duplicating their adjudication in AI.
+ */
+export function analyzeAiState(
+  state: GameState,
+  difficulty: AiDifficulty = 'medium'
+): AiAnalysis {
+  const stats = createSearchStats()
+  const mode = normalizeRuleSet(state.mode)
+  const aiColor = state.turn
+  const totalPieces = countPieces(state.board, 'you') + countPieces(state.board, 'opp')
+
+  if (state.status !== 'playing') {
+    return { move: null, depth: chooseSearchDepth(difficulty, 0, totalPieces), stats }
+  }
+
+  const moves = getAllLegalMoves(state.board, aiColor, mode)
+  const searchDepth = chooseSearchDepth(difficulty, moves.length, totalPieces)
+  if (moves.length === 0) return { move: null, depth: searchDepth, stats }
+
+  if (difficulty === 'easy') {
+    const capturingMoves = moves.filter((move) => move.capturesCount > 0)
+    if (capturingMoves.length > 0 && Math.random() < 0.65) {
+      const move = capturingMoves[Math.floor(Math.random() * capturingMoves.length)]
+      return { move: { from: move.from, to: move.to }, depth: 0, stats }
+    }
+    const move = moves[Math.floor(Math.random() * moves.length)]
+    return { move: { from: move.from, to: move.to }, depth: 0, stats }
+  }
+
+  const immediateRoyal = moves.find((move) => move.capturesKing)
+  if (immediateRoyal) {
+    return {
+      move: { from: immediateRoyal.from, to: immediateRoyal.to, score: 100000 },
+      depth: searchDepth,
+      stats,
+    }
+  }
+
+  const cache = new Map<string, number>()
+  let bestMove: AiMove | null = null
+  let bestScore = -Infinity
+
+  for (const move of moves) {
+    const next = executeMove(state, move.from, move.to)
+    if (next === state) continue
+
+    const terminal = terminalStateScore(next, aiColor, searchDepth - 1)
+    const searchScore = terminal ?? minimaxState(
+      next,
+      searchDepth - 1,
+      -Infinity,
+      Infinity,
+      aiColor,
+      cache,
+      stats
+    )
+
+    // A terminal outcome is authoritative. Tactical micro-bonuses must not turn
+    // an engine draw into a non-zero pseudo-result or perturb a decisive score.
+    const score = terminal !== null
+      ? searchScore
+      : searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
+
+    if (score > bestScore) {
+      bestScore = score
+      bestMove = { from: move.from, to: move.to, score }
+    }
+  }
+
+  const fallback = moves[0]
+  return {
+    move: bestMove ?? { from: fallback.from, to: fallback.to },
+    depth: searchDepth,
+    stats,
+  }
+}
+
 /** Chooses the best engine-legal AI move for the selected difficulty. */
 export function chooseAiMove(
   board: Cell[],
@@ -436,4 +673,12 @@ export function chooseAiMove(
   difficulty: AiDifficulty = 'medium'
 ): AiMove | null {
   return analyzeAiMove(board, aiColor, mode, difficulty).move
+}
+
+/** Chooses the best move while preserving live session draw history in search. */
+export function chooseAiMoveForState(
+  state: GameState,
+  difficulty: AiDifficulty = 'medium'
+): AiMove | null {
+  return analyzeAiState(state, difficulty).move
 }
