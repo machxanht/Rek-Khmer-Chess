@@ -38,7 +38,7 @@ function put(
 function makeState(
   board: Cell[],
   turn: PlayerColor = 'you',
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = 'REK_STANDARD'
 ): GameState {
   return {
     board,
@@ -100,7 +100,7 @@ export function runRuleGuideLockTests(): {
 
   run('GUIDE-01', 'Initial front lines have the documented staggered opening mobility', () => {
     const files = 'abcdefgh'.split('')
-    const modes: GameMode[] = ['REK_POAT', 'MIN_REK_CHANH']
+    const modes: GameMode[] = ['REK_STANDARD', 'MIN_REK_CHANH']
     let checked = 0
 
     for (const mode of modes) {
@@ -123,11 +123,11 @@ export function runRuleGuideLockTests(): {
       }
     }
 
-    return `${checked} front-line pieces checked across both modes against the corrected 7+King+8 formation.`
+    return `${checked} front-line pieces checked across both canonical rulesets against the 7+King+8 formation.`
   })
 
   run('GUIDE-02', 'Initial rear formation and palace gaps match the canonical setup', () => {
-    const modes: GameMode[] = ['REK_POAT', 'MIN_REK_CHANH']
+    const modes: GameMode[] = ['REK_STANDARD', 'MIN_REK_CHANH']
 
     for (const mode of modes) {
       const state = createInitialState(mode)
@@ -148,12 +148,12 @@ export function runRuleGuideLockTests(): {
       )
     }
 
-    return 'Both modes preserve a1/h8 corner gaps, Kings on a2/h7, and the rear-rank slides created by the staggered setup.'
+    return 'Both canonical rulesets preserve a1/h8 gaps, Kings on a2/h7, and rear-rank slides.'
   })
 
   run('GUIDE-03', 'Movement is orthogonal only and cannot land on or jump through occupied cells', () => {
-    const state = createInitialState('REK_POAT')
-    const moves = new Set(getLegalMoves(state.board, coordToIdx('a3'), 'REK_POAT'))
+    const state = createInitialState('REK_STANDARD')
+    const moves = new Set(getLegalMoves(state.board, coordToIdx('a3'), 'REK_STANDARD'))
 
     expect(!moves.has(coordToIdx('b4')), 'Diagonal a3 -> b4 must be illegal')
     expect(!moves.has(coordToIdx('a2')), 'Landing on own occupied King at a2 must be illegal')
@@ -161,28 +161,28 @@ export function runRuleGuideLockTests(): {
     expect(!moves.has(coordToIdx('a7')), 'Jumping through occupied a6 to a7 must be illegal')
     expect(!moves.has(coordToIdx('a8')), 'Jumping through occupied a6 to a8 must be illegal')
 
-    return 'Diagonal movement, occupied landing, and jumping are all rejected from the corrected initial formation.'
+    return 'Diagonal movement, occupied landing, and jumping are rejected from the canonical setup.'
   })
 
-  run('GUIDE-04', 'King slides like a Man in Rek Poat but is stationary in Min Rek Chanh', () => {
+  run('GUIDE-04', 'King moves in REK_STANDARD but is stationary in current MIN_REK_CHANH contract', () => {
     const board = emptyBoard()
     put(board, 'a2', 'you', true, 'you_king')
     put(board, 'h7', 'opp', true, 'opp_king')
 
     sameSquares(
-      getLegalMoves(board, coordToIdx('a2'), 'REK_POAT'),
+      getLegalMoves(board, coordToIdx('a2'), 'REK_STANDARD'),
       ['a1', 'a3', 'a4', 'a5', 'a6', 'a7', 'a8', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2'],
-      'REK_POAT King a2'
+      'REK_STANDARD King a2'
     )
     expect(
       getLegalMoves(board, coordToIdx('a2'), 'MIN_REK_CHANH').length === 0,
-      'MIN_REK_CHANH King must expose zero moves'
+      'MIN_REK_CHANH King must expose zero moves under current engine contract'
     )
 
-    return 'The King behavior is locked independently for both documented modes at the canonical White throne.'
+    return 'Ruleset-specific King behavior is locked without claiming Min semantics are historically final.'
   })
 
-  run('GUIDE-05', 'Rek can capture two on one axis or four on both axes', () => {
+  run('GUIDE-05', 'Current engine supports two-axis Rek and four-way Rek', () => {
     const board = emptyBoard()
     put(board, 'c4', 'you', false, 'you_land')
     put(board, 'b4', 'opp')
@@ -204,10 +204,10 @@ export function runRuleGuideLockTests(): {
       'horizontal Rek at c4'
     )
 
-    return 'Rek Boun/Rek Troat and ordinary two-piece Rek are both locked.'
+    return 'Two-piece Rek is core; four-way Rek remains explicitly a current engine interpretation pending stronger evidence.'
   })
 
-  run('GUIDE-06', 'Poat captures an entire zero-liberty connected group including at the board edge', () => {
+  run('GUIDE-06', 'Current Poat implementation captures a zero-liberty connected group at the edge', () => {
     const sealed = emptyBoard()
     put(sealed, 'a8', 'opp')
     put(sealed, 'b8', 'opp')
@@ -224,10 +224,10 @@ export function runRuleGuideLockTests(): {
       'Connected group with one liberty at c8 must survive'
     )
 
-    return 'Flood-fill Poat respects connected components, liberties, and board edges.'
+    return 'Flood-fill Poat regression locks the current connected-component/liberty interpretation.'
   })
 
-  run('GUIDE-07', 'Turn pipeline resolves Rek before Poat so removed Rek pieces can open liberties', () => {
+  run('GUIDE-07', 'Current turn pipeline resolves Rek before Poat', () => {
     const board = emptyBoard()
     put(board, 'h1', 'you', true, 'you_king')
     put(board, 'h8', 'opp', true, 'opp_king')
@@ -241,38 +241,38 @@ export function runRuleGuideLockTests(): {
     put(board, 'd4', 'opp', false, 'opp_rek_right')
     put(board, 'b5', 'opp', false, 'opp_survivor')
 
-    const result = previewMove(board, coordToIdx('c1'), coordToIdx('c4'), 'you', 'REK_POAT')
+    const result = previewMove(board, coordToIdx('c1'), coordToIdx('c4'), 'you', 'REK_STANDARD')
     sameSquares(result.rekCaptures, ['b4', 'd4'], 'pipeline Rek victims')
     expect(
       !result.poatCaptures.includes(coordToIdx('b5')),
       'b5 must survive because removing b4 opens a liberty before Poat runs'
     )
 
-    return 'The documented move -> Rek -> Poat ordering is observable and locked.'
+    return 'Regression locks move -> Rek -> Poat as the current technical pipeline, not as settled historical proof.'
   })
 
-  run('GUIDE-08', 'Min Rek Chanh exposes only Rek moves and ignoring Rek loses immediately', () => {
+  run('GUIDE-08', 'Current MIN_REK_CHANH contract exposes only Rek moves and forfeits a quiet response', () => {
     const state = setupCompulsoryRekFixture('MIN_REK_CHANH')
     expect(state.availableRekMovesCount > 0, 'Fixture must contain at least one Rek opportunity')
     expect(
       getMoveResults(state.board, coordToIdx('h1'), state.mode).size === 0,
-      'Quiet h1 moves must disappear while Rek is compulsory'
+      'Quiet h1 moves must disappear while current Min obligation is active'
     )
 
     const next = executeMove(state, coordToIdx('h1'), coordToIdx('h2'))
-    expect(next.status === 'won' && next.winner === 'opp', 'Ignoring compulsory Rek must forfeit the game')
+    expect(next.status === 'won' && next.winner === 'opp', 'Current Min contract must forfeit ignored Rek')
     expect(next.board[coordToIdx('h1')]?.id === 'you_quiet', 'Forfeited quiet move must not alter the board')
     expect(next.board[coordToIdx('h2')] === null, 'Forfeited quiet move must never reach h2')
 
-    return 'Hao Rek is a true compulsory rule with immediate-loss adjudication in Min Rek Chanh.'
+    return 'This locks current software behavior while exact traditional Hao Rek trigger remains UNVERIFIED.'
   })
 
-  run('GUIDE-09', 'Rek remains optional in Rek Poat even when a capture is available', () => {
-    const state = setupCompulsoryRekFixture('REK_POAT')
+  run('GUIDE-09', 'Rek remains optional in REK_STANDARD even when a capture is available', () => {
+    const state = setupCompulsoryRekFixture('REK_STANDARD')
     expect(state.availableRekMovesCount > 0, 'Fixture must contain a Rek opportunity')
     expect(
       getMoveResults(state.board, coordToIdx('h1'), state.mode).has(coordToIdx('h2')),
-      'Quiet h1 -> h2 must remain rule-legal in Rek Poat'
+      'Quiet h1 -> h2 must remain rule-legal in REK_STANDARD'
     )
 
     const next = executeMove(state, coordToIdx('h1'), coordToIdx('h2'))
@@ -280,7 +280,7 @@ export function runRuleGuideLockTests(): {
     expect(next.status === 'playing', 'Optional quiet move must not forfeit the game')
     expect(next.board[coordToIdx('h2')]?.id === 'you_quiet', 'Quiet piece must arrive on h2')
 
-    return 'Rek Poat keeps capture optional exactly as documented.'
+    return 'Canonical Standard keeps Rek optional under the current project contract.'
   })
 
   run('GUIDE-10', 'Capturing the opponent King by Rek ends the game immediately', () => {
@@ -296,7 +296,7 @@ export function runRuleGuideLockTests(): {
     expect(next.lastRek === true, 'Fixture must end through Rek')
     expect(next.board[coordToIdx('c5')] === null, 'Captured King must be removed from the board')
 
-    return 'Royal King capture is locked as a decisive terminal condition.'
+    return 'Royal King capture remains the decisive terminal condition with strongest evidence.'
   })
 
   const passed = results.filter((result) => result.passed).length

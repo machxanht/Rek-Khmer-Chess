@@ -104,7 +104,7 @@ function stressMode(mode: GameMode, targetPlies: number, seed: number): string {
     completed++
   }
 
-  return `${mode}: ${completed} deterministic legal plies across ${games} game(s), all invariants preserved.`
+  return `${state.mode}: ${completed} deterministic legal plies across ${games} game(s), all invariants preserved.`
 }
 
 export function runSimulationTests(): {
@@ -128,10 +128,10 @@ export function runSimulationTests(): {
     }
   }
 
-  run('SIM-01', 'REK_POAT survives deterministic long-run legal play', () =>
-    stressMode('REK_POAT', 2500, 0x52454b01))
+  run('SIM-01', 'REK_STANDARD survives deterministic long-run legal play', () =>
+    stressMode('REK_STANDARD', 2500, 0x52454b01))
 
-  run('SIM-02', 'MIN_REK_CHANH survives deterministic compulsory-Rek play', () =>
+  run('SIM-02', 'MIN_REK_CHANH survives deterministic current-contract legal play', () =>
     stressMode('MIN_REK_CHANH', 1500, 0x52454b02))
 
   const passed = results.filter((result) => result.passed).length

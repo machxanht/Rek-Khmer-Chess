@@ -39,7 +39,7 @@ function put(
 function makeState(
   board: Cell[],
   turn: PlayerColor = 'you',
-  mode: GameMode = 'REK_POAT'
+  mode: GameMode = 'REK_STANDARD'
 ): GameState {
   return {
     board,
@@ -100,7 +100,7 @@ export function runAllUnitTests(): {
     const from = coordToIdx('c1')
     const to = coordToIdx('c4')
     const expected = [coordToIdx('b4'), coordToIdx('d4')]
-    const res = previewMove(board, from, to, 'you', 'REK_POAT')
+    const res = previewMove(board, from, to, 'you', 'REK_STANDARD')
 
     expect(res.rek, 'c1 -> c4 must trigger horizontal Rek')
     expect(sameMembers(res.rekCaptures, expected), 'Rek must capture b4 and d4 only')
@@ -142,7 +142,7 @@ export function runAllUnitTests(): {
     put(board, 'd3', 'opp')
     put(board, 'd5', 'opp')
 
-    const impossible = previewMove(board, coordToIdx('a4'), coordToIdx('d4'), 'you', 'REK_POAT')
+    const impossible = previewMove(board, coordToIdx('a4'), coordToIdx('d4'), 'you', 'REK_STANDARD')
     expect(!impossible.rek, 'Preview must not simulate a4 -> d4 through occupied c4')
     expect(impossible.captures.length === 0, 'Illegal movement must never generate captures')
     return 'Cross capture math remains isolated, while the engine rejects the blocked a4 -> d4 scenario.'
@@ -154,7 +154,7 @@ export function runAllUnitTests(): {
     put(board, 'b8', 'you')
     put(board, 'a8', 'opp')
 
-    const res = previewMove(board, coordToIdx('a6'), coordToIdx('a7'), 'you', 'REK_POAT')
+    const res = previewMove(board, coordToIdx('a6'), coordToIdx('a7'), 'you', 'REK_STANDARD')
     expect(res.poat, 'Closing a7 with b8 occupied must Poat a8')
     expect(sameMembers(res.poatCaptures, [coordToIdx('a8')]), 'Only a8 should be Poat-captured')
     return 'Board edges count as walls; a8 has zero liberties after a6 -> a7.'
@@ -189,7 +189,7 @@ export function runAllUnitTests(): {
     put(board, 'a7', 'opp')
     put(board, 'b8', 'opp')
 
-    const res = previewMove(board, coordToIdx('e7'), coordToIdx('b7'), 'you', 'REK_POAT')
+    const res = previewMove(board, coordToIdx('e7'), coordToIdx('b7'), 'you', 'REK_STANDARD')
     const expected = [coordToIdx('a8'), coordToIdx('a7'), coordToIdx('b8')]
 
     expect(res.poat, 'Closing b7 must Poat the connected corner group')
@@ -198,7 +198,7 @@ export function runAllUnitTests(): {
   })
 
   run('REG-01', 'Initial staggered movement is rook-like and blocked by the surrounding formation', () => {
-    const state = createInitialState('REK_POAT')
+    const state = createInitialState('REK_STANDARD')
     const moves = getLegalMoves(state.board, coordToIdx('b3'), state.mode)
     const expected = ['b2', 'b4', 'b5'].map(coordToIdx)
 
@@ -229,16 +229,16 @@ export function runAllUnitTests(): {
     return 'Rek captures by intervention/encirclement, never by replacement capture.'
   })
 
-  run('REG-04', 'Rek remains optional in REK_POAT', () => {
+  run('REG-04', 'Rek remains optional in REK_STANDARD', () => {
     const board = emptyBoard()
     put(board, 'c1', 'you')
     put(board, 'b4', 'opp')
     put(board, 'd4', 'opp')
 
-    const moves = getMoveResults(board, coordToIdx('c1'), 'REK_POAT')
-    expect(moves.has(coordToIdx('c2')), 'Ordinary c1 -> c2 must remain legal in REK_POAT')
+    const moves = getMoveResults(board, coordToIdx('c1'), 'REK_STANDARD')
+    expect(moves.has(coordToIdx('c2')), 'Ordinary c1 -> c2 must remain legal in REK_STANDARD')
     expect(moves.has(coordToIdx('c4')), 'Rek c1 -> c4 must also remain legal')
-    return 'Standard Rek Poat exposes both tactical Rek and ordinary movement.'
+    return 'Canonical Standard exposes both tactical Rek and ordinary movement.'
   })
 
   run('REG-05', 'MIN_REK_CHANH exposes only compulsory Rek destinations', () => {
@@ -250,21 +250,21 @@ export function runAllUnitTests(): {
     const moves = getMoveResults(board, coordToIdx('c1'), 'MIN_REK_CHANH')
     expect(!moves.has(coordToIdx('c2')), 'Non-Rek c2 must be filtered while Rek exists')
     expect(moves.has(coordToIdx('c4')), 'The actual Rek destination must remain available')
-    return 'UI-facing legal moves match the compulsory Hao Rek rule.'
+    return 'Current Min contract requires a Rek whenever its global obligation condition is active.'
   })
 
-  run('REG-06', 'King mobility differs by game mode', () => {
+  run('REG-06', 'King mobility differs by ruleset', () => {
     const board = emptyBoard()
     put(board, 'a2', 'you', true)
 
-    const standard = getLegalMoves(board, coordToIdx('a2'), 'REK_POAT')
+    const standard = getLegalMoves(board, coordToIdx('a2'), 'REK_STANDARD')
     const palace = getLegalMoves(board, coordToIdx('a2'), 'MIN_REK_CHANH')
-    expect(standard.length > 0, 'King must move like a rook in REK_POAT')
-    expect(palace.length === 0, 'King must be stationary in MIN_REK_CHANH')
-    return 'Mode-specific King behavior is enforced by the core move generator.'
+    expect(standard.length > 0, 'King must move under REK_STANDARD')
+    expect(palace.length === 0, 'King must be stationary in current MIN_REK_CHANH contract')
+    return 'Ruleset-specific King behavior is enforced by the core move generator.'
   })
 
-  run('REG-07', 'Rek is resolved before Poat', () => {
+  run('REG-07', 'Rek is resolved before Poat in the current engine pipeline', () => {
     const board = emptyBoard()
     put(board, 'c6', 'you')
     put(board, 'b4', 'opp')
@@ -276,7 +276,7 @@ export function runAllUnitTests(): {
     put(board, 'a4', 'you')
     put(board, 'b5', 'you')
 
-    const res = previewMove(board, coordToIdx('c6'), coordToIdx('c4'), 'you', 'REK_POAT')
+    const res = previewMove(board, coordToIdx('c6'), coordToIdx('c4'), 'you', 'REK_STANDARD')
     expect(res.rek, 'c6 -> c4 must Rek b4/d4')
     expect(res.rekCaptures.includes(coordToIdx('b4')), 'b4 must be removed by Rek first')
     expect(!res.poatCaptures.includes(coordToIdx('b3')), 'b3 must survive because removed b4 becomes a liberty')
@@ -290,7 +290,7 @@ export function runAllUnitTests(): {
     put(board, 'h8', 'opp', true)
     put(board, 'h1', 'you', true)
 
-    const diagonal = previewMove(board, coordToIdx('a1'), coordToIdx('b2'), 'you', 'REK_POAT')
+    const diagonal = previewMove(board, coordToIdx('a1'), coordToIdx('b2'), 'you', 'REK_STANDARD')
     expect(diagonal.captures.length === 0 && !diagonal.rek && !diagonal.poat, 'Diagonal preview must be empty')
 
     const state = makeState(board)
@@ -300,7 +300,7 @@ export function runAllUnitTests(): {
   })
 
   run('REG-09', 'RekEngine class cannot move the opponent on the wrong turn', () => {
-    const engine = new RekEngine('REK_POAT')
+    const engine = new RekEngine('REK_STANDARD')
     const before = engine.getState()
     const accepted = engine.makeMove(coordToIdx('a6'), coordToIdx('a5'))
     const after = engine.getState()
@@ -308,7 +308,7 @@ export function runAllUnitTests(): {
     expect(accepted === false, 'Wrong-turn move must return false')
     expect(after === before, 'Wrong-turn move must not mutate class state')
     expect(after.moveCount === 0, 'Wrong-turn move must not increment move count')
-    return 'The stateful wrapper now enforces turn ownership before recording history.'
+    return 'The stateful wrapper enforces turn ownership before recording history.'
   })
 
   run('REG-10', 'Captured piece bookkeeping belongs to the side that lost pieces', () => {
@@ -334,11 +334,11 @@ export function runAllUnitTests(): {
     const from = coordToIdx('c1')
     const to = coordToIdx('c4')
     const legacy = previewMove(board, from, to)
-    const explicit = previewMove(board, from, to, 'you', 'REK_POAT')
+    const explicit = previewMove(board, from, to, 'you', 'REK_STANDARD')
 
     expect(sameMembers(legacy.captures, explicit.captures), 'Legacy and explicit previews must agree')
     expect(legacy.rek === explicit.rek && legacy.poat === explicit.poat, 'Legacy preview flags must match')
-    return 'The modular refactor compatibility path is covered against regression.'
+    return 'The three-argument preview compatibility path is covered against regression.'
   })
 
   run('REG-12', 'Multiple compulsory Rek choices remain selectable', () => {
@@ -354,8 +354,8 @@ export function runAllUnitTests(): {
     const first = reks.some((m) => m.from === coordToIdx('c1') && m.to === coordToIdx('c4'))
     const second = reks.some((m) => m.from === coordToIdx('h4') && m.to === coordToIdx('f4'))
 
-    expect(first && second, 'Both independent Rek choices must be available')
-    return 'Min Rek Chanh requires a Rek but does not arbitrarily select one tactical option.'
+    expect(first && second, 'Both independent Rek choices must be available under current Min contract')
+    return 'Current Min engine contract requires a Rek but does not arbitrarily select one tactical option.'
   })
 
   run('REG-13', 'A Poat group with one remaining liberty survives', () => {
@@ -364,9 +364,9 @@ export function runAllUnitTests(): {
     put(board, 'b8', 'you')
     put(board, 'a8', 'opp')
 
-    const res = previewMove(board, coordToIdx('h1'), coordToIdx('h2'), 'you', 'REK_POAT')
+    const res = previewMove(board, coordToIdx('h1'), coordToIdx('h2'), 'you', 'REK_STANDARD')
     expect(!res.poatCaptures.includes(coordToIdx('a8')), 'a8 must survive while a7 is empty')
-    return 'Poat triggers only at zero liberties; a single escape square prevents capture.'
+    return 'Poat triggers only at zero liberties under the current engine interpretation.'
   })
 
   const passedCount = results.filter((result) => result.passed).length
