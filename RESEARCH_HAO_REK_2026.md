@@ -601,6 +601,35 @@ Community/store comments không tự thỏa gate.
 
 ---
 
+## 12.1. Edge-case research decision — 2026-09-06
+
+Targeted follow-up searches were run for:
+
+- multiple newly-created Hao responses;
+- verbal call requirement;
+- ignore-call penalty;
+- `រែកព័ទ្ធ` vs `មិនរែកចាញ់`.
+
+Results:
+
+1. **Multiple NEW Hao responses:** no independent Khmer rule source found that decides responder-vs-caller choice. Historical semantics remain `UNVERIFIED`.
+2. **Verbal declaration:** no Rek-specific source found saying a spoken/shouted `រែក!` is required for the obligation to exist. Historical verbal requirement remains `UNVERIFIED`.
+3. **Ignore call:** Visal Odom / Phnom Penh Post attribution explicitly states `បើមិនរែក គឺត្រូវចាញ់` — “if [one] does not Rek, [one] loses.” Label: `SECONDARY`.
+4. **Variant separation:** the same 2013 source explicitly says `ល្បែង “រែក” មានពីរ​ប្រភេទ គឺ “រែក ព័ទ្ធ” និង “មិន​រែក​ចាញ់”` — Rek has two types, “Rek Poat” and “Min Rek Chanh”. Label: `SECONDARY`; no independent corroboration found in this pass.
+
+### Technical policies for implementation — NOT historical truth
+
+To permit deterministic engine work without silently inventing historical claims:
+
+- **TP-H1 — multiple NEW responses:** expose **all newly-created Hao responses** to the responder; responder may choose any. This is a conservative software policy, not a historical claim.
+- **TP-H2 — verbal call:** do not require speech/audio state. Hao is derived from the board transition. If later evidence proves verbal declaration mandatory, this policy must be revisited.
+- **TP-H3 — ignored Hao:** a geometrically submitted move outside the active Hao response set causes an immediate state-changing forfeit, preserving the existing public API style and the 2013 automatic-loss wording.
+- **TP-H4 — Poat in Min:** do **not** change Poat behavior in the Hao implementation. The 2013 separation is a meaningful challenge but remains only `SECONDARY`; Poat-in-Min stays `ENGINE INTERPRETATION / UNVERIFIED` pending stronger evidence.
+
+These policies unlock tests/implementation while keeping evidence labels separate from software decisions.
+
+---
+
 ## 13. Candidate regression suite nếu event-trigger được xác minh
 
 Update đúng workflow:
