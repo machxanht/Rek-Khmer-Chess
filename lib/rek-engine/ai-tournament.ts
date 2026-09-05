@@ -1,5 +1,5 @@
 import { GameMode, PlayerColor } from './types'
-import { analyzeAiMove, getAllLegalMoves, AiDifficulty, AiSearchStats } from './ai'
+import { analyzeAiMove, getAllLegalMoves, AiDifficulty } from './ai'
 import { createGame } from './session'
 
 export interface TournamentGameConfig {
@@ -7,6 +7,12 @@ export interface TournamentGameConfig {
   seed: number
   youDifficulty: Exclude<AiDifficulty, 'easy'>
   oppDifficulty: Exclude<AiDifficulty, 'easy'>
+  openingPlies?: number
+  maxPlies?: number
+}
+
+export interface TournamentSeriesOptions {
+  baseSeed?: number
   openingPlies?: number
   maxPlies?: number
 }
@@ -43,14 +49,6 @@ export interface TournamentSummary {
 
 function nextSeed(value: number): number {
   return (Math.imul(value >>> 0, 1664525) + 1013904223) >>> 0
-}
-
-function addStats(total: AiSearchStats, current: AiSearchStats): void {
-  total.nodes += current.nodes
-  total.leaves += current.leaves
-  total.cutoffs += current.cutoffs
-  total.cacheHits += current.cacheHits
-  total.legalMoveGenerations += current.legalMoveGenerations
 }
 
 /**
@@ -139,7 +137,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
 export function runTournamentSeries(
   mode: GameMode,
   games: number,
-  options: { baseSeed?: number; openingPlies?: number; maxPlies?: number } = {}
+  options: TournamentSeriesOptions = {}
 ): TournamentSummary {
   const results: TournamentGameResult[] = []
   const baseSeed = options.baseSeed ?? (mode === 'REK_POAT' ? 0x52454b : 0x4d494e)
@@ -204,10 +202,13 @@ export function runTournamentSeries(
   }
 }
 
-/** Full reproducible baseline: 100 games per ruleset, 200 total. */
-export function runFullAiTournament(): TournamentSummary[] {
+/** Runs the same deterministic Hard-vs-Medium series in both game modes. */
+export function runAiTournamentBaseline(
+  gamesPerMode: number,
+  options: TournamentSeriesOptions = {}
+): TournamentSummary[] {
   return [
-    runTournamentSeries('REK_POAT', 100),
-    runTournamentSeries('MIN_REK_CHANH', 100),
+    runTournamentSeries('REK_POAT', gamesPerMode, options),
+    runTournamentSeries('MIN_REK_CHANH', gamesPerMode, options),
   ]
 }
