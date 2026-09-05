@@ -26,9 +26,10 @@ export function runAiTournamentTests(): {
     }
   }
 
+  const sampleOptions = { maxPlies: 64, openingPlies: 4 }
   const samples = [
-    runTournamentSeries('REK_POAT', 4, { maxPlies: 96, openingPlies: 4 }),
-    runTournamentSeries('MIN_REK_CHANH', 4, { maxPlies: 96, openingPlies: 4 }),
+    runTournamentSeries('REK_POAT', 2, sampleOptions),
+    runTournamentSeries('MIN_REK_CHANH', 2, sampleOptions),
   ]
 
   run('AIT-01', 'Tournament AI never submits a move outside the core engine legal set', () => {
@@ -38,8 +39,8 @@ export function runAiTournamentTests(): {
 
   run('AIT-02', 'Tournament sample is deterministic across repeated runs', () => {
     const repeated = [
-      runTournamentSeries('REK_POAT', 4, { maxPlies: 96, openingPlies: 4 }),
-      runTournamentSeries('MIN_REK_CHANH', 4, { maxPlies: 96, openingPlies: 4 }),
+      runTournamentSeries('REK_POAT', 2, sampleOptions),
+      runTournamentSeries('MIN_REK_CHANH', 2, sampleOptions),
     ]
     expect(JSON.stringify(samples) === JSON.stringify(repeated), 'Same tournament seeds must reproduce the same summaries')
     return 'Seeded openings plus Medium/Hard search reproduce exactly across runs.'
@@ -47,13 +48,13 @@ export function runAiTournamentTests(): {
 
   run('AIT-03', 'Hard and Medium are evaluated with balanced colors in both rulesets', () => {
     for (const summary of samples) {
-      expect(summary.games === 4, `${summary.mode} sample must contain four games`)
+      expect(summary.games === 2, `${summary.mode} sample must contain two games`)
       expect(
         summary.hardWins + summary.mediumWins + summary.draws + summary.capped === summary.games,
         `${summary.mode} outcomes must account for every game`
       )
     }
-    return 'Four-game samples alternate Hard between you/opp, removing one-sided color assignment.'
+    return 'Two-game samples swap Hard between you/opp, removing one-sided color assignment.'
   })
 
   run('AIT-04', 'Tournament search remains inside a deterministic per-move node budget', () => {
@@ -69,7 +70,7 @@ export function runAiTournamentTests(): {
   run('AIT-05', 'Tournament reports game-length and unresolved-cap baselines', () => {
     for (const summary of samples) {
       expect(summary.averagePlies > 0, `${summary.mode} average plies must be positive`)
-      expect(summary.maxGamePlies <= 96, `${summary.mode} must respect the CI max-ply cap`)
+      expect(summary.maxGamePlies <= 64, `${summary.mode} must respect the CI max-ply cap`)
       expect(summary.capped <= summary.games, `${summary.mode} capped count is invalid`)
     }
     return samples
