@@ -6,6 +6,7 @@
   "scripts": {
     "test": "npm run test:engine",
     "test:engine": "node scripts/run-engine-tests.cjs",
+    "tournament:ai": "node scripts/run-ai-tournament.cjs",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
