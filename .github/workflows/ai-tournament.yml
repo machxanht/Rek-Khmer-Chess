@@ -1,0 +1,47 @@
+name: Rek AI Tournament Baseline
+
+on:
+  workflow_dispatch:
+    inputs:
+      games_per_mode:
+        description: 'Hard-vs-Medium games per ruleset'
+        required: true
+        default: '2'
+        type: string
+      opening_plies:
+        description: 'Seeded legal opening plies before AI takes over'
+        required: true
+        default: '4'
+        type: string
+      max_plies:
+        description: 'Maximum plies per game before reporting capped'
+        required: true
+        default: '160'
+        type: string
+
+jobs:
+  tournament:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install engine dependencies
+        run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund
+
+      - name: Typecheck engine
+        run: npm run typecheck
+
+      - name: Run deterministic AI tournament
+        run: >-
+          node scripts/run-ai-tournament.cjs
+          --games-per-mode=${{ inputs.games_per_mode }}
+          --opening-plies=${{ inputs.opening_plies }}
+          --max-plies=${{ inputs.max_plies }}
