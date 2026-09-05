@@ -44,11 +44,11 @@ Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you
 
 ## Core engine
 
-- `lib/rek-engine/types.ts` — `GameState`, `RuleSet`, compatibility aliases.
+- `lib/rek-engine/types.ts` — `RuleSet`, `RuleSetInput`, `GameState`, `CanonicalGameState` và compatibility aliases.
 - `lib/rek-engine/catalog.ts` — identity của game + catalog 2 canonical ruleset cho UI/server discovery; không chứa legality/capture logic.
 - `lib/rek-engine/captures.ts` — primitive Rek + Poat.
 - `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw adjudication.
-- `lib/rek-engine/session.ts` — `RekGame`, undo, snapshot migration/save/load.
+- `lib/rek-engine/session.ts` — `RekGame`, undo, canonical state, snapshot migration/save/load.
 - `lib/rek-engine/ai.ts` — AI chỉ search trên legal moves từ core engine.
 - `lib/rek-engine/ai-tournament.ts` — deterministic AI tournament regression.
 - `lib/rek-engine/puzzles.ts` — tactical fixtures.
@@ -62,14 +62,19 @@ import {
   createGame,
   getRuleSetMetadata,
   listRuleSets,
+  type CanonicalGameState,
+  type RuleSet,
+  type RuleSetInput,
 } from './lib/rek-engine'
 
 console.log(REK_GAME.id) // REK_KHMER
 console.log(listRuleSets().map((ruleset) => ruleset.id))
 // ['REK_STANDARD', 'MIN_REK_CHANH']
 
-// Canonical default
-const game = createGame('REK_STANDARD')
+const requested: RuleSetInput = 'REK_STANDARD'
+const game = createGame(requested)
+const state: CanonicalGameState = game.getState()
+const ruleset: RuleSet = state.mode
 
 const from = coordToIdx('a3')
 const to = coordToIdx('a4')
@@ -78,17 +83,28 @@ if (game.getLegalMoves(from).includes(to)) {
   game.makeMove(from, to)
 }
 
-console.log(game.getState().mode) // REK_STANDARD
+console.log(ruleset) // REK_STANDARD
 console.log(getRuleSetMetadata(game.getState().mode).displayName)
 ```
+
+Public type boundary được chia rõ:
+
+- `RuleSet` — chỉ canonical values: `REK_STANDARD | MIN_REK_CHANH`.
+- `RuleSetInput` — input compatibility boundary; ngoài hai giá trị canonical còn nhận legacy `REK_POAT`.
+- `CanonicalGameState` — state trả ra từ `RekGame.getState()` và `deserializeGameState()`; `mode` luôn là `RuleSet`, không bao giờ là `REK_POAT`.
+- `GameState` — compatibility/wire/custom-state shape dùng khi cần nhận dữ liệu legacy trước bước normalize.
+- `GameMode` — deprecated alias, chỉ giữ để source cũ vẫn compile; code mới không nên dùng.
 
 UI/server nên dùng `listRuleSets()` để render lựa chọn ruleset. Không tự hard-code thêm `REK_POAT` thành lựa chọn thứ ba và không dùng metadata catalog để quyết định move legality; legality/capture luôn gọi core engine.
 
 Legacy callers vẫn chạy:
 
 ```ts
-const legacy = createGame('REK_POAT')
-console.log(legacy.getState().mode) // REK_STANDARD
+const legacyInput: RuleSetInput = 'REK_POAT'
+const legacy = createGame(legacyInput)
+const canonical: CanonicalGameState = legacy.getState()
+
+console.log(canonical.mode) // REK_STANDARD
 console.log(getRuleSetMetadata('REK_POAT').id) // REK_STANDARD
 ```
 
