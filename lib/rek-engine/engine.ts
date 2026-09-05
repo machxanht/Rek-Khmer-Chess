@@ -497,7 +497,7 @@ export function executeMove(
       if (oppLegalCount === 0) {
         status = 'won'
         winner = mover
-        winReason = 'Opponent completely immobilized (Zero liberties)'
+        winReason = 'Opponent has no geometric moves'
       }
     }
   }
