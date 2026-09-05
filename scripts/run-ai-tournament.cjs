@@ -6,6 +6,21 @@ const { execFileSync } = require('node:child_process')
 const root = path.resolve(__dirname, '..')
 const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'rek-ai-tournament-'))
 
+function readPositiveIntArg(name, fallback) {
+  const prefix = `--${name}=`
+  const raw = process.argv.slice(2).find((arg) => arg.startsWith(prefix))
+  if (!raw) return fallback
+  const value = Number(raw.slice(prefix.length))
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`${name} must be a positive integer`)
+  }
+  return value
+}
+
+const gamesPerMode = readPositiveIntArg('games-per-mode', 2)
+const openingPlies = readPositiveIntArg('opening-plies', 4)
+const maxPlies = readPositiveIntArg('max-plies', 160)
+
 try {
   const tscBin = require.resolve('typescript/bin/tsc')
   execFileSync(
@@ -37,13 +52,14 @@ try {
     { cwd: root, stdio: 'inherit' }
   )
 
-  const { runFullAiTournament } = require(
+  const { runAiTournamentBaseline } = require(
     path.join(outDir, 'lib', 'rek-engine', 'ai-tournament.js')
   )
-  const summaries = runFullAiTournament()
+  const summaries = runAiTournamentBaseline(gamesPerMode, { openingPlies, maxPlies })
 
-  console.log('\nRek AI 200-game tournament baseline')
-  console.log('===================================')
+  console.log(`\nRek AI tournament baseline — ${gamesPerMode * 2} games total`)
+  console.log('====================================================')
+  console.log(`Opening plies: ${openingPlies}; max plies/game: ${maxPlies}`)
   for (const summary of summaries) {
     console.log(`\n${summary.mode} — ${summary.games} games`)
     console.log(`Hard wins: ${summary.hardWins}`)
