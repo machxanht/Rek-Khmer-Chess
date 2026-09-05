@@ -1,7 +1,7 @@
 import {
   DEFAULT_RULESET,
-  GameMode,
   RuleSet,
+  RuleSetInput,
   normalizeRuleSet,
 } from './types'
 
@@ -65,7 +65,7 @@ const RULE_SET_METADATA_BY_ID: Readonly<Record<RuleSet, Readonly<RuleSetMetadata
   })
 
 /** Returns presentation metadata after canonicalizing any legacy identifier. */
-export function getRuleSetMetadata(mode: GameMode = DEFAULT_RULESET): Readonly<RuleSetMetadata> {
+export function getRuleSetMetadata(mode: RuleSetInput = DEFAULT_RULESET): Readonly<RuleSetMetadata> {
   return RULE_SET_METADATA_BY_ID[normalizeRuleSet(mode)]
 }
 
