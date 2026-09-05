@@ -1,151 +1,144 @@
 # រែកខ្មែរ - Rek Khmer Engine
 
-Repository này hiện được thu gọn thành **game engine TypeScript thuần** cho Rek Khmer. Toàn bộ lớp UI/UX, Next.js, React, Tailwind, asset giao diện, âm thanh và browser-flow đã được loại để engine có thể được kiểm thử độc lập.
+Repository này là **game engine TypeScript thuần** cho Rek Khmer. UI/UX cũ đã được loại để core rules, state, AI và regression tests có thể được kiểm thử độc lập.
 
-## Nguồn luật chuẩn
+## Tài liệu nền tảng
 
-Ba tài liệu nền tảng là nguồn sự thật của dự án và phải được cập nhật đồng bộ khi một quy tắc canonical được xác nhận:
-
-- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — hướng dẫn/đối chứng luật chơi Rek Khmer.
-- `SPEC_ENGINE_CO_REK_KHMER.md` — đặc tả kỹ thuật dùng để khóa hành vi engine.
+- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — **evidence-based rule guide**: tách `CONFIRMED`, `STRONG EVIDENCE`, `ENGINE INTERPRETATION`, `UNVERIFIED` và project extensions.
+- `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mô tả behavior mà engine hiện đang chạy.
+- `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, public call-flow, turn pipeline và ranh giới evidence của từng rule.
 - `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển nền tảng.
 
-Engine và regression tests phải tuân theo các tài liệu này; UI/server về sau không được tự viết lại luật.
+### Chính sách nguồn luật
 
-## Engine giữ lại
+Project **không dùng Google Play, App Store hoặc app game có sẵn làm bằng chứng luật**. Ưu tiên tư liệu Khmer, Buddhist Institute/Chuon Nath, tài liệu văn hóa độc lập, thư viện Khmer và ván bàn thật có thể tái dựng.
 
-- `lib/rek-engine/types.ts` — kiểu dữ liệu và `GameState`.
-- `lib/rek-engine/captures.ts` — Rek (Gánh) và Poat (Bao Vây/Flood Fill).
-- `lib/rek-engine/engine.ts` — thiết lập bàn cờ, sinh nước đi, thực thi lượt, thắng/thua/hòa.
-- `lib/rek-engine/session.ts` — public facade cho UI/server/CLI: game session, undo và save/load.
-- `lib/rek-engine/ai.ts` — AI dựa hoàn toàn trên tập nước đi hợp lệ của engine.
-- `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium tournament harness và aggregate metrics.
-- `lib/rek-engine/puzzles.ts` — dữ liệu/thế cờ dùng bởi engine.
-- `lib/rek-engine/*-tests.ts` — regression, specification lock, rule-guide lock, public API, simulation, AI và draw tests.
+Một rule đang chạy trong code **không tự động đồng nghĩa** với “luật Khmer truyền thống đã được chứng minh”. Các điểm đang cần research sâu nhất là exact `Hao Rek / Min Rek Chanh`, Rek dual-axis 4 quân, exact Poat timing, zero-move terminal và draw rules.
 
-## Thiết lập bàn cờ chuẩn
+## Engine modules
 
-Bàn 8×8 dùng hệ tọa độ `a1` ở góc dưới-trái nhìn từ phía Trắng (`you`). Mỗi bên có **16 quân = 1 Vua + 15 Lính**. Setup canonical của project là đội hình **7 + Vua + 8**, đối xứng quay 180°:
+- `lib/rek-engine/types.ts` — `GameState`, piece/move types.
+- `lib/rek-engine/captures.ts` — Rek và Poat primitives.
+- `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw.
+- `lib/rek-engine/session.ts` — `RekGame` facade, undo, serialize/deserialize.
+- `lib/rek-engine/ai.ts` — AI search chỉ dùng legal moves từ core engine.
+- `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium regression harness.
+- `lib/rek-engine/puzzles.ts` — tactical fixtures.
+- `lib/rek-engine/*-tests.ts` — core/spec/guide/state/public API/AI/simulation regressions.
+
+## Setup canonical của project
+
+Bàn 8×8, mỗi bên **16 quân = 1 King + 15 Men**. Setup đã được chủ project xác nhận trực tiếp bằng ảnh bàn thật và phù hợp với nguồn game-history thứ cấp độc lập:
 
 ```text
     a   b   c   d   e   f   g   h
-8   M   M   M   M   M   M   M   .
-7   .   .   .   .   .   .   .   K
-6   M   M   M   M   M   M   M   M
+8   ●   ●   ●   ●   ●   ●   ●   .
+7   .   .   .   .   .   .   .   ♚
+6   ●   ●   ●   ●   ●   ●   ●   ●
 5   .   .   .   .   .   .   .   .
 4   .   .   .   .   .   .   .   .
-3   M   M   M   M   M   M   M   M
-2   K   .   .   .   .   .   .   .
-1   .   M   M   M   M   M   M   M
+3   ○   ○   ○   ○   ○   ○   ○   ○
+2   ♔   .   .   .   .   .   .   .
+1   .   ○   ○   ○   ○   ○   ○   ○
 ```
 
-- Trắng (`you`): Vua `a2`; Lính `b1-h1` và `a3-h3`; `a1` trống.
-- Đen (`opp`): Vua `h7`; Lính `a6-h6` và `a8-g8`; `h8` trống.
-- Chỉ hàng 4 và 5 trống hoàn toàn lúc bắt đầu.
-- Cách xếp này áp dụng cho cả `REK_POAT` và `MIN_REK_CHANH`; khác biệt giữa hai mode nằm ở luật Vua và Hao Rek, không nằm ở setup.
+- Trắng (`you`): King `a2`; Men `b1-h1`, `a3-h3`; `a1` trống.
+- Đen (`opp`): King `h7`; Men `a6-h6`, `a8-g8`; `h8` trống.
+- Hai đội hình đối xứng quay 180°.
 
-## Public API ổn định
+## Rule confidence tóm tắt
 
-Import từ `lib/rek-engine/index.ts`:
+| Rule | Status nghiên cứu | Engine hiện tại |
+|---|---|---|
+| Bàn 8×8 | `CONFIRMED` | Có |
+| 1 King + 15 Men mỗi bên | `CONFIRMED` | Có |
+| Mục tiêu bắt King | `CONFIRMED` | Có |
+| Rek ăn cặp hai phía | `CONFIRMED` | Có |
+| Bao/vây quân bị bí | `CONFIRMED principle` | Có |
+| Setup 7+King+8 `a2/h7` | `PROJECT-CONFIRMED + STRONG` | Có |
+| Đi trực giao nhiều ô | `STRONG EVIDENCE` | Có |
+| Poat BFS / zero liberties | `STRONG ENGINE INTERPRETATION` | Có |
+| Rek 4 do hai trục đồng thời | `INFERRED` | Có |
+| Global compulsory Rek trong Min | `UNVERIFIED exact rule` | Có |
+| Min violation = thua ngay | `UNVERIFIED exact semantics` | Có |
+| Zero legal moves = instant win | `UNVERIFIED` | Có |
+| Threefold repetition | `PROJECT EXTENSION` | Có |
+| Lone King 32 | `PROJECT EXTENSION` | Có |
+
+Chi tiết evidence và source links nằm trong `HUONG_DAN_LUAT_CO_REK_KHMER.md`.
+
+## Public API
+
+Consumer nên đi qua `RekGame`; UI/server không được duplicate luật:
 
 ```ts
 import { coordToIdx, createGame, deserializeGame } from './lib/rek-engine'
 
 const game = createGame('REK_POAT')
-
 const from = coordToIdx('a3')
 const to = coordToIdx('a4')
 
-const legalTargets = game.getLegalMoves(from)
-if (legalTargets.includes(to)) {
+if (game.getLegalMoves(from).includes(to)) {
   game.makeMove(from, to)
 }
 
 const state = game.getState()
 const snapshot = game.serialize()
 const loaded = deserializeGame(snapshot)
-
-loaded.undo() // false: undo history is process-local and is not serialized
 ```
 
-`RekGame` không tự quyết luật. `getLegalMoves()` dùng tập rule-legal từ core engine và `makeMove()` chuyển toàn bộ adjudication sang `executeMove()`. Trong `MIN_REK_CHANH`, UI có thể chỉ hiển thị nước Rek bắt buộc, nhưng nếu client/server vẫn gửi một nước bỏ qua Hao Rek thì core engine sẽ xử thua đúng luật.
+`session.ts` chỉ quản current state, undo và persistence. Rule legality/adjudication phải đi qua core engine.
 
-Snapshot save/load dùng schema version `1`, validate cấu trúc board/state, piece ID, King count, status/winner và metadata trước khi cho state quay lại session.
+## Current turn pipeline
 
-## AI và search contract
+```text
+input from/to
+→ validate status + side to move
+→ geometric movement
+→ current Min Rek compulsory filter
+→ move piece
+→ Rek captures
+→ Poat captures
+→ King / piece / immobilization terminal checks
+→ current draw extensions
+→ switch turn
+```
 
-AI không tự viết lại luật di chuyển/Rek/Poat. Tất cả candidate moves và tactical metadata đều lấy từ `getMoveResults()` của core engine.
+Xem `ENGINE_ARCHITECTURE_REK_KHMER.md` để biết khối nào đã có evidence mạnh và khối nào còn là project interpretation.
 
-- `easy`: cố ý có randomness; ưu tiên capture với xác suất nhưng không đảm bảo chiến thuật tối ưu.
-- `medium`: deterministic alpha-beta, depth `2`; nhìn đủ một phản đòn trực tiếp để tránh các nước kiểu “ăn quân rồi mất Vua ngay”.
-- `hard`: deterministic alpha-beta, depth `3` ở thế rộng/nhiều quân; chỉ tăng lên depth `4` khi root có tối đa 10 nước **và** tổng quân còn ≤18, hoặc depth `5` khi root có tối đa 4 nước **và** tổng quân còn ≤10.
-- Mobility heuristic dùng **rule-legal moves**, nên trong `MIN_REK_CHANH` các quiet move bị Hao Rek cấm không còn được tính nhầm vào điểm thế trận.
-- Terminal immobilization được kiểm tra trước depth cutoff.
-- Horizon có tactical extension cho Royal capture ngay lượt kế tiếp.
-- Transposition cache chỉ lưu node đã search đầy đủ; node bị alpha-beta prune không bị ghi như một exact score.
-- `analyzeAiMove()` trả cùng quyết định với `chooseAiMove()` cho Medium/Hard nhưng kèm deterministic search counters (`nodes`, `leaves`, `cutoffs`, `cacheHits`, `legalMoveGenerations`) để benchmark/regression mà không phụ thuộc tốc độ runner.
+## AI contract
 
-`ai-search-regression-tests.ts` khóa tactical safety và node-count budget để thay đổi AI về sau không vô tình làm yếu logic hoặc gây search explosion.
+AI không tự định nghĩa luật. Candidate moves và tactical metadata đến từ `getMoveResults()` / core preview logic.
 
-## AI-vs-AI tournament regression
+- `easy`: intentional randomness.
+- `medium`: deterministic alpha-beta depth 2.
+- `hard`: depth 3 mặc định; adaptive depth 4/5 ở position hẹp/endgame.
+- rule-legal mobility được dùng trong evaluation.
+- terminal immobilization được kiểm tra trước depth cutoff.
+- có immediate Royal-capture horizon extension.
+- pruned alpha-beta bounds không được cache như exact value.
+- `analyzeAiMove()` trả search diagnostics deterministic.
 
-`ai-tournament.ts` chạy Hard-vs-Medium ở cả `REK_POAT` và `MIN_REK_CHANH` với các nguyên tắc:
+**Lưu ý:** AI Min Rek Chanh hiện search theo compulsory-Rek model của engine. Không nên tune chiến lược Min sâu hơn trước khi exact Hao Rek semantics được khóa bằng evidence.
 
-- opening diversity dùng seed deterministic nhưng **chỉ chọn từ legal moves của core engine**;
-- Hard/Medium đổi màu `you`/`opp` sau mỗi ván để tránh bias bên đi;
-- mọi AI move được đối chiếu lại với legal set rồi mới gọi `RekGame.makeMove()`;
-- `maxPlies` chỉ là giới hạn benchmark; ván chạm cap được báo là `capped`, **không bị giả thành hòa theo luật**;
-- thống kê gồm Hard wins, Medium wins, engine draws, capped games, illegal moves, average/max plies và search-node totals/max.
+## AI tournament regression
 
-CI chạy tournament smoke nhỏ ở mọi thay đổi engine để khóa legality, determinism, color balance và node budget. Smoke hiện có 5 assertions riêng; cùng các suite trước đó đưa tổng regression lên **93/93**.
+Tournament harness:
 
-Tournament lớn được tách khỏi CI thường vì Hard alpha-beta có chi phí đáng kể. Runner hỗ trợ cấu hình rõ ràng:
+- seeded opening chỉ lấy từ legal moves của engine;
+- Hard/Medium đổi bên để giảm color bias;
+- mọi AI move được xác nhận legality trước khi execute;
+- theo dõi wins/draws/capped/illegal moves/plies/search nodes.
+
+CI chỉ chạy smoke nhỏ. Benchmark lớn chạy thủ công:
 
 ```bash
-# baseline nhỏ mặc định: 2 ván/mode
 npm run tournament:ai
-
-# tùy chỉnh
 node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-plies=160
-
-# 200 ván tổng (100/mode) — long-running benchmark có chủ đích
 npm run tournament:ai:200
 ```
 
-GitHub Actions có workflow manual `Rek AI Tournament Baseline`, cho phép nhập `games_per_mode`, `opening_plies`, `max_plies`. Không chạy tournament 200 ván trên mọi PR vì smoke CI đã cho thấy searched AI plies đắt hơn unit tests rất nhiều; benchmark lớn chỉ nên chạy khi cần lập hoặc so baseline AI.
-
-## Rule lock theo hướng dẫn Khmer
-
-`rule-guide-lock-tests.ts` khóa các điểm cốt lõi trực tiếp từ tài liệu luật:
-
-- Setup canonical 7+Vua+8: Vua Trắng `a2`, Vua Đen `h7`, hai góc `a1`/`h8` trống và mỗi bên đủ 16 quân.
-- Hàng quân trước nằm ở rank 3/rank 6; tùy cột, quân có 2 hoặc 3 nước mở đầu do các khoảng trống palace ở rank 2/rank 7.
-- Hàng sau `b1-h1` và `a8-g8` có các đường trượt qua khoảng trống cạnh Vua; không được giả định toàn bộ hàng sau bị khóa như setup cũ.
-- Chỉ đi trực giao và ô đích bắt buộc trống.
-- King đi như Man trong `REK_POAT`, đứng yên trong `MIN_REK_CHANH`.
-- Rek bắt 2 hoặc 4 quân theo hai trục.
-- Poat dùng connected-component + liberties, kể cả ở biên/góc.
-- Pipeline cố định: **move → Rek → Poat → check thắng/thua**.
-- Hao Rek bắt buộc trong `MIN_REK_CHANH`; Rek vẫn tự chọn trong `REK_POAT`.
-- Bắt King là điều kiện kết thúc ván.
-
-Long-run simulation hiện chạy **4.000 deterministic legal plies** tổng cộng qua hai mode và kiểm tra liên tục tính bất biến của state, bảo toàn quân, unique piece ID, repetition bookkeeping và cached Rek count.
-
-## Kiểm tra lỗi “không di chuyển quân”
-
-Audit không phát hiện lỗi trong pipeline sinh/thực thi nước đi của engine. Engine sinh nước theo 4 hướng trực giao, chỉ qua ô trống và không nhảy qua quân cản.
-
-Với setup canonical hiện tại:
-
-1. Quân Trắng tại `a3` có thể mở `a3 → a4` hoặc `a3 → a5`; các quân `b3-h3` còn có thể lùi vào khoảng trống rank 2.
-2. Quân sau `b1` có thể trượt sang `a1` hoặc lên `b2`; phía Đen đối xứng với `g8 → h8/g7`.
-3. Trong `MIN_REK_CHANH`, Vua tại `a2`/`h7` vẫn phải đứng yên hoàn toàn theo luật mode.
-
-Regression test `MOVE-01` khóa nước khai cuộc `a3 → a4`. `MOVE-02` khóa chính xác các khoảng trống `a1/h8`, vị trí Vua `a2/h7` và khả năng trượt của hàng sau.
-
-Ở lớp UI cũ, toàn bộ ô bàn cờ từng bị `disabled` khi cờ `interactive` là false (ví dụ: không phải lượt điều khiển, modal mở hoặc trạng thái kết nối). Browser smoke cũ chỉ kiểm tra render/layout chứ không thực sự click quân và ô đích, nên lỗi tương tác UI có thể lọt qua dù engine test xanh. Lớp UI đó không còn nằm trong engine-only repository này.
-
-## Chạy kiểm thử
+## Testing
 
 ```bash
 npm install --no-package-lock
@@ -153,4 +146,18 @@ npm run typecheck
 npm test
 ```
 
-Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/rule-guide/public-API/AI/state/draw/puzzle/simulation/movement, gồm AI search regression, tournament smoke và deterministic node-count benchmark.
+Bộ regression hiện bao phủ core/spec/guide/public API/state/draw/puzzles/simulation/movement/AI search/tournament.
+
+Khi research thay đổi rule:
+
+```text
+Evidence mới
+→ update HUONG_DAN_LUAT_CO_REK_KHMER.md
+→ update SPEC_ENGINE_CO_REK_KHMER.md
+→ add reproduction fixture
+→ sửa core engine tối thiểu
+→ update affected tests
+→ full CI + tournament smoke
+```
+
+Không sửa engine chỉ để khớp một app game có sẵn.
