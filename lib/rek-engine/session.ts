@@ -1,5 +1,6 @@
 import {
   BOARD_SIZE,
+  DEFAULT_LONE_KING_DRAW_LIMIT,
   DEFAULT_RULESET,
   CanonicalGameState,
   Cell,
@@ -12,9 +13,12 @@ import {
 } from './types'
 import {
   createInitialState,
+  createPositionKey,
   executeMove,
   getAllRekOpportunities,
+  getMoveResults,
   getStateMoveResults,
+  hasLoneKing,
   normalizePositionCounts,
 } from './engine'
 
@@ -231,6 +235,75 @@ function assertGameState(value: unknown): asserts value is GameState {
 }
 
 /**
+ * Persisted snapshots are stricter than arbitrary in-memory custom/training
+ * states. The loader rejects combinations that the canonical engine cannot
+ * produce, while RekGame(GameState) remains available for controlled fixtures.
+ */
+function assertPersistedGameStateSemantics(state: CanonicalGameState): void {
+  const countKings = (player: PlayerColor) =>
+    state.board.filter((piece) => piece?.player === player && piece.king).length
+  const youKings = countKings('you')
+  const oppKings = countKings('opp')
+
+  if (state.status === 'playing' || state.status === 'draw') {
+    if (youKings !== 1 || oppKings !== 1) {
+      throw new Error(`${state.status} snapshot must contain exactly one King per side`)
+    }
+  } else if (state.status === 'won') {
+    const winnerKings = state.winner === 'you' ? youKings : oppKings
+    if (winnerKings !== 1) throw new Error('won snapshot must retain the winner King')
+  }
+
+  if (state.status === 'playing') {
+    if (state.winReason !== null) throw new Error('playing snapshot cannot have a winReason')
+  } else if (typeof state.winReason !== 'string' || state.winReason.trim().length === 0) {
+    throw new Error('finished snapshot must contain a non-empty winReason')
+  }
+
+  const context = state.haoRekContext
+  if (context?.active) {
+    if (state.mode !== 'MIN_REK_CHANH' || state.status !== 'playing') {
+      throw new Error('active Hao Rek context requires a playing MIN_REK_CHANH snapshot')
+    }
+
+    const seenResponses = new Set<string>()
+    for (const response of context.allowedResponses) {
+      const key = `${response.from}:${response.to}`
+      if (seenResponses.has(key)) throw new Error('active Hao Rek responses must be unique')
+      seenResponses.add(key)
+
+      const piece = state.board[response.from]
+      const result = getMoveResults(state.board, response.from, state.mode).get(response.to)
+      if (!piece || piece.player !== state.turn || !result?.rek) {
+        throw new Error('active Hao Rek response must be a legal Rek for the side to move')
+      }
+    }
+  }
+
+  if (state.positionCounts) {
+    const currentKey = createPositionKey(
+      state.board,
+      state.turn,
+      state.mode,
+      state.haoRekContext
+    )
+    if ((state.positionCounts[currentKey] ?? 0) < 1) {
+      throw new Error('snapshot.positionCounts must contain the current rule-relevant position')
+    }
+  }
+
+  const loneKing = hasLoneKing(state.board)
+  const loneKingMoveCount = state.loneKingMoveCount ?? 0
+  const drawMoveLimit = state.drawMoveLimit ?? DEFAULT_LONE_KING_DRAW_LIMIT
+  if (!loneKing && loneKingMoveCount !== 0) {
+    throw new Error('snapshot loneKingMoveCount must be zero when no side has a lone King')
+  }
+  if (state.status === 'playing' && loneKing && loneKingMoveCount >= drawMoveLimit) {
+    throw new Error('playing snapshot cannot already satisfy the lone-King draw threshold')
+  }
+}
+
+/**
  * Canonicalize all public/session state. Legacy `REK_POAT` snapshots remain
  * readable but are rewritten in memory as `REK_STANDARD`; repetition keys are
  * migrated into the same canonical namespace so draw bookkeeping is preserved.
@@ -239,6 +312,14 @@ function normalizeState(state: GameState): CanonicalGameState {
   assertGameState(state)
   const normalized = cloneGameState(state)
   normalized.mode = normalizeRuleSet(normalized.mode)
+
+  if (
+    normalized.haoRekContext?.active &&
+    (normalized.mode !== 'MIN_REK_CHANH' || normalized.status !== 'playing')
+  ) {
+    throw new Error('active Hao Rek context requires a playing MIN_REK_CHANH state')
+  }
+
   normalized.positionCounts = normalized.positionCounts
     ? normalizePositionCounts(normalized.positionCounts)
     : normalized.positionCounts
@@ -247,16 +328,20 @@ function normalizeState(state: GameState): CanonicalGameState {
       ? getAllRekOpportunities(normalized.board, normalized.turn, normalized.mode).length
       : 0
   normalized.haoRekContext =
-    normalized.mode === 'MIN_REK_CHANH' && normalized.status === 'playing'
-      ? normalized.haoRekContext ?? null
+    normalized.mode === 'MIN_REK_CHANH' &&
+    normalized.status === 'playing' &&
+    normalized.haoRekContext?.active
+      ? normalized.haoRekContext
       : null
   return normalized as CanonicalGameState
 }
 
 export function serializeGameState(state: GameState): string {
+  const normalized = normalizeState(state)
+  assertPersistedGameStateSemantics(normalized)
   const snapshot: RekGameSnapshotV1 = {
     version: REK_GAME_SNAPSHOT_VERSION,
-    state: normalizeState(state),
+    state: normalized,
   }
   return JSON.stringify(snapshot)
 }
@@ -274,7 +359,9 @@ export function deserializeGameState(serialized: string): CanonicalGameState {
   }
 
   assertGameState(decoded.state)
-  return normalizeState(decoded.state)
+  const normalized = normalizeState(decoded.state)
+  assertPersistedGameStateSemantics(normalized)
+  return normalized
 }
 
 /**
