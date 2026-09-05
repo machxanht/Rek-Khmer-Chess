@@ -11,7 +11,13 @@ import {
   createInitialState,
   executeMove,
   getAllRekOpportunities,
+  idxToCoord,
 } from './engine'
+import {
+  RekGame,
+  deserializeGameState,
+  serializeGameState,
+} from './session'
 
 function emptyBoard(): Cell[] {
   return Array(BOARD_SIZE * BOARD_SIZE).fill(null)
@@ -51,6 +57,16 @@ function makeState(
 
 function expect(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
+}
+
+function expectThrows(fn: () => unknown, label: string): void {
+  let threw = false
+  try {
+    fn()
+  } catch {
+    threw = true
+  }
+  expect(threw, `${label} must throw`)
 }
 
 export function runStateContractTests(): {
@@ -231,6 +247,77 @@ export function runStateContractTests(): {
     expect(next.availableRekMovesCount === 0, 'Terminal state must expose zero future Rek opportunities')
 
     return 'No cached next-turn tactical opportunities survive a terminal result.'
+  })
+
+  run('STATE-09', 'coordToIdx accepts only canonical lowercase a1-h8 coordinates', () => {
+    for (const coord of ['a1', 'h8', 'd4', 'a8', 'h1']) {
+      const index = coordToIdx(coord)
+      expect(index >= 0 && index < BOARD_SIZE * BOARD_SIZE, `${coord} must map inside the board`)
+      expect(idxToCoord(index) === coord, `${coord} must round-trip through idxToCoord`)
+    }
+
+    for (const coord of ['', 'a0', 'a9', 'i1', 'A1', 'a10', '11', 'a', 'h8x']) {
+      expectThrows(() => coordToIdx(coord), `Invalid coordinate ${JSON.stringify(coord)}`)
+    }
+
+    return 'Exported coordinate parsing now fails explicitly instead of returning NaN/out-of-range indexes.'
+  })
+
+  run('STATE-10', 'Persisted snapshots enforce semantic invariants without banning custom in-memory fixtures', () => {
+    const canonical = JSON.parse(serializeGameState(createInitialState('REK_STANDARD'))) as {
+      version: number
+      state: GameState
+    }
+
+    const missingKing = JSON.parse(JSON.stringify(canonical)) as typeof canonical
+    missingKing.state.board[coordToIdx('h7')] = null
+    expectThrows(
+      () => deserializeGameState(JSON.stringify(missingKing)),
+      'Playing snapshot without both Kings'
+    )
+
+    const staleReason = JSON.parse(JSON.stringify(canonical)) as typeof canonical
+    staleReason.state.winReason = 'stale terminal reason'
+    expectThrows(
+      () => deserializeGameState(JSON.stringify(staleReason)),
+      'Playing snapshot with a winReason'
+    )
+
+    const staleRepetition = JSON.parse(JSON.stringify(canonical)) as typeof canonical
+    staleRepetition.state.positionCounts = { bogus: 1 }
+    expectThrows(
+      () => deserializeGameState(JSON.stringify(staleRepetition)),
+      'Snapshot missing its current repetition key'
+    )
+
+    const staleLoneKingClock = JSON.parse(JSON.stringify(canonical)) as typeof canonical
+    staleLoneKingClock.state.loneKingMoveCount = 2
+    expectThrows(
+      () => deserializeGameState(JSON.stringify(staleLoneKingClock)),
+      'Snapshot with lone-King clock but no lone King'
+    )
+
+    const invalidHao = JSON.parse(JSON.stringify(canonical)) as typeof canonical
+    invalidHao.state.mode = 'MIN_REK_CHANH'
+    invalidHao.state.positionCounts = undefined
+    invalidHao.state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('a6'), to: coordToIdx('a5') },
+      allowedResponses: [{ from: coordToIdx('a3'), to: coordToIdx('a4') }],
+    }
+    expectThrows(
+      () => deserializeGameState(JSON.stringify(invalidHao)),
+      'Active Hao response that is not a Rek'
+    )
+
+    const customBoard = emptyBoard()
+    put(customBoard, 'a2', 'you', true, 'custom_king')
+    const customState = makeState(customBoard, 'you', 'REK_STANDARD')
+    const customGame = new RekGame(customState)
+    expect(customGame.getState().status === 'playing', 'Custom in-memory fixture must remain constructible')
+    expectThrows(() => customGame.serialize(), 'Persisting custom playing fixture without both Kings')
+
+    return 'Persistence is strict about rule-relevant state while custom/debug GameState construction remains available in memory.'
   })
 
   const passed = results.filter((result) => result.passed).length
