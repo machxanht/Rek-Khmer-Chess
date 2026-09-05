@@ -1,9 +1,11 @@
 import {
   BOARD_SIZE,
+  CanonicalGameState,
   Cell,
-  GameMode,
   GameState,
   PlayerColor,
+  RuleSet,
+  RuleSetInput,
   TestResult,
 } from './types'
 import {
@@ -43,7 +45,7 @@ function put(
 function makeState(
   board: Cell[],
   turn: PlayerColor = 'you',
-  mode: GameMode = 'REK_STANDARD'
+  mode: RuleSetInput = 'REK_STANDARD'
 ): GameState {
   return {
     board,
@@ -296,6 +298,20 @@ export function runPublicApiTests(): {
     )
 
     return 'Catalog metadata is presentation-only: aliases normalize to canonical IDs while legality remains owned by the engine.'
+  })
+
+  run('API-10', 'session facade exposes canonical state types while accepting legacy ruleset input', () => {
+    const legacyInput: RuleSetInput = 'REK_POAT'
+    const state: CanonicalGameState = createGame(legacyInput).getState()
+    const canonicalMode: RuleSet = state.mode
+
+    expect(canonicalMode === 'REK_STANDARD', 'Canonical public state type must normalize legacy input')
+
+    const reloaded: CanonicalGameState = deserializeGameState(serializeGameState(state))
+    const reloadedMode: RuleSet = reloaded.mode
+    expect(reloadedMode === 'REK_STANDARD', 'Canonical deserialize return type must never expose legacy mode')
+
+    return 'Typecheck now proves compatibility input is separate from canonical session output.'
   })
 
   const passed = results.filter((result) => result.passed).length

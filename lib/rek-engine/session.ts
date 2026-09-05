@@ -1,12 +1,13 @@
 import {
   BOARD_SIZE,
   DEFAULT_RULESET,
+  CanonicalGameState,
   Cell,
-  GameMode,
   GameState,
   MoveResult,
   Piece,
   PlayerColor,
+  RuleSetInput,
   normalizeRuleSet,
 } from './types'
 import {
@@ -21,7 +22,7 @@ export const REK_GAME_SNAPSHOT_VERSION = 1 as const
 
 interface RekGameSnapshotV1 {
   version: typeof REK_GAME_SNAPSHOT_VERSION
-  state: GameState
+  state: CanonicalGameState
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -32,7 +33,7 @@ function isPlayerColor(value: unknown): value is PlayerColor {
   return value === 'you' || value === 'opp'
 }
 
-function isGameMode(value: unknown): value is GameMode {
+function isRuleSetInput(value: unknown): value is RuleSetInput {
   return value === 'REK_STANDARD' || value === 'REK_POAT' || value === 'MIN_REK_CHANH'
 }
 
@@ -49,6 +50,8 @@ function clonePiece(piece: Piece): Piece {
   return { ...piece }
 }
 
+export function cloneGameState(state: CanonicalGameState): CanonicalGameState
+export function cloneGameState(state: GameState): GameState
 export function cloneGameState(state: GameState): GameState {
   return {
     ...state,
@@ -111,7 +114,7 @@ function assertGameState(value: unknown): asserts value is GameState {
   }
 
   if (!isPlayerColor(value.turn)) throw new Error('snapshot.state.turn is invalid')
-  if (!isGameMode(value.mode)) throw new Error('snapshot.state.mode is invalid')
+  if (!isRuleSetInput(value.mode)) throw new Error('snapshot.state.mode is invalid')
   if (value.status !== 'playing' && value.status !== 'won' && value.status !== 'draw') {
     throw new Error('snapshot.state.status is invalid')
   }
@@ -196,7 +199,7 @@ function assertGameState(value: unknown): asserts value is GameState {
  * readable but are rewritten in memory as `REK_STANDARD`; repetition keys are
  * migrated into the same canonical namespace so draw bookkeeping is preserved.
  */
-function normalizeState(state: GameState): GameState {
+function normalizeState(state: GameState): CanonicalGameState {
   assertGameState(state)
   const normalized = cloneGameState(state)
   normalized.mode = normalizeRuleSet(normalized.mode)
@@ -207,7 +210,7 @@ function normalizeState(state: GameState): GameState {
     normalized.status === 'playing'
       ? getAllRekOpportunities(normalized.board, normalized.turn, normalized.mode).length
       : 0
-  return normalized
+  return normalized as CanonicalGameState
 }
 
 export function serializeGameState(state: GameState): string {
@@ -218,7 +221,7 @@ export function serializeGameState(state: GameState): string {
   return JSON.stringify(snapshot)
 }
 
-export function deserializeGameState(serialized: string): GameState {
+export function deserializeGameState(serialized: string): CanonicalGameState {
   let decoded: unknown
   try {
     decoded = JSON.parse(serialized)
@@ -241,12 +244,12 @@ export function deserializeGameState(serialized: string): GameState {
  * only session concerns: current state, undo history, and persistence.
  */
 export class RekGame {
-  private state: GameState
-  private history: GameState[] = []
+  private state: CanonicalGameState
+  private history: CanonicalGameState[] = []
 
-  constructor(initial: GameMode | GameState = DEFAULT_RULESET) {
+  constructor(initial: RuleSetInput | GameState = DEFAULT_RULESET) {
     this.state = typeof initial === 'string'
-      ? createInitialState(normalizeRuleSet(initial))
+      ? normalizeState(createInitialState(normalizeRuleSet(initial)))
       : normalizeState(initial)
   }
 
@@ -254,7 +257,7 @@ export class RekGame {
     return new RekGame(deserializeGameState(serialized))
   }
 
-  public getState(): GameState {
+  public getState(): CanonicalGameState {
     return cloneGameState(this.state)
   }
 
@@ -285,7 +288,7 @@ export class RekGame {
   public undo(): boolean {
     const previous = this.history.pop()
     if (!previous) return false
-    this.state = normalizeState(previous)
+    this.state = previous
     return true
   }
 
@@ -293,8 +296,8 @@ export class RekGame {
     return this.history.length > 0
   }
 
-  public reset(mode: GameMode = this.state.mode): void {
-    this.state = createInitialState(normalizeRuleSet(mode))
+  public reset(mode: RuleSetInput = this.state.mode): void {
+    this.state = normalizeState(createInitialState(normalizeRuleSet(mode)))
     this.history = []
   }
 
@@ -303,7 +306,7 @@ export class RekGame {
   }
 }
 
-export function createGame(mode: GameMode = DEFAULT_RULESET): RekGame {
+export function createGame(mode: RuleSetInput = DEFAULT_RULESET): RekGame {
   return new RekGame(mode)
 }
 

@@ -1,9 +1,9 @@
-import { GameMode, PlayerColor, RuleSet, normalizeRuleSet } from './types'
+import { PlayerColor, RuleSet, RuleSetInput, normalizeRuleSet } from './types'
 import { analyzeAiMove, getAllLegalMoves, AiDifficulty } from './ai'
 import { createGame } from './session'
 
 export interface TournamentGameConfig {
-  mode: GameMode
+  mode: RuleSetInput
   seed: number
   youDifficulty: Exclude<AiDifficulty, 'easy'>
   oppDifficulty: Exclude<AiDifficulty, 'easy'>
@@ -132,7 +132,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
 
 /** Runs Hard-vs-Medium with colors swapped every game to remove side bias. */
 export function runTournamentSeries(
-  mode: GameMode,
+  mode: RuleSetInput,
   games: number,
   options: TournamentSeriesOptions = {}
 ): TournamentSummary {

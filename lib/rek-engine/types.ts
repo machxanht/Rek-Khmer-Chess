@@ -17,19 +17,21 @@ export type Cell = Piece | null
 /** Canonical rule sets exposed by the engine. */
 export type RuleSet = 'REK_STANDARD' | 'MIN_REK_CHANH'
 
-/**
- * Legacy identifier kept only for backward-compatible callers/snapshots.
- * `REK_POAT` is not treated as a separate traditional game mode; it maps to
- * the canonical `REK_STANDARD` rule set.
- */
-export type LegacyGameMode = 'REK_POAT'
+/** Legacy identifier accepted only as compatibility input. */
+export type LegacyRuleSet = 'REK_POAT'
 
-/** @deprecated Prefer `RuleSet` for new code. */
-export type GameMode = RuleSet | LegacyGameMode
+/**
+ * Input accepted at compatibility boundaries. New application code should use
+ * the canonical `RuleSet` values; legacy callers may still submit `REK_POAT`.
+ */
+export type RuleSetInput = RuleSet | LegacyRuleSet
+
+/** @deprecated Prefer `RuleSet` for canonical state and `RuleSetInput` for compatibility inputs. */
+export type GameMode = RuleSetInput
 
 export const DEFAULT_RULESET: RuleSet = 'REK_STANDARD'
 
-export function normalizeRuleSet(mode: GameMode = DEFAULT_RULESET): RuleSet {
+export function normalizeRuleSet(mode: RuleSetInput = DEFAULT_RULESET): RuleSet {
   return mode === 'REK_POAT' ? 'REK_STANDARD' : mode
 }
 
@@ -54,14 +56,18 @@ export interface MoveResult {
 
 export type GameStatus = 'playing' | 'won' | 'draw'
 
+/**
+ * Compatibility state shape accepted at load/custom-state boundaries.
+ * Legacy serialized states may still contain `mode: 'REK_POAT'` before
+ * normalization.
+ */
 export interface GameState {
   board: Cell[]
   turn: PlayerColor
   status: GameStatus
   winner: PlayerColor | 'draw' | null
   winReason: string | null
-  /** Canonical sessions store `REK_STANDARD` or `MIN_REK_CHANH`; legacy states may still deserialize from `REK_POAT`. */
-  mode: GameMode
+  mode: RuleSetInput
   lastMove: { from: number; to: number } | null
   lastCaptured: number[]
   lastRek: boolean
@@ -90,6 +96,12 @@ export interface GameState {
    */
   drawMoveLimit?: number
 }
+
+/**
+ * State guaranteed by the public session facade after normalization. Public
+ * callers never receive the legacy `REK_POAT` identifier in this shape.
+ */
+export type CanonicalGameState = Omit<GameState, 'mode'> & { mode: RuleSet }
 
 export interface Direction {
   dr: number
