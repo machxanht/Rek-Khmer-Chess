@@ -30,6 +30,10 @@ let pieceIdCounter = 0
 export const makeId = () => `p_${pieceIdCounter++}`
 
 export function coordToIdx(coord: string): number {
+  if (!/^[a-h][1-8]$/.test(coord)) {
+    throw new Error(`Invalid Rek board coordinate: ${String(coord)}`)
+  }
+
   const file = coord.charCodeAt(0) - 'a'.charCodeAt(0)
   const rank = parseInt(coord[1], 10)
   const row = 8 - rank
