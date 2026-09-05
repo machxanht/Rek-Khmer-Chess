@@ -400,6 +400,49 @@ Nếu thêm context, phải bump/migrate snapshot contract theo nhu cầu thay v
 
 ---
 
+### 13.1. Reconstructed media implications
+
+Real-board footage `1000009344.mp4` provides multiple reconstructable events:
+
+- blocker leaves the middle square and exposes a new response;
+- mover enters a new position and creates a pair around a gap;
+- pre-existing Rek can coexist with a newly-created call response;
+- one response can create a counter-response and continue the chain.
+
+Therefore future architecture must preserve **transition identity**, not only board identity.
+
+Candidate lifecycle:
+
+```text
+previous state
+   ↓
+compute responder Rek set BEFORE
+   ↓
+execute opponent move
+   ↓
+compute responder Rek set AFTER
+   ↓
+newlyCreated = AFTER - BEFORE
+   ↓
+persist active Hao context if newlyCreated != empty
+   ↓
+next player's rule-legal generation exposes engine-owned allowedResponses
+   ↓
+response / violation adjudication
+   ↓
+response becomes next transition
+   ↓
+derive next Hao context
+   ↓
+chain until no newly-created response exists
+```
+
+This is **PROPOSED / NOT IMPLEMENTED**. Multiple-new-target choice and verbal-call requirements remain unresolved.
+
+The board alone is insufficient to distinguish a pre-existing Rek from a newly-created Hao response. This matters for snapshots/replays, undo, online synchronization, AI search and deterministic tournament reconstruction.
+
+---
+
 ## 14. Terminal/draw boundary
 
 Current order:
