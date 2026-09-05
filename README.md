@@ -18,6 +18,7 @@ Identifier cũ `REK_POAT` được giữ **chỉ để backward compatibility**.
 - `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide: CONFIRMED / STRONG EVIDENCE / ENGINE INTERPRETATION / UNVERIFIED.
 - `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mà engine hiện thực thi.
 - `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, turn flow và ranh giới rule research.
+- `RESEARCH_HAO_REK_2026.md` — research note về exact `ហៅរែក`: evidence mới, các giả thuyết chưa đủ chuẩn để code và evidence gate trước khi đổi `MIN_REK_CHANH`.
 - `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển.
 
 Game/app trên Google Play, App Store hoặc app clone **không được dùng làm positive rule evidence**.
@@ -123,6 +124,8 @@ Những phần **current engine đang chạy nhưng chưa được coi là histo
 - zero-move instant win;
 - threefold repetition;
 - lone-King draw limit.
+
+Research pass 2026 về Hao Rek đã tìm thấy native Khmer evidence cho thấy **một cặp Rek mở sẵn có thể không tự tạo “lời gọi”**, và obligation có thể phụ thuộc vào một nước đi làm lộ pair. Evidence này đủ để nghi ngờ global state-trigger hiện tại nhưng **chưa đủ independent authoritative corroboration để đổi engine**. Chi tiết và evidence gate nằm trong `RESEARCH_HAO_REK_2026.md`.
 
 Không thay các rule này chỉ vì suy đoán. Khi research đủ mạnh, cập nhật guide → SPEC → code → regression tests theo đúng thứ tự.
 
