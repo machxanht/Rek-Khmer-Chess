@@ -21,7 +21,6 @@ import {
   previewMove,
   hasKing,
   countPieces,
-  countTotalLegalMoves,
   getAllRekOpportunities,
 } from './engine'
 
@@ -40,6 +39,50 @@ export interface AiLegalMove {
   capturesKing: boolean
   rek: boolean
   poat: boolean
+}
+
+/** Deterministic counters for search-quality/performance regression tests. */
+export interface AiSearchStats {
+  nodes: number
+  leaves: number
+  cutoffs: number
+  cacheHits: number
+  legalMoveGenerations: number
+}
+
+export interface AiAnalysis {
+  move: AiMove | null
+  depth: number
+  stats: AiSearchStats
+}
+
+function createSearchStats(): AiSearchStats {
+  return {
+    nodes: 0,
+    leaves: 0,
+    cutoffs: 0,
+    cacheHits: 0,
+    legalMoveGenerations: 0,
+  }
+}
+
+/**
+ * Count rule-legal moves rather than merely geometric sliding destinations.
+ * This matters in MIN_REK_CHANH because a compulsory Rek can suppress every
+ * otherwise-geometric quiet move for the side to move.
+ */
+export function countRuleLegalMoves(
+  board: Cell[],
+  player: PlayerColor,
+  mode: GameMode = 'REK_POAT'
+): number {
+  let total = 0
+  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
+    const piece = board[from]
+    if (!piece || piece.player !== player) continue
+    total += getMoveResults(board, from, mode).size
+  }
+  return total
 }
 
 /**
@@ -90,10 +133,10 @@ export function evaluateBoard(
     }
   }
 
-  // Mobility and immediate Rek pressure are useful secondary signals. These
-  // helpers are core-engine calculations, not AI-specific rule copies.
-  const aiMobility = countTotalLegalMoves(board, aiColor, mode)
-  const oppMobility = countTotalLegalMoves(board, oppColor, mode)
+  // Mobility must use the same rule-legal boundary as actual play. In
+  // MIN_REK_CHANH this means quiet moves disappear while any Rek is compulsory.
+  const aiMobility = countRuleLegalMoves(board, aiColor, mode)
+  const oppMobility = countRuleLegalMoves(board, oppColor, mode)
   score += (aiMobility - oppMobility) * 2
 
   const aiReks = getAllRekOpportunities(board, aiColor, mode).length
@@ -155,9 +198,33 @@ function simulateMove(
   return nextBoard
 }
 
+function terminalNoMoveScore(
+  currentTurn: PlayerColor,
+  aiColor: PlayerColor,
+  depth: number
+): number {
+  return currentTurn === aiColor ? -90000 - depth : 90000 + depth
+}
+
+function royalHorizonScore(
+  currentTurn: PlayerColor,
+  aiColor: PlayerColor,
+  depth: number
+): number {
+  return currentTurn === aiColor ? 95000 + depth : -95000 - depth
+}
+
 /**
- * Alpha-Beta minimax with a small transposition cache. The cache key uses the
- * same rule-relevant position identity as draw detection.
+ * Alpha-Beta minimax with an exact-only transposition cache.
+ *
+ * Important correctness details:
+ * - Terminal immobilization is checked before the depth cutoff, so a leaf that
+ *   is already won/lost by zero legal moves is never mistaken for a heuristic
+ *   position.
+ * - At the horizon, an immediate legal Royal capture receives a mate-like score
+ *   to avoid one-ply horizon blunders.
+ * - Nodes pruned by alpha-beta are bounds, not exact values; they are therefore
+ *   deliberately not written to the numeric transposition cache.
  */
 export function minimax(
   board: Cell[],
@@ -167,28 +234,58 @@ export function minimax(
   isMaximizing: boolean,
   aiColor: PlayerColor,
   mode: GameMode,
-  cache: Map<string, number> = new Map()
+  cache: Map<string, number> = new Map(),
+  stats?: AiSearchStats
 ): number {
   const oppColor = opponent(aiColor)
   const currentTurn = isMaximizing ? aiColor : oppColor
+  if (stats) stats.nodes++
 
-  if (depth === 0 || !hasKing(board, aiColor) || !hasKing(board, oppColor)) {
+  if (!hasKing(board, aiColor) || !hasKing(board, oppColor)) {
+    if (stats) stats.leaves++
     return evaluateBoard(board, aiColor, mode)
   }
 
   const cacheKey = `${depth}|${isMaximizing ? 'max' : 'min'}|${createPositionKey(board, currentTurn, mode)}`
   const cached = cache.get(cacheKey)
-  if (cached !== undefined) return cached
+  if (cached !== undefined) {
+    if (stats) stats.cacheHits++
+    return cached
+  }
 
   const moves = getAllLegalMoves(board, currentTurn, mode)
+  if (stats) stats.legalMoveGenerations++
+
+  // Engine rule: a side with zero legal moves is immediately immobilized and
+  // loses. This remains terminal even when the search horizon has been reached.
   if (moves.length === 0) {
-    const terminal = isMaximizing ? -90000 - depth : 90000 + depth
+    if (stats) stats.leaves++
+    const terminal = terminalNoMoveScore(currentTurn, aiColor, depth)
     cache.set(cacheKey, terminal)
     return terminal
   }
 
+  if (depth === 0) {
+    if (stats) stats.leaves++
+
+    // One-ply tactical extension for the most important terminal event. Since
+    // the current side is assumed optimal, an available Royal capture is a
+    // forced choice at this leaf rather than a normal positional evaluation.
+    if (moves.some((move) => move.capturesKing)) {
+      const tactical = royalHorizonScore(currentTurn, aiColor, depth)
+      cache.set(cacheKey, tactical)
+      return tactical
+    }
+
+    const evaluated = evaluateBoard(board, aiColor, mode)
+    cache.set(cacheKey, evaluated)
+    return evaluated
+  }
+
   if (isMaximizing) {
     let maxEval = -Infinity
+    let cutoff = false
+
     for (const move of moves) {
       if (move.capturesKing) {
         maxEval = Math.max(maxEval, 100000 + depth)
@@ -196,17 +293,25 @@ export function minimax(
         const nextBoard = simulateMove(board, move, aiColor, mode)
         maxEval = Math.max(
           maxEval,
-          minimax(nextBoard, depth - 1, alpha, beta, false, aiColor, mode, cache)
+          minimax(nextBoard, depth - 1, alpha, beta, false, aiColor, mode, cache, stats)
         )
       }
       alpha = Math.max(alpha, maxEval)
-      if (beta <= alpha) break
+      if (beta <= alpha) {
+        cutoff = true
+        if (stats) stats.cutoffs++
+        break
+      }
     }
-    cache.set(cacheKey, maxEval)
+
+    // A cutoff returns a lower/upper bound, not an exact minimax value. Keep the
+    // cache numeric and safe by storing only fully searched nodes.
+    if (!cutoff) cache.set(cacheKey, maxEval)
     return maxEval
   }
 
   let minEval = Infinity
+  let cutoff = false
   for (const move of moves) {
     if (move.capturesKing) {
       minEval = Math.min(minEval, -100000 - depth)
@@ -214,62 +319,104 @@ export function minimax(
       const nextBoard = simulateMove(board, move, oppColor, mode)
       minEval = Math.min(
         minEval,
-        minimax(nextBoard, depth - 1, alpha, beta, true, aiColor, mode, cache)
+        minimax(nextBoard, depth - 1, alpha, beta, true, aiColor, mode, cache, stats)
       )
     }
     beta = Math.min(beta, minEval)
-    if (beta <= alpha) break
+    if (beta <= alpha) {
+      cutoff = true
+      if (stats) stats.cutoffs++
+      break
+    }
   }
-  cache.set(cacheKey, minEval)
+
+  if (!cutoff) cache.set(cacheKey, minEval)
   return minEval
 }
 
+function chooseSearchDepth(
+  difficulty: AiDifficulty,
+  rootMoves: number,
+  totalPieces: number
+): number {
+  if (difficulty === 'easy') return 0
+  if (difficulty === 'medium') return 2
+
+  // Hard keeps depth 3 in broad/high-material positions. Extra depth is spent
+  // only when both branching and material have already fallen enough to keep
+  // the deterministic search budget bounded.
+  if (rootMoves <= 4 && totalPieces <= 10) return 5
+  if (rootMoves <= 10 && totalPieces <= 18) return 4
+  return 3
+}
+
 /**
- * Chooses the best engine-legal AI move for the selected difficulty.
+ * Deterministic analysis entry point for Medium/Hard plus search diagnostics.
+ * Easy intentionally remains random and therefore reports zero searched nodes.
  */
-export function chooseAiMove(
+export function analyzeAiMove(
   board: Cell[],
   aiColor: PlayerColor,
   mode: GameMode = 'REK_POAT',
   difficulty: AiDifficulty = 'medium'
-): AiMove | null {
+): AiAnalysis {
+  const stats = createSearchStats()
   const moves = getAllLegalMoves(board, aiColor, mode)
-  if (moves.length === 0) return null
+  const totalPieces = countPieces(board, 'you') + countPieces(board, 'opp')
+  const searchDepth = chooseSearchDepth(difficulty, moves.length, totalPieces)
 
-  // Never overlook an immediate Royal capture at any non-random difficulty.
-  const immediateRoyal = moves.find((move) => move.capturesKing)
-  if (immediateRoyal && difficulty !== 'easy') {
-    return { from: immediateRoyal.from, to: immediateRoyal.to, score: 100000 }
-  }
+  if (moves.length === 0) return { move: null, depth: searchDepth, stats }
 
   if (difficulty === 'easy') {
-    const capturingMoves = moves.filter((m) => m.capturesCount > 0)
+    const capturingMoves = moves.filter((move) => move.capturesCount > 0)
     if (capturingMoves.length > 0 && Math.random() < 0.65) {
       const move = capturingMoves[Math.floor(Math.random() * capturingMoves.length)]
-      return { from: move.from, to: move.to }
+      return { move: { from: move.from, to: move.to }, depth: 0, stats }
     }
     const move = moves[Math.floor(Math.random() * moves.length)]
-    return { from: move.from, to: move.to }
+    return { move: { from: move.from, to: move.to }, depth: 0, stats }
   }
 
-  const searchDepth = difficulty === 'medium' ? 2 : 3
+  // Never overlook an immediate Royal capture at deterministic difficulties.
+  const immediateRoyal = moves.find((move) => move.capturesKing)
+  if (immediateRoyal) {
+    return {
+      move: { from: immediateRoyal.from, to: immediateRoyal.to, score: 100000 },
+      depth: searchDepth,
+      stats,
+    }
+  }
+
   const cache = new Map<string, number>()
   let bestMove: AiMove | null = null
   let bestScore = -Infinity
 
   for (const move of moves) {
     const nextBoard = simulateMove(board, move, aiColor, mode)
-    const searchScore = minimax(
-      nextBoard,
-      searchDepth - 1,
-      -Infinity,
-      Infinity,
-      false,
-      aiColor,
-      mode,
-      cache
-    )
-    // Tiny tactical tie-break only; material/position still dominate minimax.
+    const oppColor = opponent(aiColor)
+
+    // A move that immediately immobilizes the opponent is already a win under
+    // the engine rules; no deeper heuristic search should rank it below a quiet
+    // positional alternative.
+    let searchScore: number
+    if (!hasKing(nextBoard, oppColor) || countRuleLegalMoves(nextBoard, oppColor, mode) === 0) {
+      searchScore = 99000 + searchDepth
+    } else {
+      searchScore = minimax(
+        nextBoard,
+        searchDepth - 1,
+        -Infinity,
+        Infinity,
+        false,
+        aiColor,
+        mode,
+        cache,
+        stats
+      )
+    }
+
+    // Tiny tactical tie-break only; material/position and forced results still
+    // dominate minimax. Stable move ordering makes equal scores deterministic.
     const score = searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
 
     if (score > bestScore) {
@@ -279,5 +426,19 @@ export function chooseAiMove(
   }
 
   const fallback = moves[0]
-  return bestMove ?? { from: fallback.from, to: fallback.to }
+  return {
+    move: bestMove ?? { from: fallback.from, to: fallback.to },
+    depth: searchDepth,
+    stats,
+  }
+}
+
+/** Chooses the best engine-legal AI move for the selected difficulty. */
+export function chooseAiMove(
+  board: Cell[],
+  aiColor: PlayerColor,
+  mode: GameMode = 'REK_POAT',
+  difficulty: AiDifficulty = 'medium'
+): AiMove | null {
+  return analyzeAiMove(board, aiColor, mode, difficulty).move
 }

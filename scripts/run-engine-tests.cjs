@@ -21,6 +21,7 @@ const sourceFiles = [
   'lib/rek-engine/puzzle-tests.ts',
   'lib/rek-engine/simulation-tests.ts',
   'lib/rek-engine/ai-quality-tests.ts',
+  'lib/rek-engine/ai-search-regression-tests.ts',
   'lib/rek-engine/move-regression-tests.ts',
   'lib/rek-engine/rule-guide-lock-tests.ts',
   'lib/rek-engine/public-api-tests.ts',
@@ -33,6 +34,8 @@ function printReport(label, report) {
     console.log(`[${mark}] ${result.id} - ${result.title}`)
     if (!result.passed && result.error) {
       console.error(`       ${result.error}`)
+    } else if (label === 'Rek AI search regression' && result.passed && result.details) {
+      console.log(`       ${result.details}`)
     }
   }
 }
@@ -73,6 +76,7 @@ try {
   const { runPuzzleTests } = load('puzzle-tests.js')
   const { runSimulationTests } = load('simulation-tests.js')
   const { runAiQualityTests } = load('ai-quality-tests.js')
+  const { runAiSearchRegressionTests } = load('ai-search-regression-tests.js')
   const { runMoveRegressionTests } = load('move-regression-tests.js')
   const { runRuleGuideLockTests } = load('rule-guide-lock-tests.js')
   const { runPublicApiTests } = load('public-api-tests.js')
@@ -86,6 +90,7 @@ try {
     ['Rek published puzzles', runPuzzleTests()],
     ['Rek long-run simulations', runSimulationTests()],
     ['Rek AI tactical quality', runAiQualityTests()],
+    ['Rek AI search regression', runAiSearchRegressionTests()],
     ['Rek movement regression', runMoveRegressionTests()],
     ['Rek Khmer guide lock', runRuleGuideLockTests()],
     ['Rek public session API', runPublicApiTests()],
