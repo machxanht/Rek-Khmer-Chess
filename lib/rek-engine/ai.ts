@@ -348,7 +348,8 @@ export function minimax(
 /**
  * Draw history is rule-relevant search state. Two identical boards are not
  * interchangeable if their repetition counts, lone-King clocks, or configured
- * draw limits differ. Keep this exact key separate from the board-only cache.
+ * draw limits differ. Callers that explicitly opt into state transposition
+ * caching therefore need this exact history-aware key.
  */
 function createStateSearchKey(state: GameState, depth: number): string {
   const ruleset = normalizeRuleSet(state.mode)
@@ -385,6 +386,11 @@ function terminalStateScore(
  * Every searched transition is delegated to executeMove(), so repetition,
  * lone-King bookkeeping, terminal ordering, Rek/Poat captures, and current Min
  * adjudication remain owned by the core engine instead of being copied into AI.
+ *
+ * Exact state caching is optional rather than automatic: serializing the full
+ * repetition history at every node is expensive and live searches commonly have
+ * history-distinct transpositions. Pass a Map only when a caller has evidence
+ * that exact-history cache reuse is beneficial for its workload.
  */
 export function minimaxState(
   state: GameState,
@@ -392,7 +398,7 @@ export function minimaxState(
   alpha: number,
   beta: number,
   aiColor: PlayerColor,
-  cache: Map<string, number> = new Map(),
+  cache?: Map<string, number>,
   stats?: AiSearchStats
 ): number {
   if (stats) stats.nodes++
@@ -413,11 +419,14 @@ export function minimaxState(
     return evaluateBoard(state.board, aiColor, mode)
   }
 
-  const cacheKey = createStateSearchKey(state, depth)
-  const cached = cache.get(cacheKey)
-  if (cached !== undefined) {
-    if (stats) stats.cacheHits++
-    return cached
+  let cacheKey: string | null = null
+  if (cache) {
+    cacheKey = createStateSearchKey(state, depth)
+    const cached = cache.get(cacheKey)
+    if (cached !== undefined) {
+      if (stats) stats.cacheHits++
+      return cached
+    }
   }
 
   const moves = getAllLegalMoves(state.board, state.turn, mode)
@@ -426,7 +435,7 @@ export function minimaxState(
   if (moves.length === 0) {
     if (stats) stats.leaves++
     const score = terminalNoMoveScore(state.turn, aiColor, depth)
-    cache.set(cacheKey, score)
+    if (cache && cacheKey) cache.set(cacheKey, score)
     return score
   }
 
@@ -435,7 +444,7 @@ export function minimaxState(
 
     if (moves.some((move) => move.capturesKing)) {
       const tactical = royalHorizonScore(state.turn, aiColor, depth)
-      cache.set(cacheKey, tactical)
+      if (cache && cacheKey) cache.set(cacheKey, tactical)
       return tactical
     }
 
@@ -443,7 +452,7 @@ export function minimaxState(
       player: state.turn,
       moves,
     })
-    cache.set(cacheKey, evaluated)
+    if (cache && cacheKey) cache.set(cacheKey, evaluated)
     return evaluated
   }
 
@@ -465,7 +474,7 @@ export function minimaxState(
       }
     }
 
-    if (!cutoff) cache.set(cacheKey, maxEval)
+    if (!cutoff && cache && cacheKey) cache.set(cacheKey, maxEval)
     return maxEval
   }
 
@@ -484,7 +493,7 @@ export function minimaxState(
     }
   }
 
-  if (!cutoff) cache.set(cacheKey, minEval)
+  if (!cutoff && cache && cacheKey) cache.set(cacheKey, minEval)
   return minEval
 }
 
@@ -626,7 +635,6 @@ export function analyzeAiState(
     }
   }
 
-  const cache = new Map<string, number>()
   let bestMove: AiMove | null = null
   let bestScore = -Infinity
 
@@ -641,7 +649,7 @@ export function analyzeAiState(
       -Infinity,
       Infinity,
       aiColor,
-      cache,
+      undefined,
       stats
     )
 
