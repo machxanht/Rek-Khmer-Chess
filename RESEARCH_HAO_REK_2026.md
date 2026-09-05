@@ -1,7 +1,7 @@
 # RESEARCH NOTE: ហៅរែក (Hao Rek) / Min Rek Chanh — 2026
 
 > **Ngày rà soát:** 2026-09-06  
-> **Trạng thái:** `UNRESOLVED — DO NOT CHANGE ENGINE RULES FROM THIS NOTE ALONE`  
+> **Trạng thái:** `PARTIALLY RESOLVED — EVENT-TRIGGERED HAO REK STRONGLY SUPPORTED; MULTI-TARGET / VERBAL EDGE CASES UNRESOLVED`  
 > **Scope:** exact trigger, geometry và nghĩa vụ phản hồi của **Hao Rek (ហៅរែក)** trong variant `MIN_REK_CHANH`.
 
 Tài liệu này là **research note**, không phải rule specification. Nó không thay thế:
@@ -292,11 +292,14 @@ if not -> loss
 
 Classification:
 
-- existence/basic obligation semantics: `SECONDARY`;
-- exact transition predicate `previousBoard + move -> activeCall`: `UNVERIFIED`;
-- “newly exposed pair” geometry: `COMMUNITY SIGNAL / UNVERIFIED`;
-- pre-existing pair does not call: `COMMUNITY SIGNAL / UNVERIFIED`;
-- responder chooses among multiple pairs: `COMMUNITY SIGNAL / UNVERIFIED`.
+- existence/basic obligation semantics: `SECONDARY` text + reconstructable media support;
+- event/action-triggered Hao Rek: `STRONG EVIDENCE`;
+- transition predicate based on **new Rek opportunities created by the opponent move**: `STRONG EVIDENCE candidate`;
+- blocker-leaves geometry: `STRONG EVIDENCE candidate` from M1-E1;
+- mover-enters-to-create-pair geometry: `STRONG EVIDENCE candidate` from M1-E3;
+- pre-existing Rek is not automatically the newly-called target: `STRONG EVIDENCE candidate`;
+- chain response semantics: `STRONG EVIDENCE candidate` + `SECONDARY` textual support;
+- responder/caller choice when one move creates multiple NEW targets: `UNVERIFIED`.
 
 **Current board-global engine interpretation is not supported by any authoritative/secondary source found so far.** Không được gọi nó historical truth.
 
@@ -304,14 +307,14 @@ Classification:
 
 ## 8. Exact questions vẫn phải giải
 
-1. Hao Rek chỉ phát sinh từ action/move của opponent hay không?
-2. `បើកឲ្យរែក` exact board geometry là gì?
-3. Có cần “newly exposed” pair không?
-4. Pair đã mở từ trước có tạo obligation không?
-5. Nếu một move mở nhiều pair, responder chọn hay caller chọn?
-6. Có cần verbal call `រែក!` / `ហៅរែក` không?
-7. Ignore call là illegal move hay move hợp lệ nhưng instant loss?
-8. Obligation sống đúng 1 ply hay kéo dài theo chain?
+1. Hao Rek phát sinh từ action/move của opponent? **STRONG EVIDENCE: yes, event-triggered.**
+2. `បើកឲ្យរែក` exact board geometry? **Partially resolved:** multiple geometries can create a NEW Rek response; do not hard-code only blocker-leaves.
+3. Có cần “newly created” Rek opportunity không? **STRONG EVIDENCE candidate.**
+4. Pair/Rek đã mở từ trước có tạo obligation mới không? **Evidence nghiêng mạnh về no; vẫn chưa universal-confirmed.**
+5. Nếu một move mở nhiều NEW targets, responder chọn hay caller chọn? **UNVERIFIED.**
+6. Có cần verbal call `រែក!` / `ហៅរែក` không? **UNVERIFIED.**
+7. Ignore call là illegal move hay move hợp lệ nhưng instant loss? **Penalty SECONDARY; engine representation UNVERIFIED.**
+8. Obligation sống đúng 1 ply hay kéo dài theo chain? **Chain behavior strongly supported; exact state representation pending.**
 9. King trong Min Rek Chanh có hoàn toàn bất động không?
 10. Poat có áp dụng trong Min Rek Chanh không?
 11. Zero legal moves có phải win riêng hay chỉ là trapping/encirclement concept?
@@ -399,17 +402,175 @@ Search terms đã dùng:
 
 Một video 2014 `Tradition Khmer Board Game (Rek - រែក)` của Elite Naga là developer/app lineage: `REJECTED AS POSITIVE EVIDENCE`.
 
-Không có video nào trong pass này đủ reconstruct:
+### 11.1. Media evidence inventory — user-supplied real-board footage
 
-- board trước nước;
-- opponent move vừa đi;
-- pair trước/sau;
-- verbal call;
-- response;
-- quiet alternatives;
-- capture result.
+Các file dưới đây là media do user sưu tầm và cung cấp trực tiếp cho project research. Chúng **không có provenance archival độc lập đã khóa**, nên không tự nâng thành `CONFIRMED historical rule`. Tuy nhiên source policy của project cho phép real-board video trở thành positive evidence khi reconstruct được board + move sequence.
 
-Do đó hiện **0 usable real-board Hao Rek event**.
+#### M1 — `1000009344.mp4` (real-board video, ~17:40)
+
+`1000009345.mp4` là duplicate byte-identical của M1, nên **không tính là nguồn độc lập**.
+
+##### Event M1-E1 — khoảng 89–97s: blocker leaves, newly opened Rek is answered
+
+Camera-grid coordinates dùng hàng/cột 1-based để tránh nhầm với engine a1–h8.
+
+Before opener:
+
+- Red pieces tại khoảng `R6C3 – R7C3 – R8C3`;
+- Blue đã có **một Rek opportunity cũ ở nơi khác trên board**.
+
+Opener:
+
+- Red `R7C3 → R7C2`;
+- nước này không capture;
+- ô `R7C3` vừa bỏ trống nằm giữa Red `R6C3` và Red `R8C3`.
+
+Response:
+
+- Blue `R7C6 → R7C3`;
+- Blue đáp đúng vào gap mới mở;
+- capture Red `R6C3 + R8C3`.
+
+Evidence implications:
+
+| Claim | Label |
+|---|---|
+| Sequence/move/capture trên video | `CONFIRMED ABOUT VIDEO` |
+| Một blocker rời ô giữa pair có thể tạo một Rek response mới | `STRONG EVIDENCE candidate` |
+| Hao Rek gắn với transition do opponent move tạo ra, không chỉ current-board scan | `STRONG EVIDENCE` |
+| Pre-existing Rek khác không tự động trở thành target của call mới | `STRONG EVIDENCE candidate` |
+| Tất cả pre-existing Rek luôn được bỏ qua trong mọi trường hợp | `UNVERIFIED` |
+
+Điểm đặc biệt: Blue có một Rek cũ trước opener nhưng thực tế đáp Rek **mới vừa được mở**. Khi ghép với Khmer text `បើកឲ្យរែក` và community statement “pair mở sẵn không tự tính là call”, event này trực tiếp challenge current board-global compulsory model.
+
+##### Event M1-E2 — khoảng 186.5–194s: Hao chain
+
+Before opponent move:
+
+- Blue có 0 Rek opportunity.
+
+Red opener:
+
+- Red di chuyển một nước quiet tạo ra một Rek mới cho Blue.
+
+Blue response:
+
+- Blue vào giữa hai Red và capture 2 quân.
+
+Chain:
+
+- chính Blue response tạo một Rek mới cho Red;
+- Red lập tức Rek lại và capture 2 Blue;
+- sau response này Blue không còn Rek response mới;
+- sequence dừng.
+
+Evidence implications:
+
+| Claim | Label |
+|---|---|
+| Video có response → counter-response chain | `CONFIRMED ABOUT VIDEO` |
+| Hao response có thể tạo Hao mới cho bên kia | `STRONG EVIDENCE candidate` |
+| Chain kết thúc khi không còn call mới | `STRONG EVIDENCE candidate`, phù hợp `SECONDARY` text 2013 |
+
+##### Event M1-E3 — khoảng 550.5–563s: mover enters to create a pair around a gap
+
+Before Blue move:
+
+- Red có 0 Rek opportunity.
+
+Blue opener:
+
+- Blue đi khoảng `R6C3 → R6C5`;
+- sau nước này Blue tại `R6C5` và Blue đã có tại `R6C7`, với `R6C6` trống.
+
+Red response:
+
+- Red khoảng `R5C6 → R6C6`;
+- Red đáp vào gap mới tạo;
+- capture Blue `R6C5 + R6C7`.
+
+Evidence implication:
+
+- exact trigger **không thể hard-code chỉ là “blocking piece moves away”**;
+- một opponent move **đi vào vị trí mới** cũng có thể tạo Rek opportunity mới;
+- candidate predicate rộng hơn là **difference between responder Rek opportunities before vs after opponent move**.
+
+##### Event M1-E4 — khoảng 1027–1041s
+
+Một sequence khác cùng pattern:
+
+- trước Red quiet move: Blue có 0 Rek;
+- Red move tạo đúng một Rek mới;
+- Blue lập tức thực hiện Rek đó và capture 2 Red.
+
+Classification: `CONFIRMED ABOUT VIDEO` cho sequence; `STRONG EVIDENCE` khi dùng cùng M1-E1/E2/E3 để support transition-triggered model.
+
+##### Multiple-new-target search
+
+Toàn video đã được scan lại ở interval nhỏ và manual-review các candidate. Chưa tìm được event sạch mà **một opponent move duy nhất tạo >=2 NEW Hao responses**.
+
+Do đó:
+
+- “multiple ordinary Rek opportunities có thể cùng tồn tại”: observed;
+- “một call có thể tạo nhiều new Hao targets”: `UNVERIFIED`;
+- nếu có nhiều new targets thì responder/caller chọn: `UNVERIFIED`.
+
+#### M2 — `1000009329.mp4` (real-board clip, ~33s)
+
+Có board thật, người thật thao tác và capture, nhưng hand occlusion + overlay che các thời điểm quan trọng. Chưa reconstruct được một Hao before→opener→response đủ sạch.
+
+Classification: `COMMUNITY / REAL-BOARD SIGNAL`; chưa dùng để khóa Hao geometry.
+
+#### M3 — `1000009336.mp4` + `1000009337.jpg`
+
+Video/screenshot chủ yếu quay sơ đồ setup vẽ tay, không phải move sequence. Hữu ích để corroborate canonical staggered setup ở community level nhưng không dùng khóa Hao geometry.
+
+#### M4 — Facebook post `ល្បែងរែក-Rek Khmer`, 2021-03-22, ảnh tactical positions
+
+Các ảnh là **các thế được đánh số riêng**, không phải before/after animation. Không được suy sequence capture giữa hai ảnh liên tiếp.
+
+Classification: `COMMUNITY SIGNAL`; có giá trị làm lead cho trapping/Poat/tactical research.
+
+#### M5 — app gameplay media
+
+App/UI gameplay vẫn là `REJECTED AS POSITIVE EVIDENCE` cho historical rule truth.
+
+### 11.2. Media-derived Hao model
+
+Các reconstructed events hiện support model sau mạnh hơn current engine:
+
+```text
+before opponent move:
+    responder Rek set = BEFORE
+
+opponent executes move
+
+after opponent move:
+    responder Rek set = AFTER
+
+newlyCreated = AFTER - BEFORE
+
+if newlyCreated is non-empty:
+    active Hao Rek obligation is created
+    responder answers a newly-created Rek response
+
+response itself becomes the next opponent move
+    ↓
+derive newly-created Rek responses for the other side
+    ↓
+chain while a new call exists
+    ↓
+stop when no new call is created
+```
+
+Đây là **proposed historical model, NOT IMPLEMENTED**.
+
+Unresolved edge cases:
+
+1. one move creates multiple new Hao responses;
+2. whether verbal declaration `រែក!` / `ហៅរែក` is required;
+3. exact legal/forfeit representation when responder ignores a call;
+4. interaction with Poat and multi-axis Rek.
 
 ---
 
@@ -470,4 +631,6 @@ Current implementation tiếp tục tồn tại để compatibility/regression �
 
 > `ENGINE INTERPRETATION — current project contract / pending historical validation`
 
-Evidence mới đủ để ghi rõ rằng **action/event-triggered Hao Rek hiện được support tốt hơn board-global interpretation**, nhưng **chưa đủ exact geometry để viết replacement transition rule**.
+Evidence chữ + reconstructed real-board events hiện đủ mạnh để viết **proposed transition model** dựa trên newly-created Rek opportunities, nhưng **chưa đủ để implement final engine contract** vì multiple-new-target choice, verbal-call requirement và một số interaction edge cases vẫn unresolved.
+
+Không thay gameplay trong note này. Bước tiếp theo đúng workflow là đồng bộ `HUONG_DAN` + `SPEC` ở mức **PROPOSED / NOT IMPLEMENTED**, sau đó mới quyết định test/engine migration khi evidence gate cho các edge case còn lại đủ mạnh.
