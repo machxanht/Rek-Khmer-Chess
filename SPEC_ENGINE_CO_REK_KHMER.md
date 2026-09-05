@@ -416,6 +416,20 @@ No tests or engine code are changed by this documentation section.
 
 ---
 
+### 11.5. Technical policy for unresolved Hao edge cases
+
+Until stronger historical evidence is found, implementation uses these explicit software policies:
+
+1. `allowedResponses` contains **all** newly-created Rek responses produced by the previous opponent move.
+2. The responder chooses any member of `allowedResponses`.
+3. No verbal-call bit is stored or required.
+4. A geometrically legal move outside a non-empty active `allowedResponses` set is a state-changing immediate forfeit.
+5. Existing Poat behavior remains unchanged in this Hao migration; this is not evidence that Poat historically belongs to Min Rek Chanh.
+
+These are **TECHNICAL POLICY / NOT HISTORICAL TRUTH** and must remain easy to replace when evidence improves.
+
+---
+
 ## 12. Rule-legal generation boundary
 
 ### `getMoveResults(board, from, mode)`
