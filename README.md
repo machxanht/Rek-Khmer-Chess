@@ -56,7 +56,7 @@ AI không tự viết lại luật di chuyển/Rek/Poat. Tất cả candidate mo
 
 - `easy`: cố ý có randomness; ưu tiên capture với xác suất nhưng không đảm bảo chiến thuật tối ưu.
 - `medium`: deterministic alpha-beta, depth `2`; nhìn đủ một phản đòn trực tiếp để tránh các nước kiểu “ăn quân rồi mất Vua ngay”.
-- `hard`: deterministic alpha-beta, depth `3` ở thế nhiều nhánh; tự tăng lên depth `4` khi root có tối đa 10 nước và depth `5` khi tối đa 4 nước.
+- `hard`: deterministic alpha-beta, depth `3` ở thế rộng/nhiều quân; chỉ tăng lên depth `4` khi root có tối đa 10 nước **và** tổng quân còn ≤18, hoặc depth `5` khi root có tối đa 4 nước **và** tổng quân còn ≤10.
 - Mobility heuristic dùng **rule-legal moves**, nên trong `MIN_REK_CHANH` các quiet move bị Hao Rek cấm không còn được tính nhầm vào điểm thế trận.
 - Terminal immobilization được kiểm tra trước depth cutoff.
 - Horizon có tactical extension cho Royal capture ngay lượt kế tiếp.
