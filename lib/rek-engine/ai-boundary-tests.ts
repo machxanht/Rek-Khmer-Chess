@@ -162,7 +162,7 @@ export function runAiBoundaryTests(): {
     return 'AI does not synthesize fallback moves when the engine reports immobilization.'
   })
 
-  run('AI-BOUNDARY-06', 'AI capture metadata comes from engine MoveResult captures', () => {
+  run('AI-BOUNDARY-06', 'AI reuses exact capture squares from engine MoveResult', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true)
     put(board, 'd8', 'opp', true)
@@ -180,8 +180,12 @@ export function runAiBoundaryTests(): {
     )
     expect(aiMove !== undefined, 'AI legal list must include the engine Poat move')
     expect(aiMove.capturesCount === engineResult.captures.length, 'AI capture count must exactly mirror MoveResult.captures')
+    expect(
+      JSON.stringify(aiMove.captures) === JSON.stringify(engineResult.captures),
+      'AI must retain the exact engine-produced capture squares in engine order'
+    )
 
-    return 'AI tactical metadata is derived from the engine result rather than separate capture logic.'
+    return 'Search simulation can consume engine-produced capture squares without a second preview/capture calculation.'
   })
 
   const passed = results.filter((result) => result.passed).length
