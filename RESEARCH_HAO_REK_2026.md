@@ -1,8 +1,8 @@
 # RESEARCH NOTE: ហៅរែក (Hao Rek) / Min Rek Chanh — 2026
 
-> **Ngày rà soát:** 2026-09-05  
+> **Ngày rà soát:** 2026-09-06  
 > **Trạng thái:** `UNRESOLVED — DO NOT CHANGE ENGINE RULES FROM THIS NOTE ALONE`  
-> **Scope:** exact trigger và nghĩa vụ phản hồi của **Hao Rek (ហៅរែក)** trong variant `MIN_REK_CHANH`.
+> **Scope:** exact trigger, geometry và nghĩa vụ phản hồi của **Hao Rek (ហៅរែក)** trong variant `MIN_REK_CHANH`.
 
 Tài liệu này là **research note**, không phải rule specification. Nó không thay thế:
 
@@ -10,277 +10,464 @@ Tài liệu này là **research note**, không phải rule specification. Nó kh
 2. `SPEC_ENGINE_CO_REK_KHMER.md`
 3. regression tests của engine
 
-Mục tiêu của note là ghi lại những tín hiệu có ích cho việc điều tra Hao Rek, nhưng không biến app/game implementation hoặc ý kiến cộng đồng thành luật lịch sử.
+Mục tiêu là lưu evidence theo từng claim, giữ community/app signals tách khỏi archival/cultural evidence, và chỉ ra chính xác phần nào của current engine đang là giả định kỹ thuật.
 
 ---
 
-## 1. Source policy bắt buộc
+## 1. Evidence labels bắt buộc
 
-### EXCLUDED — không được dùng làm positive rule evidence
+| Label | Nghĩa |
+|---|---|
+| `CONFIRMED` | Nguồn Khmer/institutional mạnh xác nhận trực tiếp claim. |
+| `STRONG EVIDENCE` | Nhiều bằng chứng độc lập phù hợp nhưng chưa khóa mọi edge case. |
+| `SECONDARY` | Nguồn độc lập hữu ích nhưng không phải authoritative rule text. |
+| `ENGINE INTERPRETATION` | Cách project hiện thực hóa một nguyên lý chưa được nguồn lịch sử mô tả đủ chi tiết. |
+| `COMMUNITY SIGNAL` | Comment/forum/oral recollection dùng để tạo hypothesis và keyword, không tự khóa SPEC. |
+| `UNVERIFIED` | Claim có dấu hiệu hoặc đang tồn tại trong project nhưng chưa đủ evidence. |
+| `UNSUPPORTED` | Chưa tìm thấy Rek-specific evidence cho claim. |
+| `REJECTED AS POSITIVE EVIDENCE` | App-store developer text, app tutorial/behavior/screenshot, hoặc scrape/copy của chúng. |
 
-Các nguồn sau **không được dùng để chứng minh luật Rek Khmer**:
-
-- mô tả game trên Google Play / Apple App Store;
-- screenshot/tutorial của app;
-- hành vi mà một app hiện đang implement;
-- website copy/scrape lại store description;
-- review bài app chỉ mô tả lại hành vi của app mà không nói về luật ngoài đời.
-
-Lý do: app có thể implement sai, và chính mục tiêu của project là không sao chép sai sót từ app hiện có.
-
-### COMMUNITY SIGNAL — được đọc để đối chiếu, không phải source of truth
-
-**Comment/review do người dùng viết bên dưới app được phép đọc**, vì chúng có thể chứa:
-
-- phản biện rằng app đang làm sai;
-- mô tả edge case người chơi Khmer kỳ vọng;
-- từ khóa Khmer để tiếp tục tìm tài liệu gốc;
-- ví dụ board sequence cần đem đi xác minh độc lập.
-
-Nhưng comment/review:
-
-- không được nâng lên `CONFIRMED` chỉ vì người viết là native Khmer;
-- không được dùng một mình để sửa `SPEC_ENGINE_CO_REK_KHMER.md`;
-- không được dùng một mình để thay gameplay;
-- phải được ghi rõ là `COMMUNITY SIGNAL`.
+**Label theo từng claim, không label cả source một cục.** Một source có thể có một claim `SECONDARY` nhưng claim khác `UNSUPPORTED` hoặc mâu thuẫn nguồn mạnh hơn.
 
 ---
 
-## 2. Current engine đang làm gì?
+## 2. Source policy
 
-Tại thời điểm note này được viết, `MIN_REK_CHANH` dùng **current project interpretation**:
+### 2.1. Ưu tiên
 
-- King đứng yên.
-- Nếu bên đến lượt có **bất kỳ** nước Rek nào ở bất kỳ đâu trên bàn, toàn bộ quiet moves bị loại khỏi rule-legal set.
-- Nếu người chơi gửi một quiet move hình học hợp lệ trong khi engine thấy có Rek ở chỗ khác, engine adjudicate đó là Hao Rek violation và xử thua ngay.
+1. Buddhist Institute.
+2. Chuon Nath Dictionary bản gốc/scan.
+3. Center for Khmer Studies.
+4. MoEYS Cambodia.
+5. Ministry of Culture / Khmer archival sources.
+6. `កម្ពុជសុរិយា`.
+7. sách/scan Khmer cũ.
+8. academic/cultural source độc lập.
+9. video người Khmer chơi bàn thật nếu reconstruct được position + move sequence.
 
-Đây là **state-triggered global compulsory Rek**: nghĩa vụ phát sinh chỉ vì một Rek opportunity đang tồn tại trên board.
+### 2.2. REJECTED AS POSITIVE EVIDENCE
 
-Hiện chưa có nguồn Khmer authoritative đủ chi tiết để chứng minh interpretation này là luật truyền thống chính xác.
+Không dùng để chứng minh luật:
+
+- Google Play / Apple App Store developer descriptions;
+- app tutorial/screenshot;
+- behavior implementation của app;
+- website scrape/copy app-store description;
+- game app hiện tại làm source of truth.
+
+### 2.3. COMMUNITY SIGNAL
+
+User comment/review dưới app được đọc để:
+
+- phát hiện edge case;
+- lấy keyword Khmer;
+- dựng hypothesis;
+- tìm lỗi implementation;
+- tìm source độc lập.
+
+Nhưng không được dùng một mình để:
+
+- nâng claim lên `CONFIRMED`;
+- sửa `HUONG_DAN`/`SPEC`;
+- sửa engine;
+- gọi là historical evidence.
 
 ---
 
-## 3. Authoritative/independent evidence hiện có
+## 3. Current engine đang làm gì?
+
+`MIN_REK_CHANH` hiện dùng **state-triggered global compulsory Rek**:
+
+```text
+current board + side to move
+        ↓
+scan toàn bộ Rek opportunities
+        ↓
+any Rek exists?
+   ├── no  -> quiet/geometric moves có thể đi
+   └── yes -> chỉ moves tạo Rek được expose là rule-legal
+              submit quiet geometric move -> instant forfeit
+```
+
+Ngoài ra current engine giữ King đứng yên trong `MIN_REK_CHANH`.
+
+Classification:
+
+- global board scan trigger: `ENGINE INTERPRETATION / UNVERIFIED historical semantics`;
+- quiet move => instant loss: `ENGINE INTERPRETATION`, có `SECONDARY` support cho hậu quả “không Rek thì thua”, nhưng exact trigger vẫn chưa khóa;
+- King stationary: `STRONG EVIDENCE` ở secondary reconstruction, chưa native-confirmed;
+- Poat trong Min: `UNVERIFIED`.
+
+---
+
+## 4. Core sources không giải exact Hao Rek
 
 ### A1 — Chuon Nath / Buddhist Institute dictionary tradition
 
-Nguồn mirror Khmer:
+Exact Khmer reproduction của entry `រែក`:
 
-- https://phkaslapartner.com/learn/khmerwords-7764/
+> `រែក (ន.) ឈ្មោះល្បែងមួយប្រភេទ ស្រដៀងនឹងចត្រង្គ ខុសគ្នាតែឈ្មោះកូន និងការឈ្នះចាញ់, មានបែបឲ្យស៊ីរែកទាំងពីរខាង ឬបើអ្នកម្ខាងទាល់ច្រក ត្រូវអ្នកម្ខាងកៀរក្រសោបស៊ីបានទាំងអស់ : លេងរែក (ជាល្បែងសម្រាប់ពួកទាហានដូច ចត្រង្គ ដែរ) ។`
 
-Trang này ghi rõ đang dẫn nghĩa từ **វចនានុក្រមខ្មែរ của Samdech Chuon Nath / Buddhist Institute**.
+Literal VN gần nhất:
 
-Phần định nghĩa `រែក` xác nhận ở mức native lexical/cultural evidence:
+> “Rek: tên một loại trò chơi, tương tự Chatrang nhưng khác ở tên quân và cách thắng thua; có lối ăn Rek ở cả hai phía; hoặc nếu một bên bị dồn/bế tắc thì bên kia có thể dồn, khép vây và ăn hết tất cả. Chơi Rek là trò cho quân lính, giống Chatrang.”
 
-- Rek là một loại trò chơi Khmer tương tự `ចត្រង្គ` nhưng khác tên quân và thắng/thua;
-- có kiểu `ស៊ីរែកទាំងពីរខាង` — bắt/ăn hai phía;
-- nếu một bên `ទាល់ច្រក`, bên kia có thể `កៀរ/ក្រសោប` để bắt;
-- trò này được nhắc như trò dành cho quân lính tương tự Chaktrang.
+Provenance đã corroborate:
 
-**Không có exact Hao Rek trigger trong mục từ này.**
+- Buddhist Institute;
+- 5th edition;
+- 1967–1968;
+- 2 volumes;
+- vol.2 (`យ-អ`) xuất bản 1968 chứa alphabetic range của `រែក`.
 
-Confidence: `CONFIRMED` cho core Rek/encirclement concept; `NO EVIDENCE` cho exact Hao Rek.
+Claims:
+
+- Rek identity + two-sided capture + trapping/encirclement: `CONFIRMED`.
+- exact Hao Rek trigger: `UNSUPPORTED` bởi entry này.
+- exact scan page của `រែក`: **chưa khóa; không được bịa page number**.
 
 ### A2 — Sun-Him Chhim, *Introduction to Cambodian Culture* (1987)
 
-Bibliographic record:
+Section `V. REK` support:
 
-- ERIC ED334342: https://eric.ed.gov/?id=ED334342
-- Center for Khmer Studies catalog bản gộp 1989: https://library.khmerstudies.org/bib/14710
+- board 8×8;
+- 1 King + 15 soldiers mỗi bên;
+- 1 piece per turn;
+- objective = capture opposing King.
 
-Bản PDF được index có section `V. REK`, page 48:
+Claims trên: `STRONG EVIDENCE`.
 
-- Rek dùng bàn 8×8;
-- mỗi bên 1 King + 15 soldiers;
-- chỉ một quân được đi mỗi lượt;
-- mục tiêu là capture opposing King.
+Claim Rek bắt đầu khoảng thế kỷ II trong cùng source là single-source historical claim: `UNVERIFIED`.
 
-Nguồn này không cung cấp exact Hao Rek semantics trong phần text đã truy xuất được.
+Không có exact Hao Rek trigger trong phần đã truy xuất.
 
-Confidence: `STRONG INDEPENDENT CULTURAL SOURCE` cho board/army/objective; `NO DIRECT HAO REK RULE`.
+### A3 — Buddhist Institute, `ល្បែងប្រជាប្រិយខ្មែរ` (1964)
 
-### A3 — Buddhist Institute, *ល្បែងប្រជាប្រិយខ្មែរ* (1964)
+Đây là official folk-game publication nhưng research sau xác nhận compilation chỉ thu thập `មួយចំនួនតូច` — “một số ít” trò. Danh sách secondary được trích lại không có Rek.
 
-Institutional records:
+Kết luận hẹp:
 
-- MoEYS Digital School: https://sala.moeys.gov.kh/kh/library/00002631
-- Center for Khmer Studies: https://library.khmerstudies.org/bib/6505
+- publication/provenance: `CONFIRMED`;
+- absence khỏi một danh sách secondary: không được dùng để kết luận Rek không truyền thống;
+- direct Rek/Hao Rek rule evidence: `UNSUPPORTED` cho đến khi khóa original page.
 
-Đây là tài liệu Khmer chính thống về folk games. Tuy nhiên các nguồn Khmer trích danh sách **22 trò trong sách** không có `ល្បែងរែក`; danh sách kết thúc với `ល្បែងចត្រង្គ`.
+### A4 — `ប្រជុំវប្បធម៌ទូទៅ`, ឡុច ផ្លែង, 1973
 
-Ví dụ danh sách được trích tại:
+Metadata transcription đã corroborate:
 
-- https://thmeythmey.com/detail/135581
+- author: `ឡុច ផ្លែង`;
+- publisher: `វិទ្យាស្ថានជាតិខេមរយានកម្ម`;
+- Phnom Penh;
+- 1973.
 
-Do đó tài liệu 1964 phải được dùng đúng vai trò:
+Danh sách trò có:
 
-- **rất mạnh cho bối cảnh lưu giữ trò chơi Khmer**;
-- **không được dùng như direct Rek rule source**, trừ khi sau này tìm được trang scan cụ thể nói về Rek.
+> `... ល្បែងរាវបង្កង, ល្បែងរែក, ល្បែងលាក់កន្សែង ...`
 
-Confidence: `AUTHORITATIVE CONTEXT`, `NOT DIRECT REK EVIDENCE`.
+Claim “Rek được liệt kê như một trò Khmer trong compilation 1973”: `SECONDARY` historical corroboration.
 
-### A4 — *ប្រជុំវប្បធម៌ទូទៅ* (1973) — historical corroboration only
+Research 2026-09-06 đã tìm được **exact eLibrary Cambodia ebook object/path**, nhưng viewer không lộ asset scan/PDF ổn định qua current access. Vì vậy:
 
-Một transcription web dẫn metadata:
-
-- author: ឡុច ផ្លែង;
-- publisher: វិទ្យាស្ថានជាតិខេមរយានកម្ម;
-- Phnom Penh, 1973;
-- danh sách trò Khmer có `ល្បែងរែក`.
-
-Transcription:
-
-- https://savenkhknowlege.blogspot.com/2013/07/blog-post_5384.html
-
-Đây chưa phải original scan nên chỉ dùng để chứng minh rằng **Rek được liệt kê trong một compilation văn hóa Khmer được gán cho năm 1973**, không dùng để xác minh mechanics.
-
-Confidence: `HISTORICAL CORROBORATION`, chưa phải primary scan.
+- original scan object lead: có;
+- exact page chứa `ល្បែងរែក`: **chưa khóa**;
+- rule detail: `UNSUPPORTED`.
 
 ---
 
-## 4. Community signals từ comment bên dưới app — chỉ để đối chiếu
+## 5. Nguồn quan trọng nhất về nghĩa vụ Hao Rek
 
-Phần này cố ý **không coi store page, developer description hay app implementation là nguồn luật**. Chỉ ghi nhận lời người dùng để tạo giả thuyết nghiên cứu.
+### H1 — Visal Odom / Phnom Penh Post attribution, 2013-11-06
+
+Một bài Khmer ngày **6 November 2013**, ghi tác giả `វិសាល ឧត្តម / Visal Odom` và attribution `ភ្នំពេញប៉ុស្តិ៍ / Phnom Penh Post`, dùng luật Rek để giải thích trước một bài bình luận.
+
+Exact phrases quan trọng:
+
+> `បើមានគេបើកឲ្យរែក ខ្លួនត្រូវតែរែក`
+
+Literal VN:
+
+> “Nếu có người mở cho mình Rek, mình phải Rek.”
+
+Và:
+
+> `បើមិនរែក ត្រូវតែចាញ់ ដោយស្វ័យប្រវត្តិ`
+
+Literal VN:
+
+> “Nếu không Rek thì phải thua một cách tự động.”
+
+Bài còn mô tả chuỗi ý:
+
+```text
+opponent បើកឲ្យរែក
+→ responder ត្រូវតែរែក
+→ nếu không Rek => automatic loss
+→ opponent có thể tiếp tục mở cho Rek
+→ chain tiếp tục cho tới khi opponent ngừng mở cho Rek
+```
+
+Claim classification:
+
+| Claim | Label |
+|---|---|
+| Có concept “opponent mở cho mình Rek” | `SECONDARY` |
+| Responder phải Rek sau khi được “mở cho Rek” | `SECONDARY` |
+| Không Rek => automatic loss | `SECONDARY` |
+| Obligation được mô tả bằng previous/opponent action, không phải chỉ board-global state | `SECONDARY` challenge đối với current engine model |
+| Exact board geometry của `បើកឲ្យរែក` | `UNVERIFIED` |
+
+Lý do không nâng toàn bài lên strong/confirmed: bài có claim piece-count không đáng tin/mâu thuẫn nguồn mạnh hơn. Label áp dụng theo từng claim.
+
+### Independence caveat — VOD 2016
+
+VOD Khmer năm 2016 có text gần giống và cũng liên quan Visal Odom. Không tính 2013 + 2016 là hai independent sources; khả năng republication/reuse cao.
+
+---
+
+## 6. Community signals độc lập-ish / pre-app lineage
 
 ### C1 — Khmer user comment, 2025-02-16
 
-Một commenter Khmer tên `bou senghy` phản biện cách app xử lý Hao Rek và mô tả ba ý:
+Comment mô tả candidate geometry:
 
-1. một cặp Rek đã mở sẵn không tự động được tính là một lời gọi;
-2. lời gọi có thể phát sinh khi một quân đang che/chặn rời đi và làm lộ cơ hội Rek;
-3. khi có nhiều cặp mở, bên phải Rek có thể được quyền chọn; khi lời gọi chỉ tạo một cặp thì cặp đó bắt buộc phải được xử lý.
+1. pair Rek đã mở sẵn không tự tính là `ហៅ`;
+2. có một quân đang chắn/che;
+3. quân đó đi ra;
+4. lúc đó pair mới được tính là call;
+5. nhiều pair thì responder có thể chọn;
+6. nếu call chỉ tạo một pair thì pair đó bắt buộc.
 
 Classification: `COMMUNITY SIGNAL — DETAILED, NOT AUTHORITATIVE`.
 
-Giá trị của comment này là tạo ra các candidate tests/event semantics để đi tìm nguồn độc lập, **không phải để code ngay**.
-
 ### C2 — Khmer user comment, 2026-06-08
 
-Commenter `UN BUNTHEN` nói phần `ក្បួនហៅរែក` trong app được sắp/triển khai sai và yêu cầu sửa để không làm sai lệch cờ Rek Khmer.
+Phản biện phần `ក្បួនហៅរែក` trong app triển khai sai.
 
-Classification: `COMMUNITY SIGNAL — CORROBORATES THAT APP IMPLEMENTATION IS DISPUTED`.
+Classification: `COMMUNITY SIGNAL — IMPLEMENTATION DISPUTED`.
 
-Comment này không mô tả đủ thuật toán để xác định replacement rule.
+### C3 — community wording khoảng 2013
 
-### C3 — Apple App Store comments đã rà
+Search pass 2026-09-06 tìm lại wording:
 
-Những review được index hiện chủ yếu nói về:
+> `ហៅ រែកចាញ់ រឺ បើករែក ... បើ A បើកអោយរែក B មិនរែក នេាះ B នឹងចាញ់។`
 
-- lỗi kết nối/treo khi Hao Rek;
-- single-player/bug;
-- nhận xét chung về game.
+Literal gần nhất:
 
-Không tìm được comment App Store nào trong tập đã index cung cấp một rule sequence đủ chi tiết để độc lập corroborate C1.
+> “Gọi là Rek-chaanh hoặc Bok Rek; nếu A mở cho B Rek mà B không Rek thì B thua.”
 
-Classification: `NO SEMANTIC CORROBORATION FOUND YET`.
+Classification: `COMMUNITY SIGNAL`.
 
-### Kết luận từ community comparison
+Giá trị:
 
-Community comments **làm current global state-trigger interpretation đáng nghi hơn**, nhưng chưa vượt evidence gate để thay luật.
+- corroborate terminology `បើករែក / បើកអោយរែក` ngoài đúng text Visal;
+- support nhẹ cho action/event wording;
+- **không chứng minh geometry**;
+- provenance/independence chưa đủ để nâng lên `SECONDARY`.
 
----
+### C4 — historical online recollection khoảng 2010
 
-## 5. Candidate Hao Rek model đang cần xác minh
+Có dấu vết người Khmer kể first-person đã chơi dạng `មួយអម្រែកចាញ់ / បើមិនរែកចាញ់`, kể nhiều lần `បើកអោយគេរែក` rồi cuối chuỗi Rek trúng King.
 
-Các giả thuyết dưới đây chỉ là `UNVERIFIED HYPOTHESES`:
+Classification: `COMMUNITY SIGNAL`.
 
-- **H1 — Event trigger:** Hao Rek phát sinh do một nước cụ thể tạo/làm lộ lời gọi Rek, không phải chỉ vì board đang có Rek.
-- **H2 — Pre-existing pair:** một cặp Rek đã mở từ trước không tự tạo call.
-- **H3 — Multiple pairs:** responder có thể được chọn trong nhiều Rek pair hợp lệ.
-- **H4 — Single called pair:** nếu call chỉ tạo đúng một response pair thì phải Rek pair đó.
-- **H5 — Stateful call:** nếu H1 đúng, engine có thể cần lưu metadata về call vừa phát sinh; board position thuần túy có thể không đủ để suy ra obligation.
-
-C1 phù hợp với H1–H4, nhưng **chưa có authoritative/native independent source thứ hai mô tả cùng edge cases**.
+Nó cho thấy terminology/cultural memory predate app hiện đại, nhưng không đủ rule precision.
 
 ---
 
-## 6. Vì sao chưa sửa engine?
+## 7. Candidate historical model sau research 2026-09-06
 
-Nếu đổi từ global state-trigger sang event-trigger ngay, project vẫn chưa trả lời chắc chắn được:
+Evidence hiện tại support tốt hơn trước cho **event/action-triggered obligation**:
 
-1. nước nào chính xác được xem là “gọi”;
-2. call gắn với một pair, một destination hay chỉ trạng thái sau nước đi;
-3. một nước làm lộ nhiều pair thì xử thế nào;
-4. pre-existing pair + newly-called pair cùng tồn tại thì responder được chọn gì;
-5. call sống đúng một ply hay kéo dài;
-6. quiet move khi có call là illegal move hay immediate loss;
-7. Poat có tồn tại trong `MIN_REK_CHANH` không;
-8. King stationary interaction với Poat/immobilization thế nào;
-9. một chuỗi Hao Rek liên tiếp được tạo và kết thúc ra sao.
+```text
+opponent previous move/action
+        ↓
+បើកឲ្យរែក  (“opens for Rek”)
+        ↓
+active obligation
+        ↓
+responder must Rek
+        ↓
+if not -> loss
+```
 
-Sửa khi chưa khóa các câu này sẽ chỉ thay một assumption bằng assumption khác.
+Classification:
+
+- existence/basic obligation semantics: `SECONDARY`;
+- exact transition predicate `previousBoard + move -> activeCall`: `UNVERIFIED`;
+- “newly exposed pair” geometry: `COMMUNITY SIGNAL / UNVERIFIED`;
+- pre-existing pair does not call: `COMMUNITY SIGNAL / UNVERIFIED`;
+- responder chooses among multiple pairs: `COMMUNITY SIGNAL / UNVERIFIED`.
+
+**Current board-global engine interpretation is not supported by any authoritative/secondary source found so far.** Không được gọi nó historical truth.
 
 ---
 
-## 7. Evidence gate trước khi thay Hao Rek semantics
+## 8. Exact questions vẫn phải giải
 
-Chỉ sửa exact Hao Rek khi đạt ít nhất một gate sau.
+1. Hao Rek chỉ phát sinh từ action/move của opponent hay không?
+2. `បើកឲ្យរែក` exact board geometry là gì?
+3. Có cần “newly exposed” pair không?
+4. Pair đã mở từ trước có tạo obligation không?
+5. Nếu một move mở nhiều pair, responder chọn hay caller chọn?
+6. Có cần verbal call `រែក!` / `ហៅរែក` không?
+7. Ignore call là illegal move hay move hợp lệ nhưng instant loss?
+8. Obligation sống đúng 1 ply hay kéo dài theo chain?
+9. King trong Min Rek Chanh có hoàn toàn bất động không?
+10. Poat có áp dụng trong Min Rek Chanh không?
+11. Zero legal moves có phải win riêng hay chỉ là trapping/encirclement concept?
+12. `រែកហែក` quan hệ gì với `មិនរែកចាញ់` / `ហៅរែក`?
+13. Chain Hao Rek chấm dứt chính xác khi nào?
 
-### Gate A — Authoritative Khmer document
+---
 
-Có rulebook, giáo trình, archival text hoặc tài liệu văn hóa Khmer mô tả trigger + response đủ rõ để dựng board tests.
+## 9. Terminology pass 2026-09-06
 
-### Gate B — Hai nguồn native độc lập có board sequence
+Exact searches:
 
-Hai người/nguồn Khmer độc lập mô tả được ít nhất:
+- `រែកហែក`
+- `របៀបលេងរែកហែក`
+- `ក្បួនរែកហែក`
+- `រែកហែក រែកព័ទ្ធ`
+- `មិនរែកចាញ់`
+- `ហៅរែក`
+- `បើកឲ្យរែក`
+- `បើកអោយរែក`
+- `ក្បួនហៅរែក`
+- `រែកចាញ់`
+- `មួយអម្រែកចាញ់`
+
+Result:
+
+- `រែកហែក`: `UNVERIFIED`; chưa có independent archival/cultural source giải thích quan hệ với Hao Rek/Min Rek Chanh.
+- `រែកចាញ់ / បើករែក`: có `COMMUNITY SIGNAL` cũ và phù hợp wording action-based.
+- app/store mirrors xuất hiện nhiều nhưng đều `REJECTED AS POSITIVE EVIDENCE`.
+
+Không đổi canonical terminology của project.
+
+---
+
+## 10. Archival pass liên quan Hao Rek
+
+### `កម្ពុជសុរិយា`
+
+CKS corroborate hai index:
+
+1. `កម្រងមាតិកា កម្ពុជសុរិយា (១៩២៦–២០០០)` — khoảng 331 trang.
+2. `កម្ពុជសុរិយា (១៩២៦–១៩៧៤): មាតិកា និងអក្ខរក្រម` — catalog khoảng 575 trang; searchable scan khoảng 599 scan pages.
+
+Claim hẹp đã khóa:
+
+> The 1926–1974 Kambuja Suriya alphabetical index contains no indexed article/title named `ល្បែងរែក`.
+
+Label: `CONFIRMED ABOUT INDEX ONLY`.
+
+Không được suy ra rằng body magazine không có Rek.
+
+Research 2026-09-06 còn khóa:
+
+- Buddhist Institute digital corpus giữ article title + author + page + scan/file links;
+- `ល្បែងអៀវ` năm 1961, tác giả `ញូង សឿង`, là ví dụ folk-game article riêng;
+- năm 1964 = `ឆ្នាំទី៣៦`, có 6 issues;
+- đã tìm pointer `1964.pdf`, nhưng host hiện 502 nên chưa kiểm body `ល្បែងចត្រង្គ` / `ល្បែងផ្សេងៗ`.
+
+Status Rek mention trong article body: `UNVERIFIED`.
+
+### Chuon Nath exact scan
+
+Edition/volume provenance đã khóa; exact `រែក` scan page vẫn unresolved. Archive pointer tìm được hiện 404. Không bịa page.
+
+### 1973 scan
+
+Exact eLibrary object/path đã tìm thấy; chưa bóc được page image/PDF asset. Không bịa page.
+
+---
+
+## 11. Video real-board research
+
+Search terms đã dùng:
+
+- `លេងល្បែងរែក`
+- `របៀបលេងរែក`
+- `ក្បួនលេងរែក`
+- `ល្បែងរែកខ្មែរ`
+- `ហៅរែក`
+- `ក្បួនហៅរែក`
+- `មិនរែកចាញ់`
+- `បើកឲ្យរែក`
+- `រែកហែក`
+- `រែកព័ទ្ធ`
+
+Một video 2014 `Tradition Khmer Board Game (Rek - រែក)` của Elite Naga là developer/app lineage: `REJECTED AS POSITIVE EVIDENCE`.
+
+Không có video nào trong pass này đủ reconstruct:
+
+- board trước nước;
+- opponent move vừa đi;
+- pair trước/sau;
+- verbal call;
+- response;
+- quiet alternatives;
+- capture result.
+
+Do đó hiện **0 usable real-board Hao Rek event**.
+
+---
+
+## 12. Evidence gate trước khi đổi engine
+
+Chỉ thay exact Hao Rek khi đạt ít nhất một trong các gate:
+
+### Gate A — authoritative Khmer document
+
+Rulebook, giáo trình, archival text hoặc tài liệu văn hóa Khmer mô tả trigger + response đủ rõ để dựng board tests.
+
+### Gate B — hai nguồn native độc lập có board sequence
+
+Mỗi nguồn phải cho reconstruct được tối thiểu:
 
 - board trước nước gọi;
-- nước tạo call;
+- move tạo call;
+- pair trước/sau;
 - legal response;
-- trường hợp nhiều pair;
+- multiple-pair handling nếu có;
 - hậu quả khi không đáp.
 
-Ưu tiên video bàn thật hoặc oral explanation có thể reconstruct nước đi.
+### Gate C — expert validation
 
-### Gate C — Expert validation
+Người chơi/giảng dạy Rek Khmer có uy tín xác nhận edge cases bằng board examples.
 
-Một người chơi/giảng dạy Rek Khmer có uy tín xác nhận trực tiếp các edge cases bằng board examples.
-
-**Store comments không tự thỏa Gate B**, trừ khi người viết được xác minh độc lập và sequence được đối chứng ngoài storefront.
+Community/store comments không tự thỏa gate.
 
 ---
 
-## 8. Regression suite cần có nếu event-trigger được xác minh
+## 13. Candidate regression suite nếu event-trigger được xác minh
 
-Update theo đúng thứ tự:
+Update đúng workflow:
 
-`HUONG_DAN_LUAT_CO_REK_KHMER.md` → `SPEC_ENGINE_CO_REK_KHMER.md` → tests → engine → AI/tournament.
+`research note → HUONG_DAN → SPEC → tests → engine → AI/tournament`
 
 Candidate tests:
 
 1. `HAO-EVENT-01` — pre-existing open pair không tự tạo call.
-2. `HAO-EVENT-02` — một nước đã xác minh làm lộ pair tạo call.
+2. `HAO-EVENT-02` — exact verified opening move tạo call.
 3. `HAO-RESP-01` — single called response bắt buộc.
-4. `HAO-RESP-02` — multiple pairs follow exact verified choice rule.
-5. `HAO-RESP-03` — quiet response adjudication đúng semantics.
+4. `HAO-RESP-02` — multiple pairs theo exact verified choice rule.
+5. `HAO-RESP-03` — ignore-call adjudication đúng semantics.
 6. `HAO-LIFETIME-01` — lifetime/expiry của active call.
-7. `HAO-MULTIAXIS-01` — một call tạo nhiều trục/pair.
-8. `HAO-POAT-01` — interaction giữa called Rek và Poat.
-9. snapshot/replay test nếu call là stateful metadata.
-10. AI boundary test để AI chỉ consume engine-owned active-call legality.
+7. `HAO-CHAIN-01` — call chain tiếp tục/kết thúc đúng điều kiện.
+8. `HAO-MULTIAXIS-01` — một call tạo nhiều trục/pair.
+9. `HAO-POAT-01` — interaction called Rek / Poat.
+10. snapshot/replay test nếu call là stateful metadata.
+11. AI boundary test để AI chỉ consume engine-owned active-call legality.
 
 ---
 
-## 9. Research priority tiếp theo
-
-Ưu tiên theo thứ tự:
-
-1. tìm original Chuon Nath/Buddhist Institute dictionary scan cho mục `រែក`;
-2. tìm original scan/copy của `ប្រជុំវប្បធម៌ទូទៅ` 1973 và xem có section Rek chi tiết hay chỉ listing;
-3. tra index `កម្ពុជសុរិយា` và catalog Khmer cho `រែក`, `ស៊ីរែក`, `ហៅរែក`, `មិនរែកចាញ់`;
-4. tìm video bàn thật Khmer có thể reconstruct position trước/sau Hao Rek;
-5. phỏng vấn/đối chiếu người chơi lớn tuổi hoặc người dạy trò truyền thống bằng các fixture board cụ thể.
-
-Search pass 2026-09-05 chưa tìm được authoritative exact Hao Rek instruction đủ để vượt Gate A/B/C.
-
----
-
-## 10. Quyết định kỹ thuật tại 2026-09-05
+## 14. Quyết định kỹ thuật tại 2026-09-06
 
 **Không thay gameplay `MIN_REK_CHANH` trong research pass này.**
 
 Current implementation tiếp tục tồn tại để compatibility/regression ổn định nhưng phải được gọi đúng là:
 
-> **current project interpretation / pending historical validation**
+> `ENGINE INTERPRETATION — current project contract / pending historical validation`
 
-Không được quảng bá global compulsory Rek hiện tại như historical fact.
+Evidence mới đủ để ghi rõ rằng **action/event-triggered Hao Rek hiện được support tốt hơn board-global interpretation**, nhưng **chưa đủ exact geometry để viết replacement transition rule**.
