@@ -1,8 +1,8 @@
 import {
   BOARD_SIZE,
   Cell,
-  GameMode,
   PlayerColor,
+  RuleSet,
   TestResult,
 } from './types'
 import {
@@ -33,7 +33,7 @@ function expect(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
 }
 
-function engineMoveKeys(board: Cell[], player: PlayerColor, mode: GameMode): Set<string> {
+function engineMoveKeys(board: Cell[], player: PlayerColor, mode: RuleSet): Set<string> {
   const keys = new Set<string>()
   for (let from = 0; from < board.length; from++) {
     const piece = board[from]
@@ -45,7 +45,7 @@ function engineMoveKeys(board: Cell[], player: PlayerColor, mode: GameMode): Set
   return keys
 }
 
-function aiMoveKeys(board: Cell[], player: PlayerColor, mode: GameMode): Set<string> {
+function aiMoveKeys(board: Cell[], player: PlayerColor, mode: RuleSet): Set<string> {
   return new Set(getAllLegalMoves(board, player, mode).map((move) => `${move.from}-${move.to}`))
 }
 
