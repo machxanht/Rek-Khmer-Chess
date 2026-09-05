@@ -19,6 +19,7 @@ Engine và regression tests phải tuân theo các tài liệu này; UI/server v
 - `lib/rek-engine/engine.ts` — thiết lập bàn cờ, sinh nước đi, thực thi lượt, thắng/thua/hòa.
 - `lib/rek-engine/session.ts` — public facade cho UI/server/CLI: game session, undo và save/load.
 - `lib/rek-engine/ai.ts` — AI dựa hoàn toàn trên tập nước đi hợp lệ của engine.
+- `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium tournament harness và aggregate metrics.
 - `lib/rek-engine/puzzles.ts` — dữ liệu/thế cờ dùng bởi engine.
 - `lib/rek-engine/*-tests.ts` — regression, specification lock, rule-guide lock, public API, simulation, AI và draw tests.
 
@@ -65,6 +66,33 @@ AI không tự viết lại luật di chuyển/Rek/Poat. Tất cả candidate mo
 
 `ai-search-regression-tests.ts` khóa tactical safety và node-count budget để thay đổi AI về sau không vô tình làm yếu logic hoặc gây search explosion.
 
+## AI-vs-AI tournament regression
+
+`ai-tournament.ts` chạy Hard-vs-Medium ở cả `REK_POAT` và `MIN_REK_CHANH` với các nguyên tắc:
+
+- opening diversity dùng seed deterministic nhưng **chỉ chọn từ legal moves của core engine**;
+- Hard/Medium đổi màu `you`/`opp` sau mỗi ván để tránh bias bên đi;
+- mọi AI move được đối chiếu lại với legal set rồi mới gọi `RekGame.makeMove()`;
+- `maxPlies` chỉ là giới hạn benchmark; ván chạm cap được báo là `capped`, **không bị giả thành hòa theo luật**;
+- thống kê gồm Hard wins, Medium wins, engine draws, capped games, illegal moves, average/max plies và search-node totals/max.
+
+CI chạy tournament smoke nhỏ ở mọi thay đổi engine để khóa legality, determinism, color balance và node budget. Smoke hiện có 5 assertions riêng; cùng các suite trước đó đưa tổng regression lên **93/93**.
+
+Tournament lớn được tách khỏi CI thường vì Hard alpha-beta có chi phí đáng kể. Runner hỗ trợ cấu hình rõ ràng:
+
+```bash
+# baseline nhỏ mặc định: 2 ván/mode
+npm run tournament:ai
+
+# tùy chỉnh
+node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-plies=160
+
+# 200 ván tổng (100/mode) — long-running benchmark có chủ đích
+npm run tournament:ai:200
+```
+
+GitHub Actions có workflow manual `Rek AI Tournament Baseline`, cho phép nhập `games_per_mode`, `opening_plies`, `max_plies`. Không chạy tournament 200 ván trên mọi PR vì smoke CI đã cho thấy searched AI plies đắt hơn unit tests rất nhiều; benchmark lớn chỉ nên chạy khi cần lập hoặc so baseline AI.
+
 ## Rule lock theo hướng dẫn Khmer
 
 `rule-guide-lock-tests.ts` khóa các điểm cốt lõi trực tiếp từ tài liệu luật:
@@ -102,4 +130,4 @@ npm run typecheck
 npm test
 ```
 
-Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/rule-guide/public-API/AI/state/draw/puzzle/simulation/movement, gồm cả AI search regression và deterministic node-count benchmark.
+Engine test runner biên dịch riêng `lib/rek-engine/` rồi chạy toàn bộ bộ test core/spec/rule-guide/public-API/AI/state/draw/puzzle/simulation/movement, gồm AI search regression, tournament smoke và deterministic node-count benchmark.
