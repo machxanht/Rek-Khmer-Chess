@@ -482,6 +482,24 @@ Tuy nhiên chưa sửa engine vì chưa khóa multiple-new-target choice, verbal
 
 ---
 
+## 14.2. Implementation policy for unresolved Hao edges
+
+The following are **technical policies**, not promoted historical claims:
+
+- multiple newly-created Hao responses → responder may choose any newly-created response;
+- no verbal declaration is required by software;
+- ignoring an active Hao response → immediate forfeit;
+- Poat behavior in `MIN_REK_CHANH` remains unchanged until stronger evidence resolves the 2013 `រែកព័ទ្ធ` vs `មិនរែកចាញ់` separation.
+
+Evidence labels remain:
+
+- multiple-target choice: `UNVERIFIED`;
+- verbal-call requirement: `UNVERIFIED`;
+- automatic-loss wording: `SECONDARY`;
+- Rek-Poat vs Min separation: `SECONDARY`.
+
+---
+
 ## 15. Promote workflow
 
 Không nhảy thẳng từ research vào code:
