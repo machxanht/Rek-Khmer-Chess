@@ -18,7 +18,7 @@ import {
 } from './captures'
 import {
   createPositionKey,
-  getMoveResults,
+  getAllMoveResults,
   hasKing,
   countPieces,
 } from './engine'
@@ -69,7 +69,8 @@ function createSearchStats(): AiSearchStats {
 
 /**
  * Collects all rule-legal moves for a player with engine-produced tactical
- * metadata. getMoveResults() is the single legality boundary.
+ * metadata. The bulk engine result is the single legality boundary and computes
+ * side-wide Min Rek Chanh obligations once per position.
  */
 export function getAllLegalMoves(
   board: Cell[],
@@ -78,11 +79,7 @@ export function getAllLegalMoves(
 ): AiLegalMove[] {
   const moves: AiLegalMove[] = []
 
-  for (let from = 0; from < BOARD_SIZE * BOARD_SIZE; from++) {
-    const piece = board[from]
-    if (!piece || piece.player !== player) continue
-
-    const legalResults = getMoveResults(board, from, mode)
+  for (const [from, legalResults] of getAllMoveResults(board, player, mode)) {
     for (const [to, result] of legalResults) {
       moves.push({
         from,
@@ -391,24 +388,28 @@ export function analyzeAiMove(
   for (const move of moves) {
     const nextBoard = simulateMove(board, move)
     const oppColor = opponent(aiColor)
-    const opponentMoves = getAllLegalMoves(nextBoard, oppColor, mode)
 
     let searchScore: number
-    if (!hasKing(nextBoard, oppColor) || opponentMoves.length === 0) {
+    if (!hasKing(nextBoard, oppColor)) {
       searchScore = 99000 + searchDepth
     } else {
-      searchScore = minimax(
-        nextBoard,
-        searchDepth - 1,
-        -Infinity,
-        Infinity,
-        false,
-        aiColor,
-        mode,
-        cache,
-        stats,
-        opponentMoves
-      )
+      const opponentMoves = getAllLegalMoves(nextBoard, oppColor, mode)
+      if (opponentMoves.length === 0) {
+        searchScore = 99000 + searchDepth
+      } else {
+        searchScore = minimax(
+          nextBoard,
+          searchDepth - 1,
+          -Infinity,
+          Infinity,
+          false,
+          aiColor,
+          mode,
+          cache,
+          stats,
+          opponentMoves
+        )
+      }
     }
 
     const score = searchScore + move.capturesCount * 3 + (move.poat ? 1 : 0)
