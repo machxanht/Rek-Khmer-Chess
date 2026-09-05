@@ -375,23 +375,33 @@ export function getAllMoveResults(
   return results
 }
 
-/** Executes a move and produces a new immutable game state. */
-export function executeMove(
-  state: GameState,
-  from: number,
-  to: number
-): GameState {
+/**
+ * Applies a MoveResult that was already produced by this engine's legal-move
+ * pipeline. This is a trusted fast path for search/internal consumers that
+ * already called getMoveResults()/getAllMoveResults(); it intentionally avoids
+ * repeating geometry, compulsory-Rek, and capture preview work.
+ *
+ * @internal Do not construct MoveResult manually for this function.
+ */
+export function executeMoveResult(state: GameState, result: MoveResult): GameState {
   if (state.status !== 'playing') return state
 
   const ruleset = normalizeRuleSet(state.mode)
   const mover = state.turn
+  const from = result.from
+  const to = result.to
   const piece = state.board[from]
-  if (!piece || piece.player !== mover) return state
 
-  const legal = getLegalMoves(state.board, from, ruleset)
-  if (!legal.includes(to)) return state
-
-  const result = previewMove(state.board, from, to, mover, ruleset)
+  if (
+    !piece ||
+    piece.player !== mover ||
+    !Number.isInteger(to) ||
+    to < 0 ||
+    to >= BOARD_SIZE * BOARD_SIZE ||
+    state.board[to] !== null
+  ) {
+    return state
+  }
 
   if (result.isHaoRekViolation) {
     return {
@@ -508,6 +518,26 @@ export function executeMove(
     loneKingMoveCount,
     drawMoveLimit,
   }
+}
+
+/** Executes a move and produces a new immutable game state. */
+export function executeMove(
+  state: GameState,
+  from: number,
+  to: number
+): GameState {
+  if (state.status !== 'playing') return state
+
+  const ruleset = normalizeRuleSet(state.mode)
+  const mover = state.turn
+  const piece = state.board[from]
+  if (!piece || piece.player !== mover) return state
+
+  const legal = getLegalMoves(state.board, from, ruleset)
+  if (!legal.includes(to)) return state
+
+  const result = previewMove(state.board, from, to, mover, ruleset)
+  return executeMoveResult(state, result)
 }
 
 /** Merge legacy REK_POAT repetition keys into the canonical REK_STANDARD namespace. */

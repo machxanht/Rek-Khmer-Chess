@@ -1,5 +1,5 @@
 import { PlayerColor, RuleSet, RuleSetInput, normalizeRuleSet } from './types'
-import { analyzeAiMove, getAllLegalMoves, AiDifficulty } from './ai'
+import { analyzeAiState, getAllLegalMoves, AiDifficulty } from './ai'
 import { createGame } from './session'
 
 export interface TournamentGameConfig {
@@ -54,6 +54,8 @@ function nextSeed(value: number): number {
 /**
  * Runs one deterministic engine-owned AI game.
  * Opening diversity chooses only from core-engine legal moves.
+ * Searched turns use the full GameState so project draw bookkeeping remains
+ * visible to AI lookahead without duplicating draw rules in this harness.
  */
 export function playTournamentGame(config: TournamentGameConfig): TournamentGameResult {
   const mode = normalizeRuleSet(config.mode)
@@ -86,7 +88,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
     }
 
     const difficulty = state.turn === 'you' ? config.youDifficulty : config.oppDifficulty
-    const analysis = analyzeAiMove(state.board, state.turn, state.mode, difficulty)
+    const analysis = analyzeAiState(state, difficulty)
     const move = analysis.move
     const nodes = analysis.stats.nodes
 
