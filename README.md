@@ -18,10 +18,11 @@ Identifier cũ `REK_POAT` được giữ **chỉ để backward compatibility**.
 - `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide: CONFIRMED / STRONG EVIDENCE / ENGINE INTERPRETATION / UNVERIFIED.
 - `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mà engine hiện thực thi.
 - `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, turn flow và ranh giới rule research.
-- `RESEARCH_HAO_REK_2026.md` — research note về exact `ហៅរែក`: evidence mới, các giả thuyết chưa đủ chuẩn để code và evidence gate trước khi đổi `MIN_REK_CHANH`.
+- `RESEARCH_LUAT_REK_KHMER_2026.md` — source registry + evidence matrix toàn bộ gameplay Rek Khmer.
+- `RESEARCH_HAO_REK_2026.md` — research note chuyên sâu về exact `ហៅរែក`, candidate event semantics và evidence gate trước khi đổi `MIN_REK_CHANH`.
 - `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển.
 
-Game/app trên Google Play, App Store hoặc app clone **không được dùng làm positive rule evidence**.
+**Google Play / Apple App Store developer descriptions, app tutorials, screenshots và app behavior không được dùng làm positive rule evidence.** Comment/review do người dùng viết bên dưới app có thể được đọc để đối chiếu, nhưng chỉ được ghi là `COMMUNITY SIGNAL`: dùng để phát hiện edge case/từ khóa/board fixture cần xác minh độc lập, không được dùng một mình để sửa luật.
 
 ## Setup canonical
 
@@ -125,7 +126,7 @@ Những phần **current engine đang chạy nhưng chưa được coi là histo
 - threefold repetition;
 - lone-King draw limit.
 
-Research pass 2026 về Hao Rek đã tìm thấy native Khmer evidence cho thấy **một cặp Rek mở sẵn có thể không tự tạo “lời gọi”**, và obligation có thể phụ thuộc vào một nước đi làm lộ pair. Evidence này đủ để nghi ngờ global state-trigger hiện tại nhưng **chưa đủ independent authoritative corroboration để đổi engine**. Chi tiết và evidence gate nằm trong `RESEARCH_HAO_REK_2026.md`.
+Research pass 2026 về Hao Rek có một `COMMUNITY SIGNAL` Khmer chi tiết cho thấy **một cặp Rek mở sẵn có thể không tự tạo “lời gọi”**, và obligation có thể phụ thuộc vào một nước đi làm lộ pair. Tín hiệu này đủ để nghi ngờ global state-trigger hiện tại nhưng **không phải authoritative evidence và chưa đủ để đổi engine**. Chi tiết nằm trong `RESEARCH_HAO_REK_2026.md`; toàn bộ matrix nằm trong `RESEARCH_LUAT_REK_KHMER_2026.md`.
 
 Không thay các rule này chỉ vì suy đoán. Khi research đủ mạnh, cập nhật guide → SPEC → code → regression tests theo đúng thứ tự.
 
