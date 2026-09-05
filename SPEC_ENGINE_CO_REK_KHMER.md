@@ -357,6 +357,65 @@ Các candidate rules như “blocking piece moves away”, “pre-existing pair 
 
 ---
 
+## 11.4. Proposed Hao Rek transition contract — NOT IMPLEMENTED
+
+Reconstructed real-board evidence now supports an event/transition model more strongly than the current board-global scan.
+
+**Current implementation remains unchanged** until unresolved edge cases are locked.
+
+Candidate future contract:
+
+```ts
+interface HaoRekContext {
+  active: boolean
+  createdByMove: { from: number; to: number } | null
+  // Engine-owned responses that were newly created by createdByMove.
+  allowedResponses: { from: number; to: number }[]
+}
+```
+
+Candidate derivation:
+
+```text
+before = getAllRekOpportunities(previousBoard, responder)
+apply opponent move under core rules
+after  = getAllRekOpportunities(nextBoard, responder)
+
+newlyCreated = after - before
+
+if newlyCreated.length > 0:
+    nextState.haoRekContext = active(newlyCreated)
+else:
+    nextState.haoRekContext = inactive
+```
+
+Important constraints from evidence:
+
+1. Do **not** implement Hao as `any Rek exists on current board`.
+2. Do **not** hard-code only the geometry “blocking piece moves away”; real-board footage also shows a mover entering a new square to create a pair around a gap.
+3. Pre-existing Rek opportunities must remain distinguishable from newly-created call responses.
+4. A valid response may itself create a new Hao context for the other side, forming a chain.
+5. Chain termination candidate: no newly-created Hao response after the latest move.
+6. Multiple newly-created responses from one move remain `UNVERIFIED`; do not choose responder-vs-caller policy yet.
+7. Verbal declaration remains `UNVERIFIED`.
+8. 2013 Khmer text supplies `SECONDARY` support for automatic loss when the required Rek is ignored; exact software representation remains a technical decision.
+
+Snapshot impact if implemented:
+
+- Hao context is transition-derived state and cannot safely be reconstructed from board alone;
+- persisted/replay state may need `haoRekContext` or enough previous-move context to deterministically derive it;
+- snapshot version/migration must be reviewed before implementation.
+
+AI impact if implemented:
+
+- AI must consume engine-owned `allowedResponses`;
+- AI must not diff Rek sets itself;
+- tournament/replay tests must include Hao chain state.
+
+No tests or engine code are changed by this documentation section.
+
+---
+
 ## 12. Rule-legal generation boundary
 
 ### `getMoveResults(board, from, mode)`
