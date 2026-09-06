@@ -321,21 +321,30 @@ opponent បើកឲ្យរែក
 
 ### 10.2. Current engine contract
 
-Engine hiện làm:
+Engine v1 hiện derive Hao từ transition:
 
 ```text
-nếu side-to-move có bất kỳ Rek opportunity nào trên current board
-→ chỉ moves tạo Rek được expose legal
-→ submit quiet geometric move
-→ immediate forfeit
+BEFORE responder Rek set
+→ opponent move
+→ AFTER responder Rek set
+→ NEW = AFTER - BEFORE
+
+NEW non-empty
+→ active HaoRekContext
+→ only newly-created responses are rule-legal for the call
+→ other geometric submission => immediate forfeit
 ```
+
+Một Hao response có thể tạo context mới cho bên kia và tiếp tục chain.
 
 Classification:
 
-- global trigger: **ENGINE INTERPRETATION / UNVERIFIED**;
-- consequence “không Rek => thua”: có **SECONDARY** support, nhưng current engine có thể đang áp consequence đúng vào trigger quá rộng;
-- King stationary trong Min: **STRONG EVIDENCE** secondary, native confirmation còn thiếu;
-- Poat trong Min: **UNVERIFIED**.
+- event/action trigger: **STRONG EVIDENCE**;
+- exact NEW-diff implementation: **STRONG EVIDENCE candidate + technical contract**;
+- multiple NEW choice: **TECHNICAL POLICY / UNVERIFIED historical rule**;
+- consequence “không Rek => thua”: **SECONDARY** support;
+- King stationary trong Min: **ENGINE INTERPRETATION / UNVERIFIED historical rule** with secondary/visual support;
+- Poat trong Min: **ENGINE INTERPRETATION / UNVERIFIED**.
 
 ### 10.3. Candidate historical model hiện được support hơn
 
@@ -458,7 +467,7 @@ Claim-level status:
 | Verbal call bắt buộc | `UNVERIFIED` |
 | Không đáp => automatic loss | `SECONDARY` |
 
-### Proposed historical interpretation — NOT IMPLEMENTED
+### Historical interpretation adopted for v1 implementation
 
 Model hiện phù hợp evidence nhất:
 
@@ -476,9 +485,9 @@ NEW non-empty
 → stop when no new call is created
 ```
 
-Điểm này **challenge trực tiếp** current engine interpretation `ANY current-board Rek → compulsory`.
+Board-global `ANY current-board Rek → compulsory` không còn là current implementation.
 
-Tuy nhiên chưa sửa engine vì chưa khóa multiple-new-target choice, verbal declaration requirement và interaction với Poat/multi-axis.
+V1 dùng transition-owned Hao context. Multiple-new-target choice, verbal requirement và Poat interaction vẫn không được nâng thành historical truth; chúng được giữ dưới technical policy/evidence boundary.
 
 ---
 
@@ -522,4 +531,4 @@ session/snapshot migration nếu cần
 AI/tournament consume core behavior
 ```
 
-Research pass 2026-09-06 **không đủ exact geometry để đổi gameplay**. Current Min behavior phải tiếp tục được ghi là current project interpretation pending historical validation.
+Research v1 đã đủ để thay board-global Hao bằng transition-owned context và hiện đã triển khai. Active rule research được freeze; xem `RESEARCH_FINAL_V1_FREEZE.md`.
