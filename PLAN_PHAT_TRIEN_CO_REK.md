@@ -97,43 +97,53 @@ Bàn 8×8, mỗi bên 1 King + 15 Men.
 - Pure TypeScript core engine trong `lib/rek-engine/`.
 - Canonical ruleset normalization + legacy `REK_POAT` migration.
 - `RekGame` public session facade.
-- setup/movement/Rek/Poat/current Min adjudication.
-- undo + snapshot serialize/deserialize + validation/migration.
-- AI easy/medium/hard.
-- deterministic AI tournament harness.
+- setup/movement/Rek/Poat/Min adjudication + transition-owned Hao Rek.
+- undo + snapshot serialize/deserialize + semantic validation/migration.
+- AI easy/medium/hard + deterministic tournament harness.
+- React/Vite responsive canonical board UI.
+- Local two-player match.
+- vs AI match.
+- Khmer / Vietnamese / English presentation.
+- local Save / Load + replay.
+- authoritative two-player WebSocket Online MVP with create/join room.
+- shared online protocol + two-client online smoke test.
 - curated engine tactical puzzles.
-- 13 regression report groups.
 - evidence-aware rule/research/spec/architecture docs.
 
-### Chưa có trong repository này
+### Chưa có / production hardening
 
-- React/web/mobile board UI.
-- `components/board/`.
-- online server/network match implementation.
-- production persistence/database.
-- audio/i18n application layer.
+- native mobile packaging.
+- production WebSocket deployment / WSS endpoint configuration.
+- reconnect + session resume.
+- room expiry/lifecycle cleanup beyond connection-close handling.
+- account/authentication.
+- matchmaking/lobby.
+- spectators.
+- production persistence/database for online rooms.
+- browser/device E2E automation.
+- audio/animation/accessibility polish.
 
-Các roadmap cũ từng đánh dấu GameBoard/mode UI là hoàn thành là **không còn đúng với trạng thái repo hiện tại** và đã được loại khỏi checklist.
+Các mục trên là **product/operations work**, không phải core rule blockers.
 
 ---
 
 ## 5. Checkpoint kỹ thuật hiện tại
 
-Theo checkpoint đã ghi nhận sau PR #27–#29:
+Latest verified product/core checkpoint:
 
 ```text
-Engine regression: 97/97 PASS
+Engine regression: 109/109 PASS
+Web typecheck/build: PASS
+Online server typecheck: PASS
+Two-client WebSocket smoke: PASS
 
 AI deterministic baseline:
 Medium: 798 nodes
 Hard: 7,532 nodes / 652 cutoffs
 Tournament smoke illegalMoves = 0
-
-Observed GitHub runner runtime after legal-move optimization:
-~77s -> ~16s
 ```
 
-Các metrics trên là regression checkpoint của project, không phải historical rule evidence.
+Các metrics trên là engineering regression checkpoint, không phải historical rule evidence.
 
 ---
 
@@ -354,43 +364,44 @@ Live state-aware AI search hiện mang repetition history, lone-King counter và
 
 ---
 
-## 14. Priority P3 — future UI/application
+## 14. Product MVP — COMPLETED; production hardening next
 
-Sau khi core contract đủ ổn định:
+Completed:
 
-### Board UI
+- Board UI with canonical a2/h7 setup.
+- Local match.
+- vs AI with Easy / Medium / Hard.
+- Khmer / Vietnamese / English i18n.
+- local save/load through engine snapshots.
+- replay through engine move execution.
+- Online MVP with authoritative WebSocket rooms.
 
-- render canonical a2/h7 initial setup;
-- consume `listRuleSets()`;
-- consume `RekGame.getLegalMoves()` / `previewMove()` / `makeMove()`;
-- không implement capture logic;
-- visual Rek/Poat sequence dựa trên engine metadata.
-
-### Match types
-
-```text
-LOCAL
-VS_AI
-ONLINE
-AI_VS_AI
-```
-
-Match type ngoài rules engine.
-
-### AI UI
+Current Online MVP contract:
 
 ```text
-easy
-medium
-hard
+browser move intent
+    ↓
+WebSocket room server
+    ↓
+RekGame authoritative turn/move validation
+    ↓
+canonical serialized snapshot broadcast
+    ↓
+both clients render server state
 ```
 
-### Cultural presentation
+Next product hardening:
 
-- Khmer/Vietnamese/English i18n;
-- terminology sourced from guide;
-- tránh wording “100% traditional” cho unverified mechanics;
-- Hao Rek visual/audio only after exact semantics verified enough to avoid teaching wrong rule.
+1. production host + WSS configuration;
+2. reconnect/session-resume token;
+3. room lifecycle/expiry and disconnect policy;
+4. browser E2E/device tests;
+5. UX/accessibility/animation/audio polish;
+6. optional auth + matchmaking/lobby;
+7. optional spectators;
+8. optional native/mobile packaging.
+
+Rules remain engine-owned. UI/network code must never duplicate Rek/Poat/Hao adjudication.
 
 ---
 
@@ -408,20 +419,20 @@ hard
 
 ---
 
-## 16. Recommended execution order after v1 freeze
+## 16. Recommended execution order từ product MVP checkpoint
 
 ```text
-P3  Board UI
+P3  production deployment / WSS config
     ↓
-P3  Local match
+P3  reconnect + room lifecycle
     ↓
-P3  vs AI
+P3  browser E2E / device verification
     ↓
-P3  presentation / i18n / replay persistence
+P3  UX / accessibility / animation / audio polish
     ↓
-P3  Online
+P4  optional auth / matchmaking / spectator
     ↓
-    polish
+P4  optional mobile packaging
 ```
 
-Research chỉ reopen khi có materially stronger archival/native/board-level evidence.
+Research tiếp tục frozen; chỉ reopen khi có materially stronger archival/native/board-level evidence.

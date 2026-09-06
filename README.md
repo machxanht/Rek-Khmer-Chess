@@ -1,6 +1,6 @@
 # រែកខ្មែរ - Rek Khmer Engine
 
-Pure TypeScript game engine cho **Rek Khmer (ល្បែងរែក)**. Repository này hiện chứa **engine, session API, AI, tournament harness, tests, tactical fixtures và tài liệu luật/research**. UI/web/mobile/server chưa nằm trong repo hiện tại.
+**Rek Khmer (ល្បែងរែក)** hiện gồm pure TypeScript engine + React/Vite web client. Repository chứa **engine, session API, AI, tournament harness, tests, tactical fixtures, Local/vs-AI/Online MVP, i18n, local persistence/replay, WebSocket room server và tài liệu luật/research**.
 
 ## Canonical project model
 
@@ -127,7 +127,24 @@ Historical edges still not promoted as truth:
 
 See `RESEARCH_FINAL_V1_FREEZE.md` for the frozen evidence matrix and reopen criteria.
 
-## Core modules
+## Product MVP
+
+Đã có:
+
+- canonical responsive 8×8 board UI;
+- Local two-player match;
+- vs AI: Easy / Medium / Hard, AI dùng full state-aware engine search;
+- Khmer / Vietnamese / English presentation;
+- local Save / Load bằng engine snapshot;
+- replay dựng lại bằng `RekGame.makeMove()`;
+- Online MVP: create/join room qua WebSocket, creator = White, joiner = Black;
+- server authoritative: turn + move đều được validate bằng `RekGame`.
+
+Online MVP hiện **chưa** có auth, database, matchmaking, reconnect/session-resume, spectator hoặc production deployment config.
+
+## Modules
+
+Core:
 
 - `lib/rek-engine/types.ts` — canonical rulesets, compatibility inputs, state types.
 - `lib/rek-engine/catalog.ts` — single-game identity + presentation metadata.
@@ -137,6 +154,15 @@ See `RESEARCH_FINAL_V1_FREEZE.md` for the frozen evidence matrix and reopen crit
 - `lib/rek-engine/ai.ts` — engine-backed AI search.
 - `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium tournament harness.
 - `lib/rek-engine/puzzles.ts` — curated **engine tactical fixtures**.
+
+Application/network:
+
+- `src/App.tsx` — Local / vs AI / Online UI orchestration.
+- `src/i18n.ts` — Khmer / Vietnamese / English UI copy.
+- `src/persistence.ts` — versioned local match persistence metadata.
+- `src/online.ts` — browser WebSocket transport.
+- `shared/online-protocol.ts` — shared create/join/move room protocol.
+- `server/online-server.ts` — authoritative two-player room server.
 
 ## Public API
 
@@ -217,12 +243,37 @@ Tournament smoke illegalMoves = 0
 Observed runner test runtime: ~77s -> ~16s after legal-move pipeline optimization
 ```
 
-## Test
+## Run / build / test
+
+Install:
 
 ```bash
 npm install --no-package-lock
+```
+
+Web client:
+
+```bash
+npm run dev
+npm run typecheck:web
+npm run build:web
+```
+
+Online server:
+
+```bash
+npm run server:online
+# default: ws://localhost:8787
+# optional: REK_WS_HOST / REK_WS_PORT
+npm run typecheck:server
+npm run test:online
+```
+
+Engine:
+
+```bash
 npm run typecheck
-npm test
+npm run test:engine
 ```
 
 Tournament:
@@ -233,7 +284,7 @@ node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-p
 npm run tournament:ai:200
 ```
 
-Engine CI runs typecheck + regressions for engine/scripts/package/tsconfig and canonical rule/spec/research Markdown (`RESEARCH_*.md`).
+CI hiện chạy **engine typecheck + web build + online-server typecheck + two-client WebSocket smoke + full engine regressions** cho các path liên quan, cùng canonical rule/spec/research Markdown (`RESEARCH_*.md`).
 
 ## Rule-change workflow
 
