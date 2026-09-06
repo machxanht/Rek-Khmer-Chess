@@ -11,17 +11,23 @@
     "tournament:ai": "node scripts/run-ai-tournament.cjs",
     "tournament:ai:200": "node scripts/run-ai-tournament.cjs --games-per-mode=100 --max-plies=160",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "typecheck:web": "tsc --noEmit -p tsconfig.web.json"
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "server:online": "tsx server/online-entry.ts",
+    "test:online": "tsx scripts/run-online-smoke.ts",
+    "typecheck:server": "tsc --noEmit -p tsconfig.server.json"
   },
   "dependencies": {
     "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "react-dom": "18.3.1",
+    "ws": "8.18.0"
   },
   "devDependencies": {
     "@types/node": "^24",
     "@types/react": "18.3.18",
     "@types/react-dom": "18.3.5",
     "typescript": "5.7.3",
-    "vite": "5.4.14"
+    "vite": "5.4.14",
+    "@types/ws": "8.5.14",
+    "tsx": "4.19.2"
   }
 }

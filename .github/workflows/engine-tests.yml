@@ -5,8 +5,14 @@ on:
     paths:
       - 'lib/rek-engine/**'
       - 'src/**'
+      - 'server/**'
+      - 'shared/**'
+      - 'server/**'
+      - 'shared/**'
       - 'index.html'
       - 'tsconfig.web.json'
+      - 'tsconfig.server.json'
+      - 'tsconfig.server.json'
       - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
@@ -56,6 +62,12 @@ jobs:
 
       - name: Build web client
         run: npm run build:web
+
+      - name: Typecheck online server
+        run: npm run typecheck:server
+
+      - name: Run online room smoke
+        run: npm run test:online
 
       - name: Run core engine regressions
         run: npm run test:engine

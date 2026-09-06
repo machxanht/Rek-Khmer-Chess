@@ -12,6 +12,17 @@ export interface UiCopy {
   match: string
   local: string
   vsAi: string
+  online: string
+  server: string
+  roomCode: string
+  createRoom: string
+  joinRoom: string
+  connecting: string
+  waitingOpponent: string
+  opponentConnected: string
+  opponentLeft: string
+  onlineAs: string
+  onlineError: string
   aiDifficulty: string
   easy: string
   medium: string
@@ -66,6 +77,17 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     match: 'ការប្រកួត',
     local: 'លេងក្នុងម៉ាស៊ីន',
     vsAi: 'ទល់ AI',
+    online: 'អនឡាញ',
+    server: 'ម៉ាស៊ីនមេ',
+    roomCode: 'លេខបន្ទប់',
+    createRoom: 'បង្កើតបន្ទប់',
+    joinRoom: 'ចូលបន្ទប់',
+    connecting: 'កំពុងភ្ជាប់…',
+    waitingOpponent: 'កំពុងរង់ចាំគូប្រកួត…',
+    opponentConnected: 'គូប្រកួតបានភ្ជាប់។',
+    opponentLeft: 'គូប្រកួតបានចាកចេញ។',
+    onlineAs: 'អ្នកលេងជា',
+    onlineError: 'បញ្ហាអនឡាញ',
     aiDifficulty: 'កម្រិត AI',
     easy: 'ងាយ',
     medium: 'មធ្យម',
@@ -118,6 +140,17 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     match: 'Trận đấu',
     local: 'Hai người',
     vsAi: 'Đấu AI',
+    online: 'Online',
+    server: 'Máy chủ',
+    roomCode: 'Mã phòng',
+    createRoom: 'Tạo phòng',
+    joinRoom: 'Vào phòng',
+    connecting: 'Đang kết nối…',
+    waitingOpponent: 'Đang chờ đối thủ…',
+    opponentConnected: 'Đối thủ đã kết nối.',
+    opponentLeft: 'Đối thủ đã rời phòng.',
+    onlineAs: 'Bạn cầm',
+    onlineError: 'Lỗi online',
     aiDifficulty: 'Độ khó AI',
     easy: 'Dễ',
     medium: 'Vừa',
@@ -170,6 +203,17 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     match: 'Match',
     local: 'Local',
     vsAi: 'vs AI',
+    online: 'Online',
+    server: 'Server',
+    roomCode: 'Room code',
+    createRoom: 'Create room',
+    joinRoom: 'Join room',
+    connecting: 'Connecting…',
+    waitingOpponent: 'Waiting for opponent…',
+    opponentConnected: 'Opponent connected.',
+    opponentLeft: 'Opponent left.',
+    onlineAs: 'You are',
+    onlineError: 'Online error',
     aiDifficulty: 'AI difficulty',
     easy: 'Easy',
     medium: 'Medium',
