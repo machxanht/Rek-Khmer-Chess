@@ -1,7 +1,7 @@
 # RESEARCH NOTE: ហៅរែក (Hao Rek) / Min Rek Chanh — 2026
 
 > **Ngày rà soát:** 2026-09-06  
-> **Trạng thái:** `PARTIALLY RESOLVED — EVENT-TRIGGERED HAO REK STRONGLY SUPPORTED; MULTI-TARGET / VERBAL EDGE CASES UNRESOLVED`  
+> **Trạng thái:** `V1 IMPLEMENTED + RESEARCH FROZEN — event-triggered Hao active; unresolved edges remain technical policy / UNVERIFIED`  
 > **Scope:** exact trigger, geometry và nghĩa vụ phản hồi của **Hao Rek (ហៅរែក)** trong variant `MIN_REK_CHANH`.
 
 Tài liệu này là **research note**, không phải rule specification. Nó không thay thế:
@@ -76,27 +76,35 @@ Nhưng không được dùng một mình để:
 
 ## 3. Current engine đang làm gì?
 
-`MIN_REK_CHANH` hiện dùng **state-triggered global compulsory Rek**:
+`MIN_REK_CHANH` hiện dùng **transition-owned Hao Rek context**:
 
 ```text
-current board + side to move
+BEFORE responder Rek set
         ↓
-scan toàn bộ Rek opportunities
+execute opponent move
         ↓
-any Rek exists?
-   ├── no  -> quiet/geometric moves có thể đi
-   └── yes -> chỉ moves tạo Rek được expose là rule-legal
-              submit quiet geometric move -> instant forfeit
+AFTER responder Rek set
+        ↓
+NEW = AFTER - BEFORE
+        ↓
+NEW non-empty?
+   ├── no  -> normal state legality
+   └── yes -> HaoRekContext.allowedResponses = NEW
+              responder must choose a NEW response
+              other geometric submit -> immediate forfeit
 ```
 
-Ngoài ra current engine giữ King đứng yên trong `MIN_REK_CHANH`.
+Một valid Hao response có thể tạo Hao context mới cho bên kia, vì vậy chain được derive lại sau mỗi transition.
 
 Classification:
 
-- global board scan trigger: `ENGINE INTERPRETATION / UNVERIFIED historical semantics`;
-- quiet move => instant loss: `ENGINE INTERPRETATION`, có `SECONDARY` support cho hậu quả “không Rek thì thua”, nhưng exact trigger vẫn chưa khóa;
-- King stationary: `STRONG EVIDENCE` ở secondary reconstruction, chưa native-confirmed;
-- Poat trong Min: `UNVERIFIED`.
+- event/action-triggered Hao: `STRONG EVIDENCE`;
+- newly-created-response diff: `STRONG EVIDENCE candidate` + v1 technical contract;
+- multiple NEW responses => responder chooses any: `TECHNICAL POLICY / UNVERIFIED historical rule`;
+- no verbal-call bit: `TECHNICAL POLICY`;
+- ignore active Hao => loss: `SECONDARY` consequence support;
+- King stationary: `ENGINE INTERPRETATION / UNVERIFIED historical rule` with secondary/visual support;
+- Poat in Min: `ENGINE INTERPRETATION / UNVERIFIED`.
 
 ---
 
@@ -301,7 +309,7 @@ Classification:
 - chain response semantics: `STRONG EVIDENCE candidate` + `SECONDARY` textual support;
 - responder/caller choice when one move creates multiple NEW targets: `UNVERIFIED`.
 
-**Current board-global engine interpretation is not supported by any authoritative/secondary source found so far.** Không được gọi nó historical truth.
+**Board-global compulsory Rek đã bị loại khỏi current engine.** Current v1 implementation dùng transition-owned Hao context và vẫn giữ evidence labels riêng với technical policy.
 
 ---
 
@@ -652,14 +660,15 @@ Candidate tests:
 
 ---
 
-## 14. Quyết định kỹ thuật tại 2026-09-06
+## 14. Quyết định kỹ thuật / v1 freeze
 
-**Không thay gameplay `MIN_REK_CHANH` trong research pass này.**
+Event-triggered Hao đã được triển khai qua `HaoRekContext`, state-aware legality, snapshot persistence, repetition identity và AI/tournament consumption.
 
-Current implementation tiếp tục tồn tại để compatibility/regression ổn định nhưng phải được gọi đúng là:
+Các điểm chưa được historical-confirmed vẫn giữ dưới technical policy thay vì tiếp tục chặn product work:
 
-> `ENGINE INTERPRETATION — current project contract / pending historical validation`
+- multiple NEW responses -> responder may choose any;
+- verbal call not modeled;
+- ignored active Hao -> state-changing forfeit;
+- Poat-in-Min unchanged pending stronger evidence.
 
-Evidence chữ + reconstructed real-board events hiện đủ mạnh để viết **proposed transition model** dựa trên newly-created Rek opportunities, nhưng **chưa đủ để implement final engine contract** vì multiple-new-target choice, verbal-call requirement và một số interaction edge cases vẫn unresolved.
-
-Không thay gameplay trong note này. Bước tiếp theo đúng workflow là đồng bộ `HUONG_DAN` + `SPEC` ở mức **PROPOSED / NOT IMPLEMENTED**, sau đó mới quyết định test/engine migration khi evidence gate cho các edge case còn lại đủ mạnh.
+Active Hao research đóng ở v1. Xem `RESEARCH_FINAL_V1_FREEZE.md` để biết matrix cuối và điều kiện reopen.
