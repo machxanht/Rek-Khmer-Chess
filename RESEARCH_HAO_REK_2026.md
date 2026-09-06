@@ -76,25 +76,24 @@ Nhưng không được dùng một mình để:
 
 ## 3. Current engine đang làm gì?
 
-`MIN_REK_CHANH` hiện dùng **state-triggered global compulsory Rek**:
+`MIN_REK_CHANH` hiện dùng **transition-owned Hao Rek context**:
 
 ```text
-current board + side to move
-        ↓
-scan toàn bộ Rek opportunities
-        ↓
-any Rek exists?
-   ├── no  -> quiet/geometric moves có thể đi
-   └── yes -> chỉ moves tạo Rek được expose là rule-legal
-              submit quiet geometric move -> instant forfeit
+before opponent move -> responder Rek set BEFORE
+opponent move
+after opponent move  -> responder Rek set AFTER
+NEW = AFTER - BEFORE
+   ├── empty -> no Hao obligation
+   └── non-empty -> active Hao context with engine-owned allowedResponses
+                    ignore active response -> immediate forfeit
 ```
 
 Ngoài ra current engine giữ King đứng yên trong `MIN_REK_CHANH`.
 
 Classification:
 
-- global board scan trigger: `ENGINE INTERPRETATION / UNVERIFIED historical semantics`;
-- quiet move => instant loss: `ENGINE INTERPRETATION`, có `SECONDARY` support cho hậu quả “không Rek thì thua”, nhưng exact trigger vẫn chưa khóa;
+- transition-owned newly-created-response trigger: `IMPLEMENTED TECHNICAL POLICY`, supported by `STRONG EVIDENCE` for event-triggered Hao;
+- ignore active Hao => instant loss: `IMPLEMENTED TECHNICAL POLICY`, with `SECONDARY` support for the consequence “không Rek thì thua”;
 - King stationary: `STRONG EVIDENCE` ở secondary reconstruction, chưa native-confirmed;
 - Poat trong Min: `UNVERIFIED`.
 
@@ -563,7 +562,7 @@ chain while a new call exists
 stop when no new call is created
 ```
 
-Đây là **proposed historical model, NOT IMPLEMENTED**.
+Đây là **implemented project model**, dựa trên evidence mạnh nhất hiện có; các edge case chưa khóa vẫn được ghi riêng là technical policy, không phải historical truth.
 
 Unresolved edge cases:
 
@@ -652,13 +651,13 @@ Candidate tests:
 
 ---
 
-## 14. Quyết định kỹ thuật tại 2026-09-06
+## 14. Quyết định kỹ thuật tại 2026-09-07 — V1 freeze
 
-**Không thay gameplay `MIN_REK_CHANH` trong research pass này.**
+`MIN_REK_CHANH` đã migrate sang transition-owned Hao Rek context và regression hiện khóa model đó.
 
-Current implementation tiếp tục tồn tại để compatibility/regression ổn định nhưng phải được gọi đúng là:
+Current implementation phải được gọi đúng là:
 
-> `ENGINE INTERPRETATION — current project contract / pending historical validation`
+> `PROJECT V1 TECHNICAL POLICY — transition-owned Hao Rek / pending stronger historical validation for unresolved edges`
 
 Evidence chữ + reconstructed real-board events hiện đủ mạnh để viết **proposed transition model** dựa trên newly-created Rek opportunities, nhưng **chưa đủ để implement final engine contract** vì multiple-new-target choice, verbal-call requirement và một số interaction edge cases vẫn unresolved.
 
