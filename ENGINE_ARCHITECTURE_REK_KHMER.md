@@ -43,7 +43,7 @@ AiDifficulty
 └── hard
 ```
 
-Rek và Poat là mechanics. Hao Rek là rule/state/event candidate trong Min Rek Chanh, không phải game mode.
+Rek và Poat là mechanics. Hao Rek là transition-owned rule/state trong Min Rek Chanh, không phải game mode.
 
 ---
 
@@ -237,8 +237,8 @@ flowchart LR
 ### Rule legality
 
 - Standard: geometric set remains available;
-- current Min: side-wide board scan may suppress quiet moves;
-- bulk AI path computes current Min obligation once per position.
+- current Min: state-aware legality consumes `haoRekContext.allowedResponses`;
+- board-only move generation does not invent Hao from pre-existing Rek.
 
 Consumer không dùng geometric set như final legal set.
 
@@ -325,121 +325,59 @@ Tên neutral, không tuyên bố “Rek Poat” là separate traditional mode.
 
 ---
 
-## 12. `MIN_REK_CHANH`: current vs candidate historical model
+## 12. `MIN_REK_CHANH`: Rek v1 architecture
 
-### Current engine model
-
-```text
-current board + current player
-      ↓
-getAllRekOpportunities()
-      ↓
-any Rek exists?
-  ├── no  -> normal geometric moves
-  └── yes -> only Rek moves
-             quiet geometric submit -> forfeit
-```
-
-### Evidence update 2026-09-06
-
-Secondary Khmer wording:
+Current engine model:
 
 ```text
-opponent បើកឲ្យរែក
-→ responder must Rek
-→ if not -> automatic loss
+previous GameState
+   ↓
+responder Rek set BEFORE
+   ↓
+execute opponent move
+   ↓
+responder Rek set AFTER
+   ↓
+NEW = AFTER - BEFORE
+   ↓
+NEW empty? -> no Hao context
+NEW non-empty? -> persist active HaoRekContext.allowedResponses
+   ↓
+state-aware legal generation
+   ↓
+response / immediate forfeit
+   ↓
+derive next Hao context
 ```
 
-Do đó candidate historical flow hiện được support hơn:
-
-```mermaid
-flowchart LR
-    PREV[previous board] --> MOVE[opponent move/action]
-    MOVE --> DETECT[detect បើកឲ្យរែក]
-    DETECT --> CTX[active Hao Rek obligation]
-    CTX --> RESPONSE[allowed response set]
-    RESPONSE --> NEXT[next state]
-```
-
-**Exact `detect បើកឲ្យរែក` predicate vẫn UNVERIFIED.** Không implement candidate architecture trước evidence gate.
+This implements the strongest available event-trigger evidence while keeping unresolved historical edges as explicit technical policy.
 
 ---
 
-## 13. Future Hao Rek state boundary
-
-Nếu event-trigger được xác nhận, engine có thể cần:
+## 13. Hao Rek state boundary
 
 ```ts
 interface HaoRekContext {
   active: boolean
   createdByMove: { from: number; to: number } | null
-  targetPairs: number[][]
-  allowedResponses?: { from: number; to: number }[]
+  allowedResponses: { from: number; to: number }[]
 }
 ```
 
-Possible lifecycle:
+Architectural consequences:
 
-```text
-previous state
-   ↓
-execute opponent move
-   ↓
-derive call context from verified rule
-   ↓
-persist context in canonical state/snapshot
-   ↓
-next player's rule-legal generation
-   ↓
-response / violation adjudication
-   ↓
-expire or chain context by verified rule
-```
+- board identity alone is insufficient for live legality;
+- snapshots/replays persist Hao context;
+- repetition identity includes active response set;
+- session/API use state-aware legal projection;
+- live AI/tournament consume full GameState;
+- AI never derives Hao independently.
 
-Nếu thêm context, phải bump/migrate snapshot contract theo nhu cầu thay vì silently deriving from board.
+Current technical policies:
 
----
-
-### 13.1. Reconstructed media implications
-
-Real-board footage `1000009344.mp4` provides multiple reconstructable events:
-
-- blocker leaves the middle square and exposes a new response;
-- mover enters a new position and creates a pair around a gap;
-- pre-existing Rek can coexist with a newly-created call response;
-- one response can create a counter-response and continue the chain.
-
-Therefore future architecture must preserve **transition identity**, not only board identity.
-
-Candidate lifecycle:
-
-```text
-previous state
-   ↓
-compute responder Rek set BEFORE
-   ↓
-execute opponent move
-   ↓
-compute responder Rek set AFTER
-   ↓
-newlyCreated = AFTER - BEFORE
-   ↓
-persist active Hao context if newlyCreated != empty
-   ↓
-next player's rule-legal generation exposes engine-owned allowedResponses
-   ↓
-response / violation adjudication
-   ↓
-response becomes next transition
-   ↓
-derive next Hao context
-   ↓
-chain until no newly-created response exists
-```
-
-This is **PROPOSED / NOT IMPLEMENTED**. Multiple-new-target choice and verbal-call requirements remain unresolved.
-
-The board alone is insufficient to distinguish a pre-existing Rek from a newly-created Hao response. This matters for snapshots/replays, undo, online synchronization, AI search and deterministic tournament reconstruction.
+- responder may choose any NEW response;
+- verbal speech state is not required;
+- Poat-in-Min remains unchanged but historically unverified.
 
 ---
 
@@ -466,22 +404,24 @@ lone-King limit
 | threefold | project extension |
 | lone-King default 32 | project extension |
 
-Win reason `Opponent completely immobilized (Zero liberties)` hiện dễ gây conflation giữa mobility terminal và Poat/liberties. Đây là naming/semantic cleanup candidate, chưa sửa code trong docs pass.
+Zero-move terminal reason is now `Opponent has no geometric moves`, intentionally separated from Poat/liberty terminology.
 
 ---
 
 ## 15. AI architecture
 
-AI legal path:
+AI live path:
 
 ```text
-board + player + canonical RuleSet
-        ↓
-getAllMoveResults()
-        ↓
-engine-owned legal moves + captures
-        ↓
-ordering/evaluation/minimax
+GameState
+   ↓
+getAllStateMoveResults()
+   ↓
+engine-owned Hao/legal/capture metadata
+   ↓
+executeMove() for child states
+   ↓
+ordering/evaluation/minimaxState
 ```
 
 Điểm tốt:
@@ -491,13 +431,7 @@ ordering/evaluation/minimax
 - deterministic Medium/Hard regression;
 - tournament uses `RekGame` for actual state transitions.
 
-Technical debt:
-
-- minimax search state không mang `positionCounts`, `loneKingMoveCount`, `drawMoveLimit`;
-- vì vậy project draw extensions không được modeled đầy đủ trong search tree;
-- tournament/session vẫn adjudicate draws khi move thật được execute.
-
-Không ưu tiên sửa điểm này trước khi rule research/terminal semantics ổn định.
+Live state-aware search now carries Hao context plus repetition/lone-King draw history through engine-owned GameState transitions. Board-only AI helpers remain compatibility/baseline utilities.
 
 ---
 
@@ -520,7 +454,7 @@ Future UI phải label đúng “engine training/tactical fixture” trừ khi t
 
 `npm run test:engine` compile và chạy 13 report groups, gồm core/spec/AI/state/draw/puzzle/simulation/tournament/API locks.
 
-Checkpoint gần nhất: **97/97 PASS**.
+Rek v1 freeze checkpoint: **109/109 PASS**.
 
 CI engine workflow chạy khi paths thay đổi trong:
 
@@ -530,7 +464,7 @@ CI engine workflow chạy khi paths thay đổi trong:
 - `tsconfig.json`;
 - workflow itself.
 
-**Audit finding:** Markdown rule/spec docs không nằm trong path trigger. Vì docs chính là evidence/contract layer, future CI nên cân nhắc trigger test suite khi `HUONG_DAN`, `SPEC`, `ENGINE_ARCHITECTURE` hoặc research lock-relevant docs thay đổi.
+CI path coverage includes canonical rule/spec/architecture docs and `RESEARCH_*.md`, so research-contract changes trigger the same engine Quality Gate.
 
 ---
 
