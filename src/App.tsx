@@ -9,6 +9,7 @@ import {
   type RekGame,
   type RuleSet,
 } from '../lib/rek-engine'
+import { LANGUAGE_LABELS, UI_COPY, type UiCopy, type UiLanguage } from './i18n'
 
 type MatchType = 'LOCAL' | 'VS_AI'
 
@@ -17,11 +18,7 @@ const RULESETS: { id: RuleSet; label: string; note: string }[] = [
   { id: 'MIN_REK_CHANH', label: 'Min Rek Chanh', note: 'Event-triggered Hao Rek contract' },
 ]
 
-const DIFFICULTIES: { id: AiDifficulty; label: string }[] = [
-  { id: 'easy', label: 'Easy' },
-  { id: 'medium', label: 'Medium' },
-  { id: 'hard', label: 'Hard' },
-]
+const DIFFICULTIES: AiDifficulty[] = ['easy', 'medium', 'hard']
 
 function PieceView({ piece }: { piece: NonNullable<Cell> }) {
   const side = piece.player === 'you' ? 'white' : 'black'
@@ -40,10 +37,11 @@ interface BoardProps {
   selected: number | null
   legalMoves: Set<number>
   disabled: boolean
+  copy: UiCopy
   onSquareClick: (index: number) => void
 }
 
-function Board({ state, selected, legalMoves, disabled, onSquareClick }: BoardProps) {
+function Board({ state, selected, legalMoves, disabled, copy, onSquareClick }: BoardProps) {
   return (
     <div className="board-shell">
       <div className="file-labels" aria-hidden="true">
@@ -62,8 +60,8 @@ function Board({ state, selected, legalMoves, disabled, onSquareClick }: BoardPr
             const isLegal = legalMoves.has(index)
             const isLastMove = state.lastMove?.from === index || state.lastMove?.to === index
             const label = piece
-              ? `${coord}: ${piece.player === 'you' ? 'White' : 'Black'} ${piece.king ? 'King' : 'Man'}`
-              : `${coord}: empty`
+              ? `${coord}: ${piece.player === 'you' ? copy.white : copy.black} ${piece.king ? copy.king : copy.man}`
+              : `${coord}: ${copy.empty}`
 
             return (
               <button
@@ -76,7 +74,7 @@ function Board({ state, selected, legalMoves, disabled, onSquareClick }: BoardPr
                   isLegal ? 'square--legal' : '',
                   isLastMove ? 'square--last' : '',
                 ].filter(Boolean).join(' ')}
-                aria-label={isLegal ? `${label}, legal destination` : label}
+                aria-label={isLegal ? `${label}, ${copy.legalDestination}` : label}
                 aria-pressed={isSelected}
                 key={coord}
                 data-coordinate={coord}
@@ -105,6 +103,7 @@ function pieceCounts(board: Cell[]) {
 }
 
 export function App() {
+  const [language, setLanguage] = useState<UiLanguage>('km')
   const [ruleset, setRuleset] = useState<RuleSet>('REK_STANDARD')
   const [matchType, setMatchType] = useState<MatchType>('LOCAL')
   const [difficulty, setDifficulty] = useState<AiDifficulty>('medium')
@@ -114,8 +113,13 @@ export function App() {
   const [legalMoves, setLegalMoves] = useState<Set<number>>(new Set())
   const [aiThinking, setAiThinking] = useState(false)
 
+  const copy = UI_COPY[language]
   const counts = pieceCounts(state.board)
   const isAiTurn = matchType === 'VS_AI' && state.status === 'playing' && state.turn === 'opp'
+
+  useEffect(() => {
+    document.documentElement.lang = language
+  }, [language])
 
   const clearSelection = () => {
     setSelected(null)
@@ -202,29 +206,47 @@ export function App() {
     syncState()
   }
 
-  const turnLabel = state.turn === 'you' ? 'White' : 'Black'
+  const difficultyLabel = copy[difficulty]
+  const turnLabel = state.turn === 'you' ? copy.white : copy.black
   const statusLabel = state.status === 'playing'
     ? aiThinking
-      ? 'AI thinking…'
+      ? copy.aiThinking
       : matchType === 'VS_AI' && state.turn === 'opp'
-        ? `AI (${difficulty}) to move`
-        : `${turnLabel} to move`
+        ? `${copy.aiToMove} · ${difficultyLabel}`
+        : `${turnLabel} ${copy.toMove}`
     : state.status === 'draw'
-      ? 'Draw'
-      : `${state.winner === 'you' ? 'White' : 'Black'} wins`
+      ? copy.draw
+      : `${state.winner === 'you' ? copy.white : copy.black} ${copy.wins}`
 
   return (
     <main className="app-shell">
       <header className="hero">
         <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
         <h1>រែកខ្មែរ</h1>
-        <p className="subtitle">Play locally or challenge the engine AI.</p>
+        <p className="subtitle">{copy.subtitle}</p>
       </header>
 
       <section className="game-layout">
-        <aside className="panel" aria-label="Match controls">
+        <aside className="panel" aria-label={copy.match}>
           <div>
-            <span className="panel-label">Match</span>
+            <span className="panel-label">{copy.language}</span>
+            <div className="choice-row choice-row--three">
+              {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
+                <button
+                  type="button"
+                  key={item}
+                  className={language === item ? 'choice choice--active' : 'choice'}
+                  onClick={() => setLanguage(item)}
+                  aria-pressed={language === item}
+                >
+                  {LANGUAGE_LABELS[item]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <span className="panel-label">{copy.match}</span>
             <div className="choice-row">
               <button
                 type="button"
@@ -232,7 +254,7 @@ export function App() {
                 onClick={() => startFreshGame(ruleset, 'LOCAL')}
                 aria-pressed={matchType === 'LOCAL'}
               >
-                Local
+                {copy.local}
               </button>
               <button
                 type="button"
@@ -240,24 +262,24 @@ export function App() {
                 onClick={() => startFreshGame(ruleset, 'VS_AI')}
                 aria-pressed={matchType === 'VS_AI'}
               >
-                vs AI
+                {copy.vsAi}
               </button>
             </div>
           </div>
 
           {matchType === 'VS_AI' ? (
             <div>
-              <span className="panel-label">AI difficulty</span>
+              <span className="panel-label">{copy.aiDifficulty}</span>
               <div className="choice-row choice-row--three">
                 {DIFFICULTIES.map((item) => (
                   <button
                     type="button"
-                    key={item.id}
-                    className={difficulty === item.id ? 'choice choice--active' : 'choice'}
-                    onClick={() => setDifficulty(item.id)}
-                    aria-pressed={difficulty === item.id}
+                    key={item}
+                    className={difficulty === item ? 'choice choice--active' : 'choice'}
+                    onClick={() => setDifficulty(item)}
+                    aria-pressed={difficulty === item}
                   >
-                    {item.label}
+                    {copy[item]}
                   </button>
                 ))}
               </div>
@@ -265,7 +287,7 @@ export function App() {
           ) : null}
 
           <div>
-            <span className="panel-label">Ruleset</span>
+            <span className="panel-label">{copy.ruleset}</span>
             <div className="segmented">
               {RULESETS.map((item) => (
                 <button
@@ -283,14 +305,14 @@ export function App() {
           </div>
 
           <div className="status-card">
-            <span className="panel-label">{matchType === 'LOCAL' ? 'Local match' : 'You are White'}</span>
+            <span className="panel-label">{matchType === 'LOCAL' ? copy.localMatch : copy.youAreWhite}</span>
             <dl>
-              <div><dt>Status</dt><dd>{statusLabel}</dd></div>
-              <div><dt>White pieces</dt><dd>{counts.you}</dd></div>
-              <div><dt>Black pieces</dt><dd>{counts.opp}</dd></div>
-              <div><dt>Moves</dt><dd>{state.moveCount}</dd></div>
-              <div><dt>Last Rek</dt><dd>{state.lastRek ? 'Yes' : 'No'}</dd></div>
-              <div><dt>Last Poat</dt><dd>{state.lastPoat ? 'Yes' : 'No'}</dd></div>
+              <div><dt>{copy.status}</dt><dd>{statusLabel}</dd></div>
+              <div><dt>{copy.whitePieces}</dt><dd>{counts.you}</dd></div>
+              <div><dt>{copy.blackPieces}</dt><dd>{counts.opp}</dd></div>
+              <div><dt>{copy.moves}</dt><dd>{state.moveCount}</dd></div>
+              <div><dt>{copy.lastRek}</dt><dd>{state.lastRek ? copy.yes : copy.no}</dd></div>
+              <div><dt>{copy.lastPoat}</dt><dd>{state.lastPoat ? copy.yes : copy.no}</dd></div>
             </dl>
           </div>
 
@@ -301,26 +323,26 @@ export function App() {
               onClick={undoMove}
               disabled={!game.canUndo() || aiThinking}
             >
-              Undo
+              {copy.undo}
             </button>
             <button type="button" className="action-button" onClick={resetGame}>
-              Reset
+              {copy.reset}
             </button>
           </div>
 
           {state.winReason ? <p className="result-note">{state.winReason}</p> : null}
 
           <p className="phase-note">
-            {matchType === 'VS_AI'
-              ? 'You play White. The AI plays Black using full state-aware engine search.'
-              : 'Both sides play on this device. All legality and adjudication come from the engine.'}
+            {matchType === 'VS_AI' ? copy.vsAiHint : copy.localHint}
           </p>
         </aside>
 
         <section className="board-card">
           <div className="board-card__head">
             <div>
-              <span className="panel-label">{matchType === 'LOCAL' ? 'Local · 2 players' : `vs AI · ${difficulty}`}</span>
+              <span className="panel-label">
+                {matchType === 'LOCAL' ? copy.localBoardLabel : `${copy.vsAiBoardLabel} · ${difficultyLabel}`}
+              </span>
               <h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2>
             </div>
             <span className={`turn-chip ${state.status !== 'playing' ? 'turn-chip--finished' : ''}`}>
@@ -333,14 +355,15 @@ export function App() {
             selected={selected}
             legalMoves={legalMoves}
             disabled={isAiTurn}
+            copy={copy}
             onSquareClick={handleSquareClick}
           />
 
           <div className="legend" aria-label="Piece legend">
-            <span><i className="legend-piece legend-piece--white" /> White</span>
-            <span><i className="legend-piece legend-piece--black" /> Black</span>
-            <span><i className="legend-king">♚</i> King</span>
-            <span><i className="legend-dot" /> Legal move</span>
+            <span><i className="legend-piece legend-piece--white" /> {copy.white}</span>
+            <span><i className="legend-piece legend-piece--black" /> {copy.black}</span>
+            <span><i className="legend-king">♚</i> {copy.king}</span>
+            <span><i className="legend-dot" /> {copy.legalMove}</span>
           </div>
         </section>
       </section>
