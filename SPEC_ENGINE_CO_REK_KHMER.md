@@ -5,7 +5,7 @@
 > **Vai trò:** technical contract của code hiện tại.  
 > **Không phải:** tuyên bố rằng mọi edge case dưới đây đều đã được lịch sử Khmer xác nhận. Evidence status nằm trong `HUONG_DAN_LUAT_CO_REK_KHMER.md` và research notes.
 
-**Research pass 2026-09-06 không đổi gameplay.** Evidence mới về `បើកឲ្យរែក` được ghi vào guide/research nhưng exact geometry chưa đủ để thay current Min contract.
+**V1 contract đã áp dụng event-triggered Hao Rek.** Evidence boundary và technical policies được ghi trong guide/research nhưng exact geometry chưa đủ để thay current Min contract.
 
 ---
 
@@ -314,26 +314,35 @@ Không có global compulsory-Rek filter.
 
 ### 11.1. Current software contract
 
-`getAllRekOpportunities(board, player, MIN_REK_CHANH)` scan toàn side.
-
-Nếu ít nhất một Rek tồn tại:
+`MIN_REK_CHANH` uses transition-owned `HaoRekContext`.
 
 ```text
-rule-legal moves = only moves that produce Rek
+before = responder Rek opportunities before previous move
+after  = responder Rek opportunities after previous move
+newlyCreated = after - before
 ```
 
-Nếu caller submit một **geometrically legal quiet move** qua low-level `executeMove()`:
+If `newlyCreated` is non-empty:
+
+```text
+haoRekContext.active = true
+haoRekContext.allowedResponses = newlyCreated
+```
+
+State-aware legality exposes only `allowedResponses` while the call is active.
+
+Submitting another geometrically valid move:
 
 ```text
 status = won
 winner = opponent(mover)
 board move is NOT applied
-winReason = 'Min Rek Chanh violation: compulsory Rek was ignored'
+winReason = 'Min Rek Chanh violation: active Hao Rek response was ignored'
 ```
 
-King stationary trong current Min contract.
+A valid response can create the next side's Hao context. King remains stationary in the current Min contract, but that movement restriction is still not historical-confirmed.
 
-### 11.2. Research boundary 2026-09-06
+### 11.2. Evidence boundary / v1 freeze
 
 Secondary evidence mới mô tả:
 
@@ -347,9 +356,11 @@ opponent បើកឲ្យរែក
 
 Technical decision hiện tại:
 
-- giữ global scan để không thay gameplay trước evidence gate;
-- ghi rõ nó là `ENGINE INTERPRETATION / UNVERIFIED`;
-- không thêm previous-move/call context cho tới khi exact `បើកឲ្យរែក` geometry được khóa.
+- use transition-owned Hao context;
+- derive NEW responses from BEFORE/AFTER Rek-set difference;
+- responder may choose any NEW response when several exist: explicit technical policy;
+- no verbal-call state is required;
+- Poat-in-Min remains unchanged as an engine interpretation.
 
 ### 11.3. Không suy diễn từ community geometry
 
@@ -357,11 +368,11 @@ Các candidate rules như “blocking piece moves away”, “pre-existing pair 
 
 ---
 
-## 11.4. Proposed Hao Rek transition contract — NOT IMPLEMENTED
+## 11.4. Implemented Hao Rek transition contract
 
 Reconstructed real-board evidence now supports an event/transition model more strongly than the current board-global scan.
 
-**Current implementation remains unchanged** until unresolved edge cases are locked.
+**This contract is implemented in v1.** Unresolved historical edges remain explicitly classified as technical policy.
 
 Candidate future contract:
 
@@ -412,7 +423,7 @@ AI impact if implemented:
 - AI must not diff Rek sets itself;
 - tournament/replay tests must include Hao chain state.
 
-No tests or engine code are changed by this documentation section.
+Regression coverage exists for pre-existing-vs-new Rek, blocker-leaves, Hao chain, multiple NEW technical policy, snapshot context, repetition identity and state-aware AI legality.
 
 ---
 
@@ -432,22 +443,15 @@ These are **TECHNICAL POLICY / NOT HISTORICAL TRUTH** and must remain easy to re
 
 ## 12. Rule-legal generation boundary
 
-### `getMoveResults(board, from, mode)`
+### Board-only move-result helpers
 
-- piece-specific;
-- computes current Min side-wide compulsory set;
-- only returns allowed destinations;
-- resolves exact engine capture metadata once.
+`getMoveResults(board, from, mode)` and `getAllMoveResults(board, player, mode)` are context-free with respect to Hao. Board state alone cannot distinguish a pre-existing Rek from a newly-created call.
 
-### `getAllMoveResults(board, player, mode)`
+### State-aware move-result helpers
 
-Preferred AI/search boundary:
+Application/session/live AI legality must consume canonical `GameState` through state-aware engine boundaries so active `haoRekContext.allowedResponses` is enforced.
 
-- computes current side-wide Min obligation once;
-- generates all rule-legal moves;
-- returns engine-owned Rek/Poat/capture metadata.
-
-AI không được gọi geometry rồi tự suy capture/obligation.
+AI không được diff Rek sets hoặc tự suy Hao obligation.
 
 ---
 
@@ -490,7 +494,7 @@ Current decisive checks after a normal executed move:
 1. opponent King missing -> mover wins (`Royal King Captured`);
 2. mover King missing -> opponent wins (`Self King Lost`);
 3. opponent has zero pieces -> mover wins;
-4. opponent **geometric** move count = 0 -> mover wins (`Opponent completely immobilized (Zero liberties)`).
+4. opponent **geometric** move count = 0 -> mover wins (`Opponent has no geometric moves`).
 
 Evidence boundary:
 
