@@ -2,16 +2,26 @@
   "name": "rek-khmer-engine",
   "version": "0.1.0",
   "private": true,
-  "description": "Pure TypeScript engine for Rek Khmer",
+  "description": "Rek Khmer engine and web client",
   "scripts": {
+    "dev": "vite",
+    "build:web": "npm run typecheck:web && vite build",
     "test": "npm run test:engine",
     "test:engine": "node scripts/run-engine-tests.cjs",
     "tournament:ai": "node scripts/run-ai-tournament.cjs",
     "tournament:ai:200": "node scripts/run-ai-tournament.cjs --games-per-mode=100 --max-plies=160",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck:web": "tsc --noEmit -p tsconfig.web.json"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
   },
   "devDependencies": {
     "@types/node": "^24",
-    "typescript": "5.7.3"
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "typescript": "5.7.3",
+    "vite": "5.4.14"
   }
 }
