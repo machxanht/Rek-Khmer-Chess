@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - 'lib/rek-engine/**'
+      - 'src/**'
+      - 'index.html'
+      - 'tsconfig.web.json'
       - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
@@ -17,6 +20,9 @@ on:
   pull_request:
     paths:
       - 'lib/rek-engine/**'
+      - 'src/**'
+      - 'index.html'
+      - 'tsconfig.web.json'
       - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
@@ -47,6 +53,9 @@ jobs:
 
       - name: Typecheck engine
         run: npm run typecheck
+
+      - name: Build web client
+        run: npm run build:web
 
       - name: Run core engine regressions
         run: npm run test:engine
