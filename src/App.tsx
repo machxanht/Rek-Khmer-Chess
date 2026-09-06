@@ -7,10 +7,13 @@ import {
   type AiDifficulty,
   type CanonicalGameState,
   type Cell,
+  type PlayerColor,
   type RekGame,
   type RuleSet,
 } from '../lib/rek-engine'
+import type { OnlineServerMessage } from '../shared/online-protocol'
 import { LANGUAGE_LABELS, UI_COPY, type UiCopy, type UiLanguage } from './i18n'
+import { RekOnlineClient } from './online'
 import {
   loadStoredMatch,
   saveStoredMatch,
@@ -18,7 +21,8 @@ import {
   type StoredMove,
 } from './persistence'
 
-type MatchType = StoredMatchType
+type MatchType = StoredMatchType | 'ONLINE'
+type OnlineStatus = 'idle' | 'connecting' | 'waiting' | 'connected' | 'peer-left' | 'error'
 
 const RULESETS: { id: RuleSet; label: string; note: string }[] = [
   { id: 'REK_STANDARD', label: 'Rek Standard', note: 'Rek + current Poat engine contract' },
@@ -30,10 +34,7 @@ const DIFFICULTIES: AiDifficulty[] = ['easy', 'medium', 'hard']
 function PieceView({ piece }: { piece: NonNullable<Cell> }) {
   const side = piece.player === 'you' ? 'white' : 'black'
   return (
-    <span
-      className={`piece piece--${side} ${piece.king ? 'piece--king' : ''}`}
-      aria-hidden="true"
-    >
+    <span className={`piece piece--${side} ${piece.king ? 'piece--king' : ''}`} aria-hidden="true">
       {piece.king ? '♚' : ''}
     </span>
   )
@@ -54,12 +55,10 @@ function Board({ state, selected, legalMoves, disabled, copy, onSquareClick }: B
       <div className="file-labels" aria-hidden="true">
         {'abcdefgh'.split('').map((file) => <span key={file}>{file}</span>)}
       </div>
-
       <div className="board-wrap">
         <div className="rank-labels" aria-hidden="true">
           {[8, 7, 6, 5, 4, 3, 2, 1].map((rank) => <span key={rank}>{rank}</span>)}
         </div>
-
         <div className={`board ${disabled ? 'board--disabled' : ''}`} role="grid" aria-label="Rek Khmer board">
           {state.board.map((piece, index) => {
             const coord = idxToCoord(index)
@@ -135,6 +134,14 @@ export function App() {
   const [replayPly, setReplayPly] = useState<number | null>(null)
   const [storageMessage, setStorageMessage] = useState('')
 
+  const [onlineClient, setOnlineClient] = useState<RekOnlineClient | null>(null)
+  const [onlineUrl, setOnlineUrl] = useState('ws://localhost:8787')
+  const [roomInput, setRoomInput] = useState('')
+  const [roomId, setRoomId] = useState('')
+  const [onlineColor, setOnlineColor] = useState<PlayerColor | null>(null)
+  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('idle')
+  const [onlineError, setOnlineError] = useState('')
+
   const copy = UI_COPY[language]
   const replayState = useMemo(
     () => replayPly === null ? null : buildReplayState(ruleset, moveLog, replayPly),
@@ -148,10 +155,20 @@ export function App() {
     matchType === 'VS_AI' &&
     state.status === 'playing' &&
     state.turn === 'opp'
+  const canOnlineMove =
+    matchType === 'ONLINE' &&
+    onlineStatus === 'connected' &&
+    onlineColor !== null &&
+    state.status === 'playing' &&
+    state.turn === onlineColor
 
   useEffect(() => {
     document.documentElement.lang = language
   }, [language])
+
+  useEffect(() => {
+    return () => onlineClient?.close()
+  }, [onlineClient])
 
   const clearSelection = () => {
     setSelected(null)
@@ -163,7 +180,19 @@ export function App() {
     clearSelection()
   }
 
-  const startFreshGame = (nextRuleset = ruleset, nextMatchType = matchType) => {
+  const resetOnline = () => {
+    onlineClient?.close()
+    setOnlineClient(null)
+    setRoomId('')
+    setRoomInput('')
+    setOnlineColor(null)
+    setOnlineStatus('idle')
+    setOnlineError('')
+  }
+
+  const startFreshGame = (nextRuleset = ruleset, nextMatchType: MatchType = matchType) => {
+    if (matchType === 'ONLINE' || nextMatchType !== 'ONLINE') resetOnline()
+
     const nextGame = createGame(nextRuleset)
     setRuleset(nextRuleset)
     setMatchType(nextMatchType)
@@ -194,7 +223,6 @@ export function App() {
       if (move && game.makeMove(move.from, move.to)) {
         setMoveLog((moves) => [...moves, { from: move.from, to: move.to }])
       }
-
       setState(game.getState())
       setAiThinking(false)
       clearSelection()
@@ -203,10 +231,68 @@ export function App() {
     return () => window.clearTimeout(timer)
   }, [difficulty, game, isAiTurn])
 
+  const handleOnlineMessage = (message: OnlineServerMessage) => {
+    if (message.type === 'error') {
+      setOnlineStatus('error')
+      setOnlineError(message.message)
+      return
+    }
+
+    if (message.type === 'peer') {
+      setOnlineStatus(message.status === 'joined' ? 'connected' : 'peer-left')
+      return
+    }
+
+    const remoteGame = deserializeGame(message.snapshot)
+    const remoteState = remoteGame.getState()
+    setGame(remoteGame)
+    setState(remoteState)
+    setRuleset(remoteState.mode)
+    setRoomId(message.roomId)
+    setReplayPly(null)
+    clearSelection()
+
+    if (message.type === 'room') {
+      setOnlineColor(message.color)
+      setMoveLog([])
+      setOnlineStatus(message.color === 'you' ? 'waiting' : 'connected')
+      return
+    }
+
+    setMoveLog((moves) => [...moves, message.move])
+    setOnlineStatus('connected')
+  }
+
+  const openOnline = (action: 'create' | 'join') => {
+    resetOnline()
+    setMatchType('ONLINE')
+    setOnlineStatus('connecting')
+
+    let client: RekOnlineClient
+    client = new RekOnlineClient(onlineUrl, {
+      onOpen: () => {
+        if (action === 'create') client.create(ruleset)
+        else client.join(roomInput)
+      },
+      onMessage: handleOnlineMessage,
+      onClose: () => {
+        setOnlineClient((current) => current === client ? null : current)
+      },
+    })
+    setOnlineClient(client)
+  }
+
   const handleSquareClick = (index: number) => {
     if (state.status !== 'playing' || isAiTurn || isReplaying) return
+    if (matchType === 'ONLINE' && !canOnlineMove) return
 
     if (selected !== null && legalMoves.has(index)) {
+      if (matchType === 'ONLINE') {
+        if (onlineClient && roomId) onlineClient.move(roomId, selected, index)
+        clearSelection()
+        return
+      }
+
       if (game.makeMove(selected, index)) {
         setMoveLog((moves) => [...moves, { from: selected, to: index }])
       }
@@ -220,14 +306,13 @@ export function App() {
       setLegalMoves(new Set(game.getLegalMoves(index)))
       return
     }
-
     clearSelection()
   }
 
   const resetGame = () => startFreshGame()
 
   const undoMove = () => {
-    if (!game.canUndo() || isReplaying) return
+    if (!game.canUndo() || isReplaying || matchType === 'ONLINE') return
 
     let undone = 0
     if (matchType === 'LOCAL') {
@@ -248,6 +333,7 @@ export function App() {
   }
 
   const saveMatch = () => {
+    if (matchType === 'ONLINE') return
     try {
       saveStoredMatch({
         version: 1,
@@ -265,6 +351,7 @@ export function App() {
   }
 
   const loadMatch = () => {
+    if (matchType === 'ONLINE') return
     try {
       const stored = loadStoredMatch()
       if (!stored) {
@@ -297,17 +384,36 @@ export function App() {
 
   const difficultyLabel = copy[difficulty]
   const turnLabel = displayState.turn === 'you' ? copy.white : copy.black
+  const onlineStatusLabel = onlineStatus === 'connecting'
+    ? copy.connecting
+    : onlineStatus === 'waiting'
+      ? copy.waitingOpponent
+      : onlineStatus === 'connected'
+        ? copy.opponentConnected
+        : onlineStatus === 'peer-left'
+          ? copy.opponentLeft
+          : onlineStatus === 'error'
+            ? `${copy.onlineError}: ${onlineError}`
+            : copy.online
+
   const statusLabel = isReplaying
     ? `${copy.replayPosition} ${replayPly}/${moveLog.length}`
-    : state.status === 'playing'
-      ? aiThinking
-        ? copy.aiThinking
-        : matchType === 'VS_AI' && state.turn === 'opp'
-          ? `${copy.aiToMove} · ${difficultyLabel}`
-          : `${turnLabel} ${copy.toMove}`
-      : state.status === 'draw'
-        ? copy.draw
-        : `${state.winner === 'you' ? copy.white : copy.black} ${copy.wins}`
+    : matchType === 'ONLINE' && onlineStatus !== 'connected'
+      ? onlineStatusLabel
+      : state.status === 'playing'
+        ? aiThinking
+          ? copy.aiThinking
+          : matchType === 'VS_AI' && state.turn === 'opp'
+            ? `${copy.aiToMove} · ${difficultyLabel}`
+            : `${turnLabel} ${copy.toMove}`
+        : state.status === 'draw'
+          ? copy.draw
+          : `${state.winner === 'you' ? copy.white : copy.black} ${copy.wins}`
+
+  const boardDisabled =
+    isAiTurn ||
+    isReplaying ||
+    (matchType === 'ONLINE' && !canOnlineMove)
 
   return (
     <main className="app-shell">
@@ -323,13 +429,7 @@ export function App() {
             <span className="panel-label">{copy.language}</span>
             <div className="choice-row choice-row--three">
               {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
-                <button
-                  type="button"
-                  key={item}
-                  className={language === item ? 'choice choice--active' : 'choice'}
-                  onClick={() => setLanguage(item)}
-                  aria-pressed={language === item}
-                >
+                <button type="button" key={item} className={language === item ? 'choice choice--active' : 'choice'} onClick={() => setLanguage(item)}>
                   {LANGUAGE_LABELS[item]}
                 </button>
               ))}
@@ -338,15 +438,30 @@ export function App() {
 
           <div>
             <span className="panel-label">{copy.match}</span>
-            <div className="choice-row">
-              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}>
-                {copy.local}
-              </button>
-              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}>
-                {copy.vsAi}
-              </button>
+            <div className="choice-row choice-row--match">
+              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}>{copy.local}</button>
+              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}>{copy.vsAi}</button>
+              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}>{copy.online}</button>
             </div>
           </div>
+
+          {matchType === 'ONLINE' ? (
+            <div className="online-panel">
+              <span className="panel-label">{copy.server}</span>
+              <input className="online-input" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} spellCheck={false} />
+              <div className="online-create">
+                <button type="button" className="action-button" onClick={() => openOnline('create')}>{copy.createRoom}</button>
+              </div>
+              <span className="panel-label">{copy.roomCode}</span>
+              <div className="online-join">
+                <input className="online-input room-input" value={roomInput} onChange={(event) => setRoomInput(event.target.value.toUpperCase())} maxLength={6} spellCheck={false} />
+                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}>{copy.joinRoom}</button>
+              </div>
+              {roomId ? <p className="online-room"><strong>{copy.roomCode}:</strong> {roomId}</p> : null}
+              {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
+              <p className="storage-note">{onlineStatusLabel}</p>
+            </div>
+          ) : null}
 
           {matchType === 'VS_AI' ? (
             <div>
@@ -365,7 +480,13 @@ export function App() {
             <span className="panel-label">{copy.ruleset}</span>
             <div className="segmented">
               {RULESETS.map((item) => (
-                <button type="button" key={item.id} className={ruleset === item.id ? 'segment segment--active' : 'segment'} onClick={() => startFreshGame(item.id, matchType)}>
+                <button
+                  type="button"
+                  key={item.id}
+                  disabled={matchType === 'ONLINE' && !!roomId}
+                  className={ruleset === item.id ? 'segment segment--active' : 'segment'}
+                  onClick={() => startFreshGame(item.id, matchType)}
+                >
                   <strong>{item.label}</strong>
                   <small>{item.note}</small>
                 </button>
@@ -374,7 +495,9 @@ export function App() {
           </div>
 
           <div className="status-card">
-            <span className="panel-label">{matchType === 'LOCAL' ? copy.localMatch : copy.youAreWhite}</span>
+            <span className="panel-label">
+              {matchType === 'LOCAL' ? copy.localMatch : matchType === 'VS_AI' ? copy.youAreWhite : copy.online}
+            </span>
             <dl>
               <div><dt>{copy.status}</dt><dd>{statusLabel}</dd></div>
               <div><dt>{copy.whitePieces}</dt><dd>{counts.you}</dd></div>
@@ -385,27 +508,21 @@ export function App() {
             </dl>
           </div>
 
-          <div className="actions">
-            <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}>
-              {copy.undo}
-            </button>
-            <button type="button" className="action-button" onClick={resetGame}>{copy.reset}</button>
-          </div>
+          {matchType !== 'ONLINE' ? (
+            <>
+              <div className="actions">
+                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}>{copy.undo}</button>
+                <button type="button" className="action-button" onClick={resetGame}>{copy.reset}</button>
+              </div>
+              <div className="storage-actions">
+                <button type="button" className="action-button" onClick={saveMatch}>{copy.save}</button>
+                <button type="button" className="action-button" onClick={loadMatch}>{copy.load}</button>
+                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}>{copy.replay}</button>
+              </div>
+              {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
+            </>
+          ) : null}
 
-          <div className="storage-actions">
-            <button type="button" className="action-button" onClick={saveMatch}>{copy.save}</button>
-            <button type="button" className="action-button" onClick={loadMatch}>{copy.load}</button>
-            <button
-              type="button"
-              className="action-button"
-              onClick={() => setReplayPly(0)}
-              disabled={moveLog.length === 0}
-            >
-              {copy.replay}
-            </button>
-          </div>
-
-          {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
           {state.winReason && !isReplaying ? <p className="result-note">{state.winReason}</p> : null}
 
           {moveLog.length > 0 ? (
@@ -413,15 +530,13 @@ export function App() {
               <span className="panel-label">{copy.history}</span>
               <ol>
                 {moveLog.slice(-8).map((move, index) => (
-                  <li key={moveLog.length - Math.min(moveLog.length, 8) + index}>
-                    {idxToCoord(move.from)} → {idxToCoord(move.to)}
-                  </li>
+                  <li key={moveLog.length - Math.min(moveLog.length, 8) + index}>{idxToCoord(move.from)} → {idxToCoord(move.to)}</li>
                 ))}
               </ol>
             </div>
           ) : null}
 
-          <p className="phase-note">{matchType === 'VS_AI' ? copy.vsAiHint : copy.localHint}</p>
+          {matchType !== 'ONLINE' ? <p className="phase-note">{matchType === 'VS_AI' ? copy.vsAiHint : copy.localHint}</p> : null}
         </aside>
 
         <section className="board-card">
@@ -432,36 +547,30 @@ export function App() {
                   ? `${copy.replay} · ${replayPly}/${moveLog.length}`
                   : matchType === 'LOCAL'
                     ? copy.localBoardLabel
-                    : `${copy.vsAiBoardLabel} · ${difficultyLabel}`}
+                    : matchType === 'VS_AI'
+                      ? `${copy.vsAiBoardLabel} · ${difficultyLabel}`
+                      : `${copy.online} · ${roomId || '—'}`}
               </span>
               <h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2>
             </div>
-            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}>
-              {statusLabel}
-            </span>
+            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}>{statusLabel}</span>
           </div>
 
           <Board
             state={displayState}
             selected={isReplaying ? null : selected}
             legalMoves={isReplaying ? new Set() : legalMoves}
-            disabled={isAiTurn || isReplaying}
+            disabled={boardDisabled}
             copy={copy}
             onSquareClick={handleSquareClick}
           />
 
           {isReplaying ? (
             <div className="replay-bar">
-              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.max(0, (ply ?? 0) - 1))} disabled={replayPly === 0}>
-                {copy.previous}
-              </button>
+              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.max(0, (ply ?? 0) - 1))} disabled={replayPly === 0}>{copy.previous}</button>
               <span>{copy.replayPosition} {replayPly}/{moveLog.length}</span>
-              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.min(moveLog.length, (ply ?? 0) + 1))} disabled={replayPly === moveLog.length}>
-                {copy.next}
-              </button>
-              <button type="button" className="action-button replay-exit" onClick={() => setReplayPly(null)}>
-                {copy.exitReplay}
-              </button>
+              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.min(moveLog.length, (ply ?? 0) + 1))} disabled={replayPly === moveLog.length}>{copy.next}</button>
+              <button type="button" className="action-button replay-exit" onClick={() => setReplayPly(null)}>{copy.exitReplay}</button>
             </div>
           ) : null}
 
