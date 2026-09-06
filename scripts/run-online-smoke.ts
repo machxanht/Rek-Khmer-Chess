@@ -1,5 +1,5 @@
 import { once } from 'node:events'
-import { WebSocket } from 'ws'
+import { WebSocket, type RawData } from 'ws'
 import { coordToIdx, deserializeGame } from '../lib/rek-engine'
 import { createOnlineServer } from '../server/online-server'
 import type { OnlineServerMessage } from '../shared/online-protocol'
@@ -14,7 +14,7 @@ function nextMessage(
       reject(new Error('Timed out waiting for online smoke message'))
     }, 3000)
 
-    const onMessage = (raw: WebSocket.RawData) => {
+    const onMessage = (raw: RawData) => {
       const message = JSON.parse(raw.toString()) as OnlineServerMessage
       if (!predicate(message)) return
       clearTimeout(timer)
