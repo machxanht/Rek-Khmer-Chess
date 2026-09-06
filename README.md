@@ -13,7 +13,7 @@ REK_KHMER
 Hai canonical rulesets:
 
 - `REK_STANDARD` — default technical ruleset cho Rek Khmer.
-- `MIN_REK_CHANH` — variant có current compulsory-Rek contract; exact historical Hao Rek trigger vẫn đang research.
+- `MIN_REK_CHANH` — event-triggered Hao Rek variant using transition-owned `HaoRekContext`; unresolved historical edges are explicit technical policy.
 
 Compatibility only:
 
@@ -42,7 +42,8 @@ Google Play / Apple App Store developer descriptions, app tutorials, screenshots
 
 Các tài liệu chính:
 
-- `RESEARCH_HAO_REK_2026.md` — exact Hao Rek research, source/claim labels, evidence gates.
+- `RESEARCH_FINAL_V1_FREEZE.md` — frozen v1 evidence matrix + reopen criteria.
+- `RESEARCH_HAO_REK_2026.md` — Hao Rek research, media evidence, source/claim labels.
 - `RESEARCH_LUAT_REK_KHMER_2026.md` — source registry + gameplay evidence matrix.
 - `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide.
 - `SPEC_ENGINE_CO_REK_KHMER.md` — current technical contract.
@@ -85,53 +86,46 @@ Evidence mạnh hiện hỗ trợ:
 - trapping/encirclement concept;
 - canonical setup + regular orthogonal sliding có secondary support mạnh.
 
-Current engine còn có các interpretations/extensions chưa được gọi historical truth:
+Current engine còn có interpretations/extensions chưa được gọi historical truth:
 
 - dual-axis Rek => capture 4;
 - Poat = BFS connected group + zero orthogonal liberties;
 - Rek resolve trước Poat;
-- board-global compulsory Rek trong `MIN_REK_CHANH`;
+- newly-created-response diff as the exact Hao transition predicate;
+- responder-choice policy when one move creates multiple NEW Hao responses;
+- stationary King in Min;
 - zero-geometric-move instant win;
-- Poat trong Min;
+- Poat in Min;
 - threefold repetition;
 - lone-King draw limit 32.
 
-## Hao Rek research update — 2026-09-06
+## Hao Rek v1
 
-Một Khmer source ngày **6 November 2013**, ghi tác giả `វិសាល ឧត្តម / Visal Odom` và attribution `ភ្នំពេញប៉ុស្តិ៍ / Phnom Penh Post`, có wording:
+Research + reconstructable real-board media support an event/action-triggered obligation more strongly than the old board-global interpretation.
 
-```text
-បើមានគេបើកឲ្យរែក ខ្លួនត្រូវតែរែក
-```
-
-Literal gần nhất:
-
-> “Nếu có người mở cho mình Rek, mình phải Rek.”
-
-Và:
+Current v1 engine:
 
 ```text
-បើមិនរែក ត្រូវតែចាញ់ ដោយស្វ័យប្រវត្តិ
+BEFORE responder Rek set
+→ opponent move
+→ AFTER responder Rek set
+→ NEW = AFTER - BEFORE
+→ active HaoRekContext.allowedResponses
+→ responder answers NEW response
+→ response may create counter-Hao
 ```
 
-Literal:
+Board-global “any Rek exists => compulsory” is no longer the engine contract.
 
-> “Nếu không Rek thì phải thua một cách tự động.”
+Historical edges still not promoted as truth:
 
-Các claim trên được giữ ở mức **SECONDARY**. VOD 2016 có text gần giống và cùng Visal Odom lineage nên không tính là independent source thứ hai.
+- multiple NEW responses: responder-choice is a technical policy;
+- verbal call is not required by software;
+- Poat-in-Min remains unverified;
+- King stationary in Min remains historically unverified;
+- zero-geometric-move instant win remains an engine interpretation.
 
-Điểm quan trọng: source diễn đạt nghĩa vụ theo **opponent action — `បើកឲ្យរែក` — rồi responder phải Rek**, nên hiện có support tốt hơn trước cho candidate **event/action-triggered obligation**. Nó trực tiếp challenge cách engine hiện tại suy obligation chỉ từ “board đang có bất kỳ Rek opportunity nào”.
-
-Tuy nhiên exact geometry vẫn chưa khóa:
-
-- có cần blocking piece rời đi không?
-- pair phải newly exposed không?
-- pre-existing pair có call không?
-- nhiều pair ai chọn?
-- verbal call có bắt buộc không?
-- obligation lifetime/chain kết thúc thế nào?
-
-Các chi tiết đó vẫn `COMMUNITY SIGNAL / UNVERIFIED`. **Research pass này không đổi gameplay.**
+See `RESEARCH_FINAL_V1_FREEZE.md` for the frozen evidence matrix and reopen criteria.
 
 ## Core modules
 
@@ -185,7 +179,7 @@ Public type boundary:
 - `GameState` — compatibility/custom-load shape.
 - `GameMode` — deprecated.
 
-`engine.ts` còn export stateful `RekEngine` wrapper cho compatibility, nhưng **new application code nên ưu tiên `RekGame`**. Audit 2026-09-06 ghi nhận một return-value inconsistency giữa hai wrappers khi current Min violation xảy ra; xem audit doc trước khi mở rộng public API.
+`engine.ts` còn export stateful `RekEngine` wrapper cho compatibility, nhưng **new application code nên ưu tiên `RekGame`**. `RekEngine` is deprecated and its state-change semantics are regression-locked to match `RekGame`.
 
 ## Snapshot compatibility
 
@@ -196,17 +190,16 @@ Snapshot schema hiện version `1`:
 - legacy repetition keys migrate/merge;
 - serializer mới chỉ emit canonical ruleset.
 
-Validation hiện kiểm 64 cells, colors/types/status, piece IDs, captured ownership, counters và basic state shape.
+Validation hiện kiểm structural shape plus persisted semantic invariants for Kings/status, Hao context, repetition identity and lone-King counters.
 
 ## AI
 
 - `easy`: random có capture bias.
 - `medium`: deterministic alpha-beta depth 2.
 - `hard`: deterministic depth 3, adaptive depth 4/5 ở narrow endgame.
-- legality + exact capture metadata lấy từ `getAllMoveResults()` của core engine.
-- AI không tự implement movement/Rek/Poat/Hao legality.
-
-Known technical debt: minimax search không carry session repetition/lone-King history, nên threefold/lone-King project draw extensions chưa được model đầy đủ trong search tree. Actual `RekGame` execution vẫn adjudicate chúng.
+- live/tournament legality uses state-aware engine boundaries;
+- AI does not implement movement/Rek/Poat/Hao independently;
+- live search carries engine-owned repetition/lone-King draw state.
 
 ## Tactical fixtures
 
@@ -217,7 +210,7 @@ Known technical debt: minimax search không carry session repetition/lone-King h
 Checkpoint gần nhất của project:
 
 ```text
-Engine regressions: 97/97 PASS
+Engine regressions: 109/109 PASS
 Medium baseline: 798 nodes
 Hard baseline: 7,532 nodes / 652 cutoffs
 Tournament smoke illegalMoves = 0
@@ -240,7 +233,7 @@ node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-p
 npm run tournament:ai:200
 ```
 
-Current engine CI chạy typecheck + regression khi engine/scripts/package/tsconfig thay đổi. Audit ghi nhận rule/spec Markdown chưa nằm trong CI path trigger; đây là follow-up item.
+Engine CI runs typecheck + regressions for engine/scripts/package/tsconfig and canonical rule/spec/research Markdown (`RESEARCH_*.md`).
 
 ## Rule-change workflow
 
@@ -254,4 +247,4 @@ research evidence
 → AI/tournament verification
 ```
 
-Không dùng app-store shortcut. Không sửa Min semantics trước khi exact Hao Rek trigger đủ mạnh.
+Không dùng app-store shortcut. Research v1 is frozen; reopen rule semantics only on materially stronger evidence.
