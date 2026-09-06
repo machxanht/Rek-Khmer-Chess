@@ -87,7 +87,8 @@ button:focus-visible {
   margin-top: 10px;
 }
 
-.choice-row--three {
+.choice-row--three,
+.choice-row--match {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -142,6 +143,57 @@ button:focus-visible {
 .segment--active {
   border-color: #c89949;
   background: #342719;
+}
+
+.segment:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.online-panel {
+  display: grid;
+  gap: 9px;
+  border-top: 1px solid #3b3026;
+  padding-top: 18px;
+}
+
+.online-input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #4b3c2e;
+  border-radius: 9px;
+  padding: 9px 10px;
+  color: #f0e4d3;
+  background: #17130f;
+  outline: none;
+}
+
+.online-input:focus {
+  border-color: #c89949;
+  box-shadow: 0 0 0 3px rgba(200, 153, 73, 0.14);
+}
+
+.online-create {
+  display: grid;
+}
+
+.online-join {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.room-input {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+
+.online-room {
+  margin: 0;
+  color: #bfae96;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
 }
 
 .status-card {
