@@ -314,119 +314,60 @@ Không có global compulsory-Rek filter.
 
 ### 11.1. Current software contract
 
-`getAllRekOpportunities(board, player, MIN_REK_CHANH)` scan toàn side.
-
-Nếu ít nhất một Rek tồn tại:
+`MIN_REK_CHANH` uses transition-owned Hao Rek state.
 
 ```text
-rule-legal moves = only moves that produce Rek
+before = responder Rek opportunities before opponent move
+execute opponent move
+after = responder Rek opportunities after move
+newlyCreated = after - before
+
+newlyCreated.length > 0
+→ state.haoRekContext.active = true
+→ allowedResponses = all newly-created Rek responses
 ```
 
-Nếu caller submit một **geometrically legal quiet move** qua low-level `executeMove()`:
+State-aware legality exposes only `allowedResponses` while Hao is active.
+
+Submitting a geometrically legal move outside active `allowedResponses`:
 
 ```text
 status = won
 winner = opponent(mover)
 board move is NOT applied
-winReason = 'Min Rek Chanh violation: compulsory Rek was ignored'
+winReason = 'Min Rek Chanh violation: active Hao Rek response was ignored'
 ```
 
-King stationary trong current Min contract.
+Technical-policy boundaries:
 
-### 11.2. Research boundary 2026-09-06
+- multiple NEW responses: responder may choose any;
+- verbal call is not required by software;
+- response may create a counter-Hao context;
+- chain ends when the latest move creates no new response;
+- Poat behavior remains unchanged pending stronger evidence;
+- King stationary remains current engine interpretation, not historical-confirmed truth.
 
-Secondary evidence mới mô tả:
+### 11.2. Hao state persistence
 
-```text
-opponent បើកឲ្យរែក
-→ responder must Rek
-→ if not -> automatic loss
-```
+`GameState.haoRekContext` is persisted because board state alone cannot distinguish pre-existing Rek from a newly-created Hao response.
 
-Điều này trực tiếp challenge giả định rằng **mere existence of any current-board Rek** là exact historical trigger.
+Repetition identity includes the active Hao response set.
 
-Technical decision hiện tại:
+Snapshot loader validates that active Hao responses are legal Rek responses for the side to move.
 
-- giữ global scan để không thay gameplay trước evidence gate;
-- ghi rõ nó là `ENGINE INTERPRETATION / UNVERIFIED`;
-- không thêm previous-move/call context cho tới khi exact `បើកឲ្យរែក` geometry được khóa.
+### 11.3. Evidence boundary
 
-### 11.3. Không suy diễn từ community geometry
+Implemented transition semantics are the project v1 model supported by the strongest available evidence.
 
-Các candidate rules như “blocking piece moves away”, “pre-existing pair không call”, “multiple pairs responder chọn” chưa vào SPEC vì mới ở `COMMUNITY SIGNAL / UNVERIFIED`.
+Historical claims still unresolved:
 
----
+- mandatory verbal declaration;
+- exact traditional choice rule when one move creates multiple NEW responses;
+- whether Poat belongs inside Min Rek Chanh;
+- King stationary semantics;
+- exact interaction with multi-axis Rek.
 
-## 11.4. Proposed Hao Rek transition contract — NOT IMPLEMENTED
-
-Reconstructed real-board evidence now supports an event/transition model more strongly than the current board-global scan.
-
-**Current implementation remains unchanged** until unresolved edge cases are locked.
-
-Candidate future contract:
-
-```ts
-interface HaoRekContext {
-  active: boolean
-  createdByMove: { from: number; to: number } | null
-  // Engine-owned responses that were newly created by createdByMove.
-  allowedResponses: { from: number; to: number }[]
-}
-```
-
-Candidate derivation:
-
-```text
-before = getAllRekOpportunities(previousBoard, responder)
-apply opponent move under core rules
-after  = getAllRekOpportunities(nextBoard, responder)
-
-newlyCreated = after - before
-
-if newlyCreated.length > 0:
-    nextState.haoRekContext = active(newlyCreated)
-else:
-    nextState.haoRekContext = inactive
-```
-
-Important constraints from evidence:
-
-1. Do **not** implement Hao as `any Rek exists on current board`.
-2. Do **not** hard-code only the geometry “blocking piece moves away”; real-board footage also shows a mover entering a new square to create a pair around a gap.
-3. Pre-existing Rek opportunities must remain distinguishable from newly-created call responses.
-4. A valid response may itself create a new Hao context for the other side, forming a chain.
-5. Chain termination candidate: no newly-created Hao response after the latest move.
-6. Multiple newly-created responses from one move remain `UNVERIFIED`; do not choose responder-vs-caller policy yet.
-7. Verbal declaration remains `UNVERIFIED`.
-8. 2013 Khmer text supplies `SECONDARY` support for automatic loss when the required Rek is ignored; exact software representation remains a technical decision.
-
-Snapshot impact if implemented:
-
-- Hao context is transition-derived state and cannot safely be reconstructed from board alone;
-- persisted/replay state may need `haoRekContext` or enough previous-move context to deterministically derive it;
-- snapshot version/migration must be reviewed before implementation.
-
-AI impact if implemented:
-
-- AI must consume engine-owned `allowedResponses`;
-- AI must not diff Rek sets itself;
-- tournament/replay tests must include Hao chain state.
-
-No tests or engine code are changed by this documentation section.
-
----
-
-### 11.5. Technical policy for unresolved Hao edge cases
-
-Until stronger historical evidence is found, implementation uses these explicit software policies:
-
-1. `allowedResponses` contains **all** newly-created Rek responses produced by the previous opponent move.
-2. The responder chooses any member of `allowedResponses`.
-3. No verbal-call bit is stored or required.
-4. A geometrically legal move outside a non-empty active `allowedResponses` set is a state-changing immediate forfeit.
-5. Existing Poat behavior remains unchanged in this Hao migration; this is not evidence that Poat historically belongs to Min Rek Chanh.
-
-These are **TECHNICAL POLICY / NOT HISTORICAL TRUTH** and must remain easy to replace when evidence improves.
+These remain replaceable technical-policy boundaries, not promoted historical truth.
 
 ---
 
@@ -490,13 +431,13 @@ Current decisive checks after a normal executed move:
 1. opponent King missing -> mover wins (`Royal King Captured`);
 2. mover King missing -> opponent wins (`Self King Lost`);
 3. opponent has zero pieces -> mover wins;
-4. opponent **geometric** move count = 0 -> mover wins (`Opponent completely immobilized (Zero liberties)`).
+4. opponent **geometric** move count = 0 -> mover wins (`Opponent has no geometric moves`).
 
 Evidence boundary:
 
 - capture opposing King = strongest evidence;
 - zero-move instant-win = unverified historical interpretation;
-- winReason text `Zero liberties` is software wording and should not be treated as proof it is identical to Poat/traditional `ទាល់ច្រក`.
+- zero-geometric-move remains an engine interpretation and is intentionally named separately from Poat/liberties.
 
 ---
 
@@ -543,6 +484,10 @@ Counts are merged if canonical key already exists.
 Snapshot validation enforces:
 
 - exactly 64 board cells;
+- canonical coordinate APIs accept only lowercase `a1`–`h8`;
+- playing/draw snapshots contain exactly one King per side;
+- won snapshots retain the winner King;
+- active Hao context is valid only in playing `MIN_REK_CHANH` and its responses remain legal Rek;
 - valid player/ruleset/status;
 - max one King per side on board;
 - unique piece IDs across board + captured arrays;
@@ -597,13 +542,7 @@ AI:
 - Medium/Hard deterministic;
 - tournament output canonicalizes ruleset.
 
-Current search state is essentially:
-
-```text
-board + side + ruleset
-```
-
-It does **not** carry session repetition/lone-King history. Therefore threefold/lone-King draw extensions are adjudicated by session/game execution, not fully modeled inside minimax. This is documented technical debt, not a current ruleset change.
+Live AI search consumes full `GameState`, including Hao context, repetition counts, lone-King count and draw limit. Engine terminal outcomes remain authoritative; AI does not duplicate Hao or draw adjudication.
 
 ---
 
@@ -622,7 +561,7 @@ Future UI copy must preserve this distinction unless a puzzle has independent hi
 
 ## 20. Core regression contract
 
-At checkpoint `a783f592...`, project reports **97/97 PASS**.
+Current Rek v1 freeze checkpoint reports **109/109 PASS**.
 
 Required groups include:
 

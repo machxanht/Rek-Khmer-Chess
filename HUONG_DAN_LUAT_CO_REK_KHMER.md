@@ -324,18 +324,27 @@ opponent បើកឲ្យរែក
 Engine hiện làm:
 
 ```text
-nếu side-to-move có bất kỳ Rek opportunity nào trên current board
-→ chỉ moves tạo Rek được expose legal
-→ submit quiet geometric move
+BEFORE = responder Rek opportunities trước nước đối phương
+opponent move
+AFTER = responder Rek opportunities sau nước đó
+NEW = AFTER - BEFORE
+
+NEW != empty
+→ tạo active HaoRekContext
+→ chỉ NEW responses được expose qua state-aware legality
+→ ignore active Hao
 → immediate forfeit
 ```
 
 Classification:
 
-- global trigger: **ENGINE INTERPRETATION / UNVERIFIED**;
-- consequence “không Rek => thua”: có **SECONDARY** support, nhưng current engine có thể đang áp consequence đúng vào trigger quá rộng;
-- King stationary trong Min: **STRONG EVIDENCE** secondary, native confirmation còn thiếu;
-- Poat trong Min: **UNVERIFIED**.
+- event/transition trigger: **STRONG EVIDENCE**;
+- exact NEW-set implementation: **PROJECT V1 TECHNICAL POLICY**;
+- consequence “không Rek => thua”: **SECONDARY** support;
+- multiple NEW targets: responder chọn bất kỳ NEW response = **TECHNICAL POLICY / historical choice UNVERIFIED**;
+- verbal declaration mandatory: **UNVERIFIED**; software không require speech state;
+- King stationary trong Min: **ENGINE INTERPRETATION / UNVERIFIED**;
+- Poat trong Min: **ENGINE INTERPRETATION / UNVERIFIED**.
 
 ### 10.3. Candidate historical model hiện được support hơn
 
@@ -458,7 +467,7 @@ Claim-level status:
 | Verbal call bắt buộc | `UNVERIFIED` |
 | Không đáp => automatic loss | `SECONDARY` |
 
-### Proposed historical interpretation — NOT IMPLEMENTED
+### Evidence-backed project model — IMPLEMENTED IN V1
 
 Model hiện phù hợp evidence nhất:
 
@@ -478,7 +487,7 @@ NEW non-empty
 
 Điểm này **challenge trực tiếp** current engine interpretation `ANY current-board Rek → compulsory`.
 
-Tuy nhiên chưa sửa engine vì chưa khóa multiple-new-target choice, verbal declaration requirement và interaction với Poat/multi-axis.
+Engine đã implement model này. Multiple-new-target choice, verbal declaration và Poat interaction vẫn tách thành technical policy / unresolved historical claims.
 
 ---
 
@@ -522,4 +531,4 @@ session/snapshot migration nếu cần
 AI/tournament consume core behavior
 ```
 
-Research pass 2026-09-06 **không đủ exact geometry để đổi gameplay**. Current Min behavior phải tiếp tục được ghi là current project interpretation pending historical validation.
+Research v1 được freeze 2026-09-07. Reopen gameplay research chỉ khi có archival/native board-level evidence mới đủ mạnh để thay đổi claim hoặc technical policy.
