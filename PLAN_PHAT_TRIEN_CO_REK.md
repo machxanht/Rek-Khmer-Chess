@@ -165,16 +165,19 @@ Rules không được duplicate ở UI/server/AI.
 
 ---
 
-## 7. Priority P0 — exact Hao Rek research
+## 7. Research v1 — FROZEN
 
-**Đây là blocker lớn nhất trước mọi gameplay rewrite của `MIN_REK_CHANH`.**
+Hao Rek event-trigger migration đã hoàn thành. Active broad rule research không còn là blocker cho product work.
 
 Current engine:
 
 ```text
-any Rek exists anywhere on current board
-→ only Rek moves allowed
-→ quiet geometric move => forfeit
+opponent move
+→ derive newly-created responder Rek responses
+→ active HaoRekContext
+→ responder answers NEW response(s)
+→ ignored active Hao => forfeit
+→ response may chain
 ```
 
 Evidence 2013 hiện support tốt hơn model:
@@ -209,11 +212,11 @@ Archival targets:
 - Chuon Nath vol.2 exact scan page for `រែក`.
 - reconstructable real-board Khmer video.
 
-**Không code replacement Hao Rek trước evidence gate.**
+Multiple-new-target choice, verbal call, Poat-in-Min, King stationary historical status và zero-move historical status được freeze với explicit evidence/technical labels trong `RESEARCH_FINAL_V1_FREEZE.md`.
 
 ---
 
-## 8. Khi Hao Rek vượt evidence gate
+## 8. Nếu research được reopen sau v1 freeze
 
 Thứ tự bắt buộc:
 
@@ -229,24 +232,23 @@ research note
 → tournament/replay regression
 ```
 
-Candidate future context nếu evidence xác nhận event-trigger:
+Current context đã triển khai:
 
 ```ts
 interface HaoRekContext {
   active: boolean
   createdByMove: { from: number; to: number } | null
-  targetPairs: number[][]
-  allowedResponses?: { from: number; to: number }[]
+  allowedResponses: { from: number; to: number }[]
 }
 ```
 
-Đây chỉ là architecture placeholder, không phải rule đã duyệt.
+Nếu evidence mới bác technical policy, phải quay lại research → guide → SPEC → failing regression trước khi sửa engine.
 
 ---
 
-## 9. Priority P1 — API contract cleanup
+## 9. Completed core hardening
 
-### P1.1 — canonicalize stateful facade
+### Completed — canonicalize stateful facade
 
 Repo hiện export cả:
 
@@ -258,36 +260,23 @@ Audit phát hiện return-value mismatch khi current Min violation xảy ra:
 - `RekGame.makeMove()` có thể chuyển game sang forfeit loss và return `true` vì state changed;
 - `RekEngine.makeMove()` cũng chuyển state sang loss nhưng return `false` vì preview đánh dấu violation.
 
-Action sau docs pass:
+Status: `RekEngine` đã deprecated, state-change semantics đã align với `RekGame`, có public API regression.
 
-1. quyết định deprecate `RekEngine` stateful wrapper hoặc align semantics;
-2. thêm explicit public API regression;
-3. không làm thay đổi rule adjudication.
+### Completed — public coordinate validation
 
-### P1.2 — public coordinate validation
+`coordToIdx()` hiện validate canonical lowercase `a1-h8` và reject malformed input.
 
-`coordToIdx()` hiện là exported helper nhưng assume trusted coordinate format. Future API/UI nên:
+### Completed — snapshot semantic validation
 
-- validate exact `[a-h][1-8]`, hoặc
-- đổi contract rõ là internal/trusted input.
-
-### P1.3 — snapshot semantic validation
-
-Current loader validate shape rất tốt, nhưng chủ yếu structural. Audit future:
-
-- `playing` state có bắt buộc đủ Kings không?
-- `won/draw` state có cần winner/board consistency sâu hơn không?
-- counters có cần cross-field invariants không?
-
-Không thắt validator trước khi đánh giá backward compatibility snapshots.
+Persisted snapshots hiện enforce King/status/Hao/repetition/lone-King semantic invariants while custom in-memory fixtures remain flexible.
 
 ---
 
 ## 10. Priority P1 — docs/test/CI contract
 
-### P1.4 — docs-triggered regression
+### Completed — docs-triggered regression
 
-Current engine CI không chạy nếu PR chỉ đổi Markdown rule/spec docs.
+Engine CI hiện chạy cho canonical rule/spec/research docs, gồm `RESEARCH_*.md`.
 
 Action proposed:
 
@@ -334,7 +323,7 @@ Action:
 
 ---
 
-## 12. Priority P2 — terminal semantics research + cleanup
+## 12. Research freeze result — terminal semantics
 
 Current engine có separate terminal:
 
@@ -345,7 +334,7 @@ opponent has zero geometric moves -> mover wins
 win reason hiện dùng wording:
 
 ```text
-Opponent completely immobilized (Zero liberties)
+Opponent has no geometric moves
 ```
 
 Vấn đề:
@@ -353,34 +342,15 @@ Vấn đề:
 - “zero moves” và Poat “zero liberties” là hai predicates kỹ thuật khác nhau;
 - native `ទាល់ច្រក` chưa đủ để khẳng định zero-geometric-move == instant win riêng.
 
-Action:
-
-1. research historical terminal relation;
-2. nếu giữ software rule, rename reason để không conflated với Poat;
-3. đổi regression chỉ sau SPEC decision.
+Final v1 classification: zero-geometric-move instant win = `ENGINE INTERPRETATION / UNVERIFIED`. Wording đã tách khỏi Poat liberties.
 
 ---
 
-## 13. Priority P2 — draw/search consistency
+## 13. Completed — draw/search consistency
 
 Threefold và lone-King 32 hiện là project extensions.
 
-Session executes them, nhưng minimax search state không mang:
-
-- repetition history;
-- lone-King counter;
-- draw limit.
-
-Consequently AI có thể evaluate một search line khác với eventual session adjudication.
-
-Action chỉ nên làm sau khi quyết định giữ các draw extensions lâu dài:
-
-1. define search-state history contract;
-2. include draw context in transposition key nếu cần;
-3. regression tactical quality + node baseline lại;
-4. tournament verify.
-
-Không ưu tiên trước P0 Hao research.
+Live state-aware AI search hiện mang repetition history, lone-King counter và draw limit qua engine-owned `GameState` transitions. Các draw rule vẫn là project extensions.
 
 ---
 
@@ -438,22 +408,20 @@ hard
 
 ---
 
-## 16. Recommended execution order từ checkpoint này
+## 16. Recommended execution order after v1 freeze
 
 ```text
-P0  Continue exact Hao Rek research
+P3  Board UI
     ↓
-P1  API facade + docs/CI cleanup (semantics-preserving)
+P3  Local match
     ↓
-P1  Puzzle labeling/provenance hygiene
+P3  vs AI
     ↓
-P2  Terminal/zero-move research
+P3  presentation / i18n / replay persistence
     ↓
-P2  Draw/search consistency if extensions retained
+P3  Online
     ↓
-P3  UI / local / vs AI
-    ↓
-P3  Online/application polish
+    polish
 ```
 
-Nếu P0 tìm được authoritative exact Hao Rek geometry, **dừng các optimization khác**, report evidence trước, rồi chạy rule-change workflow guide → SPEC → tests → engine → AI.
+Research chỉ reopen khi có materially stronger archival/native/board-level evidence.
