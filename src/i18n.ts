@@ -29,6 +29,18 @@ export interface UiCopy {
   no: string
   undo: string
   reset: string
+  save: string
+  load: string
+  replay: string
+  replayPosition: string
+  previous: string
+  next: string
+  exitReplay: string
+  history: string
+  saved: string
+  loaded: string
+  noSavedGame: string
+  storageError: string
   white: string
   black: string
   king: string
@@ -71,6 +83,18 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     no: 'ទេ',
     undo: 'ថយក្រោយ',
     reset: 'ចាប់ផ្តើមឡើងវិញ',
+    save: 'រក្សាទុក',
+    load: 'បើកវគ្គ',
+    replay: 'មើលឡើងវិញ',
+    replayPosition: 'ទឹក',
+    previous: 'មុន',
+    next: 'បន្ទាប់',
+    exitReplay: 'ចាកចេញ',
+    history: 'ប្រវត្តិទឹក',
+    saved: 'បានរក្សាទុកវគ្គ។',
+    loaded: 'បានបើកវគ្គ។',
+    noSavedGame: 'មិនទាន់មានវគ្គដែលបានរក្សាទុក។',
+    storageError: 'មិនអាចអាន ឬរក្សាទុកវគ្គបានទេ។',
     white: 'ស',
     black: 'ខ្មៅ',
     king: 'ស្តេច',
@@ -111,6 +135,18 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     no: 'Không',
     undo: 'Hoàn tác',
     reset: 'Ván mới',
+    save: 'Lưu',
+    load: 'Tải',
+    replay: 'Xem lại',
+    replayPosition: 'Nước',
+    previous: 'Trước',
+    next: 'Sau',
+    exitReplay: 'Thoát xem lại',
+    history: 'Lịch sử nước',
+    saved: 'Đã lưu ván.',
+    loaded: 'Đã tải ván.',
+    noSavedGame: 'Chưa có ván đã lưu.',
+    storageError: 'Không thể đọc hoặc lưu dữ liệu ván.',
     white: 'Trắng',
     black: 'Đen',
     king: 'Vua',
@@ -151,6 +187,18 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     no: 'No',
     undo: 'Undo',
     reset: 'Reset',
+    save: 'Save',
+    load: 'Load',
+    replay: 'Replay',
+    replayPosition: 'Ply',
+    previous: 'Previous',
+    next: 'Next',
+    exitReplay: 'Exit replay',
+    history: 'Move history',
+    saved: 'Match saved.',
+    loaded: 'Match loaded.',
+    noSavedGame: 'No saved match yet.',
+    storageError: 'Could not read or save match data.',
     white: 'White',
     black: 'Black',
     king: 'King',
