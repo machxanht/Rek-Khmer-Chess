@@ -237,8 +237,9 @@ flowchart LR
 ### Rule legality
 
 - Standard: geometric set remains available;
-- current Min: side-wide board scan may suppress quiet moves;
-- bulk AI path computes current Min obligation once per position.
+- Min: active Hao legality is owned by `GameState.haoRekContext`;
+- board-only move-result helpers do not invent Hao from existing Rek;
+- session/live AI use state-aware legality.
 
 Consumer không dùng geometric set như final legal set.
 
@@ -330,14 +331,19 @@ Tên neutral, không tuyên bố “Rek Poat” là separate traditional mode.
 ### Current engine model
 
 ```text
-current board + current player
-      ↓
-getAllRekOpportunities()
-      ↓
-any Rek exists?
-  ├── no  -> normal geometric moves
-  └── yes -> only Rek moves
-             quiet geometric submit -> forfeit
+previous state
+   ↓
+execute opponent move
+   ↓
+BEFORE/AFTER responder Rek diff
+   ↓
+newlyCreated responses
+   ↓
+HaoRekContext.allowedResponses
+   ↓
+state-aware response / forfeit
+   ↓
+derive next Hao context
 ```
 
 ### Evidence update 2026-09-06
@@ -361,24 +367,23 @@ flowchart LR
     RESPONSE --> NEXT[next state]
 ```
 
-**Exact `detect បើកឲ្យរែក` predicate vẫn UNVERIFIED.** Không implement candidate architecture trước evidence gate.
+Event-triggered Hao is now implemented through Rek-set transition diff. The exact historical rule for multiple NEW responses and verbal calling remains unverified and is kept outside the architecture as technical policy.
 
 ---
 
-## 13. Future Hao Rek state boundary
+## 13. Hao Rek state boundary
 
-Nếu event-trigger được xác nhận, engine có thể cần:
+Current engine uses:
 
 ```ts
 interface HaoRekContext {
   active: boolean
   createdByMove: { from: number; to: number } | null
-  targetPairs: number[][]
-  allowedResponses?: { from: number; to: number }[]
+  allowedResponses: { from: number; to: number }[]
 }
 ```
 
-Possible lifecycle:
+Implemented lifecycle:
 
 ```text
 previous state
@@ -396,7 +401,7 @@ response / violation adjudication
 expire or chain context by verified rule
 ```
 
-Nếu thêm context, phải bump/migrate snapshot contract theo nhu cầu thay vì silently deriving from board.
+Snapshot v1 stores Hao context as an additive optional field and validates active response semantics.
 
 ---
 
@@ -437,7 +442,7 @@ derive next Hao context
 chain until no newly-created response exists
 ```
 
-This is **PROPOSED / NOT IMPLEMENTED**. Multiple-new-target choice and verbal-call requirements remain unresolved.
+This is **IMPLEMENTED IN V1**. Multiple-new-target choice and verbal-call requirements remain historically unresolved; responder-choice/no-verbal-state are explicit technical policies.
 
 The board alone is insufficient to distinguish a pre-existing Rek from a newly-created Hao response. This matters for snapshots/replays, undo, online synchronization, AI search and deterministic tournament reconstruction.
 
@@ -466,23 +471,25 @@ lone-King limit
 | threefold | project extension |
 | lone-King default 32 | project extension |
 
-Win reason `Opponent completely immobilized (Zero liberties)` hiện dễ gây conflation giữa mobility terminal và Poat/liberties. Đây là naming/semantic cleanup candidate, chưa sửa code trong docs pass.
+Zero-move terminal now uses `Opponent has no geometric moves`, keeping mobility distinct from Poat/liberties. The rule itself remains historically unverified.
 
 ---
 
 ## 15. AI architecture
 
-AI legal path:
+AI live legal path:
 
 ```text
-board + player + canonical RuleSet
-        ↓
-getAllMoveResults()
-        ↓
-engine-owned legal moves + captures
-        ↓
-ordering/evaluation/minimax
+GameState
+   ↓
+state-aware engine legality
+   ↓
+engine-owned Hao/Rek/Poat/capture semantics
+   ↓
+ordering/evaluation/minimaxState
 ```
+
+Board-only AI helpers remain for compatibility/benchmarks but live/tournament Min legality uses full state.
 
 Điểm tốt:
 
@@ -491,13 +498,7 @@ ordering/evaluation/minimax
 - deterministic Medium/Hard regression;
 - tournament uses `RekGame` for actual state transitions.
 
-Technical debt:
-
-- minimax search state không mang `positionCounts`, `loneKingMoveCount`, `drawMoveLimit`;
-- vì vậy project draw extensions không được modeled đầy đủ trong search tree;
-- tournament/session vẫn adjudicate draws khi move thật được execute.
-
-Không ưu tiên sửa điểm này trước khi rule research/terminal semantics ổn định.
+Draw-history debt đã được xử lý trong live state search: repetition history, lone-King counter và draw limit đi qua `GameState` / `executeMove()`. Threefold/lone-King vẫn là project extensions, không phải historical truth.
 
 ---
 
@@ -520,7 +521,7 @@ Future UI phải label đúng “engine training/tactical fixture” trừ khi t
 
 `npm run test:engine` compile và chạy 13 report groups, gồm core/spec/AI/state/draw/puzzle/simulation/tournament/API locks.
 
-Checkpoint gần nhất: **97/97 PASS**.
+Checkpoint gần nhất trước research freeze: **109/109 PASS**.
 
 CI engine workflow chạy khi paths thay đổi trong:
 
@@ -530,7 +531,7 @@ CI engine workflow chạy khi paths thay đổi trong:
 - `tsconfig.json`;
 - workflow itself.
 
-**Audit finding:** Markdown rule/spec docs không nằm trong path trigger. Vì docs chính là evidence/contract layer, future CI nên cân nhắc trigger test suite khi `HUONG_DAN`, `SPEC`, `ENGINE_ARCHITECTURE` hoặc research lock-relevant docs thay đổi.
+Rule/spec/research Markdown hiện nằm trong CI path trigger, gồm wildcard `RESEARCH_*.md`.
 
 ---
 
