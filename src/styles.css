@@ -172,6 +172,47 @@ button:focus-visible {
   font-weight: 700;
 }
 
+.turn-chip--finished {
+  border-color: #b37d43;
+  color: #ffdca0;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.action-button {
+  border: 1px solid #4b3c2e;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: #e9ddca;
+  background: #211b16;
+  cursor: pointer;
+}
+
+.action-button:hover:not(:disabled) {
+  border-color: #c89949;
+  background: #342719;
+}
+
+.action-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.result-note {
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #694d2e;
+  border-radius: 10px;
+  color: #f3d79f;
+  background: rgba(189, 126, 50, 0.09);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
 .board-shell {
   width: min(100%, 720px);
   margin: 0 auto;
@@ -220,6 +261,46 @@ button:focus-visible {
   position: relative;
   display: grid;
   place-items: center;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.square:hover {
+  background: rgba(255, 245, 220, 0.08);
+}
+
+.square--last {
+  box-shadow: inset 0 0 0 3px rgba(95, 69, 37, 0.28);
+}
+
+.square--selected {
+  background: rgba(255, 229, 155, 0.3);
+  box-shadow: inset 0 0 0 3px #f1c66d;
+}
+
+.square--legal:hover {
+  background: rgba(255, 238, 184, 0.2);
+}
+
+.legal-dot {
+  position: absolute;
+  z-index: 2;
+  width: 20%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(40, 31, 21, 0.52);
+  box-shadow: 0 0 0 4px rgba(255, 241, 201, 0.16);
+}
+
+.square--legal .piece {
+  box-shadow:
+    inset 0 2px 2px rgba(255,255,255,0.28),
+    0 0 0 4px rgba(75, 52, 26, 0.4),
+    0 4px 8px rgba(0,0,0,0.25);
 }
 
 .piece,
@@ -284,6 +365,13 @@ button:focus-visible {
 .legend-king {
   color: #d9ad6b;
   font-size: 1.25rem;
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #8f7552;
 }
 
 @media (max-width: 850px) {
