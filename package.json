@@ -14,7 +14,8 @@
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "server:online": "tsx server/online-entry.ts",
     "test:online": "tsx scripts/run-online-smoke.ts",
-    "typecheck:server": "tsc --noEmit -p tsconfig.server.json"
+    "typecheck:server": "tsc --noEmit -p tsconfig.server.json",
+    "test:product": "tsx scripts/run-product-smoke.ts"
   },
   "dependencies": {
     "react": "18.3.1",
