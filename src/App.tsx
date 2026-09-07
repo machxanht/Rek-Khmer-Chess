@@ -45,6 +45,53 @@ const RULESETS: { id: RuleSet; label: string; note: string }[] = [
 
 const DIFFICULTIES: AiDifficulty[] = ['easy', 'medium', 'hard']
 
+type IconName =
+  | 'temple'
+  | 'naga'
+  | 'lotus'
+  | 'local'
+  | 'ai'
+  | 'online'
+  | 'rules'
+  | 'status'
+  | 'undo'
+  | 'reset'
+  | 'save'
+  | 'load'
+  | 'replay'
+  | 'spark'
+  | 'crown'
+
+function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  if (name === 'temple') return <svg {...common}><path d="M3 21h18M5 21v-7h14v7M7 14V9h10v5M9 9V5h6v4M12 3l2 2h-4l2-2Z"/><path d="M8 17h2m4 0h2"/></svg>
+  if (name === 'naga') return <svg {...common}><path d="M5 18c2.2 2 5.3 1.4 6.6-.8 1.5-2.5-.7-4.5-2.5-3.7-2 .8-1.4 3.8.8 4.1 4.8.8 9.5-2 9.5-6.7 0-3-2.3-5.5-5.2-5.9"/><path d="M16.7 4.7 19 3l-.4 3 2.4.9-2.6 1.1.3 3-2.3-1.7"/></svg>
+  if (name === 'lotus') return <svg {...common}><path d="M12 21c0-4-2.6-6.6-6.8-7 1.1 3.7 3.4 5.8 6.8 7Z"/><path d="M12 21c0-4 2.6-6.6 6.8-7-1.1 3.7-3.4 5.8-6.8 7Z"/><path d="M12 18c-3-2.2-3.6-5.4 0-9 3.6 3.6 3 6.8 0 9Z"/><path d="M12 12c-2.4-1.5-3.1-4.4-1.4-7 1 .8 1.4 1.6 1.4 2.8 0-1.2.4-2 1.4-2.8 1.7 2.6 1 5.5-1.4 7Z"/></svg>
+  if (name === 'local') return <svg {...common}><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c.4-3.4 2.1-5 5-5s4.6 1.6 5 5M11 20c.4-3.4 2.1-5 5-5s4.6 1.6 5 5"/></svg>
+  if (name === 'ai') return <svg {...common}><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M9 10h.01M15 10h.01M8 15h8M12 2v3"/></svg>
+  if (name === 'online') return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.6 3.6 5.6 3.6 9S14.4 18.4 12 21c-2.4-2.6-3.6-5.6-3.6-9S9.6 5.6 12 3Z"/></svg>
+  if (name === 'rules') return <svg {...common}><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg>
+  if (name === 'status') return <svg {...common}><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg>
+  if (name === 'undo') return <svg {...common}><path d="m9 7-5 5 5 5"/><path d="M20 17a8 8 0 0 0-8-8H4"/></svg>
+  if (name === 'reset') return <svg {...common}><path d="M20 6v5h-5"/><path d="M19 11a8 8 0 1 0 1 5"/></svg>
+  if (name === 'save') return <svg {...common}><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7"/></svg>
+  if (name === 'load') return <svg {...common}><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/></svg>
+  if (name === 'replay') return <svg {...common}><path d="M4 11a8 8 0 1 1 2 6"/><path d="M4 5v6h6"/><path d="m10 9 6 3-6 3Z"/></svg>
+  if (name === 'spark') return <svg {...common}><path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
+  return <svg {...common}><path d="m4 9 4 3 4-7 4 7 4-3-2 10H6L4 9Z"/><path d="M7 19h10"/></svg>
+}
+
 function PieceView({ piece }: { piece: NonNullable<Cell> }) {
   const side = piece.player === 'you' ? 'white' : 'black'
   return (
@@ -470,16 +517,26 @@ export function App() {
 
   return (
     <main className="app-shell">
+      <div className="ambient ambient--one" aria-hidden="true" />
+      <div className="ambient ambient--two" aria-hidden="true" />
+
       <header className="hero">
+        <div className="hero-emblem" aria-hidden="true"><UiIcon name="temple" size={34} /></div>
         <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
         <h1>រែកខ្មែរ</h1>
         <p className="subtitle">{copy.subtitle}</p>
+        <div className="heritage-strip" aria-label="Khmer cultural motifs">
+          <div className="heritage-card"><UiIcon name="temple" /><span><strong>អង្គរ</strong><small>Angkor spirit</small></span></div>
+          <div className="heritage-card"><UiIcon name="naga" /><span><strong>នាគ</strong><small>Naga guardian</small></span></div>
+          <div className="heritage-card"><UiIcon name="lotus" /><span><strong>ផ្កាឈូក</strong><small>Lotus balance</small></span></div>
+        </div>
       </header>
 
       <section className="game-layout">
         <aside className="panel" aria-label={copy.match}>
+          <div className="panel-ornament" aria-hidden="true"><span /><i /><span /></div>
           <div>
-            <span className="panel-label">{copy.language}</span>
+            <span className="panel-label"><UiIcon name="spark" size={14} />{copy.language}</span>
             <div className="choice-row choice-row--three">
               {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
                 <button type="button" key={item} className={language === item ? 'choice choice--active' : 'choice'} onClick={() => setLanguage(item)}>
@@ -490,31 +547,31 @@ export function App() {
           </div>
 
           <div>
-            <span className="panel-label">{copy.match}</span>
+            <span className="panel-label"><UiIcon name="local" size={14} />{copy.match}</span>
             <div className="choice-row choice-row--match">
-              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}>{copy.local}</button>
-              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}>{copy.vsAi}</button>
-              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}>{copy.online}</button>
+              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}><UiIcon name="local" />{copy.local}</button>
+              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}><UiIcon name="ai" />{copy.vsAi}</button>
+              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}><UiIcon name="online" />{copy.online}</button>
             </div>
           </div>
 
           {matchType === 'ONLINE' ? (
             <div className="online-panel">
-              <span className="panel-label">{copy.server}</span>
+              <span className="panel-label"><UiIcon name="online" size={14} />{copy.server}</span>
               <input className="online-input" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} spellCheck={false} />
               <div className="online-create">
-                <button type="button" className="action-button" onClick={() => openOnline('create')}>{copy.createRoom}</button>
+                <button type="button" className="action-button" onClick={() => openOnline('create')}><UiIcon name="online" />{copy.createRoom}</button>
               </div>
               <span className="panel-label">{copy.roomCode}</span>
               <div className="online-join">
                 <input className="online-input room-input" value={roomInput} onChange={(event) => setRoomInput(event.target.value.toUpperCase())} maxLength={6} spellCheck={false} />
-                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}>{copy.joinRoom}</button>
+                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}><UiIcon name="online" />{copy.joinRoom}</button>
               </div>
               {roomId ? <p className="online-room"><strong>{copy.roomCode}:</strong> {roomId}</p> : null}
               {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
               {onlineStatus === 'disconnected' && roomId && onlineResumeToken ? (
                 <button type="button" className="action-button" onClick={resumeOnline}>
-                  {copy.reconnect}
+                  <UiIcon name="online" />{copy.reconnect}
                 </button>
               ) : null}
               <p className="storage-note">{onlineStatusLabel}</p>
@@ -523,7 +580,7 @@ export function App() {
 
           {matchType === 'VS_AI' ? (
             <div>
-              <span className="panel-label">{copy.aiDifficulty}</span>
+              <span className="panel-label"><UiIcon name="ai" size={14} />{copy.aiDifficulty}</span>
               <div className="choice-row choice-row--three">
                 {DIFFICULTIES.map((item) => (
                   <button type="button" key={item} className={difficulty === item ? 'choice choice--active' : 'choice'} onClick={() => setDifficulty(item)}>
@@ -535,7 +592,7 @@ export function App() {
           ) : null}
 
           <div>
-            <span className="panel-label">{copy.ruleset}</span>
+            <span className="panel-label"><UiIcon name="rules" size={14} />{copy.ruleset}</span>
             <div className="segmented">
               {RULESETS.map((item) => (
                 <button
@@ -545,15 +602,15 @@ export function App() {
                   className={ruleset === item.id ? 'segment segment--active' : 'segment'}
                   onClick={() => startFreshGame(item.id, matchType)}
                 >
-                  <strong>{item.label}</strong>
-                  <small>{item.note}</small>
+                  <span className="segment-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} /></span>
+                  <span><strong>{item.label}</strong><small>{item.note}</small></span>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="status-card">
-            <span className="panel-label">
+            <span className="panel-label"><UiIcon name="status" size={14} />
               {matchType === 'LOCAL' ? copy.localMatch : matchType === 'VS_AI' ? copy.youAreWhite : copy.online}
             </span>
             <dl>
@@ -569,13 +626,13 @@ export function App() {
           {matchType !== 'ONLINE' ? (
             <>
               <div className="actions">
-                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}>{copy.undo}</button>
-                <button type="button" className="action-button" onClick={resetGame}>{copy.reset}</button>
+                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}><UiIcon name="undo" />{copy.undo}</button>
+                <button type="button" className="action-button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button>
               </div>
               <div className="storage-actions">
-                <button type="button" className="action-button" onClick={saveMatch}>{copy.save}</button>
-                <button type="button" className="action-button" onClick={loadMatch}>{copy.load}</button>
-                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}>{copy.replay}</button>
+                <button type="button" className="action-button" onClick={saveMatch}><UiIcon name="save" />{copy.save}</button>
+                <button type="button" className="action-button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button>
+                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}><UiIcon name="replay" />{copy.replay}</button>
               </div>
               {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
             </>
@@ -585,7 +642,7 @@ export function App() {
 
           {moveLog.length > 0 ? (
             <div className="move-history">
-              <span className="panel-label">{copy.history}</span>
+              <span className="panel-label"><UiIcon name="replay" size={14} />{copy.history}</span>
               <ol>
                 {moveLog.slice(-8).map((move, index) => (
                   <li key={moveLog.length - Math.min(moveLog.length, 8) + index}>{idxToCoord(move.from)} → {idxToCoord(move.to)}</li>
@@ -598,9 +655,13 @@ export function App() {
         </aside>
 
         <section className="board-card">
+          <span className="khmer-corner khmer-corner--tl" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--tr" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--bl" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--br" aria-hidden="true">✦</span>
           <div className="board-card__head">
             <div>
-              <span className="panel-label">
+              <span className="panel-label"><UiIcon name="temple" size={14} />
                 {isReplaying
                   ? `${copy.replay} · ${replayPly}/${moveLog.length}`
                   : matchType === 'LOCAL'
@@ -611,7 +672,7 @@ export function App() {
               </span>
               <h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2>
             </div>
-            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}>{statusLabel}</span>
+            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}><UiIcon name="crown" size={15} />{statusLabel}</span>
           </div>
 
           <Board
