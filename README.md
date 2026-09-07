@@ -1,32 +1,59 @@
 # រែកខ្មែរ - Rek Khmer Engine
 
-Pure TypeScript game engine cho **Rek Khmer (ល្បែងរែក)**. Repository này chỉ giữ engine, AI, test, puzzle và tài liệu luật; UI/UX không nằm trong scope hiện tại.
+**Rek Khmer (ល្បែងរែក)** hiện gồm pure TypeScript engine + React/Vite web client. Repository chứa **engine, session API, AI, tournament harness, tests, tactical fixtures, Local/vs-AI/Online MVP, i18n, local persistence/replay, WebSocket room server và tài liệu luật/research**.
 
-## Cách phân chia game chuẩn của project
+## Canonical project model
 
-Project chỉ có **một game: Rek Khmer**. Bên trong engine hiện có hai **rule set**:
+Project chỉ có **một game**:
 
-- `REK_STANDARD` — rule set chuẩn/mặc định của Rek Khmer. Rek và Poat là **cơ chế bắt quân**, không phải hai game mode độc lập.
-- `MIN_REK_CHANH` — variant có thêm rule bắt buộc Rek theo current engine contract. Exact historical Hao Rek trigger vẫn đang được research và chưa được tuyên bố là fully confirmed.
+```text
+REK_KHMER
+```
 
-Identifier cũ `REK_POAT` được giữ **chỉ để backward compatibility**. Mọi public session/snapshot mới sẽ canonicalize nó thành `REK_STANDARD`.
+Hai canonical rulesets:
 
-`Local`, `Online`, `vs AI`, `AI vs AI`, `Easy/Medium/Hard` là match type hoặc AI difficulty, **không phải rule set của cờ Rek** và không được nhét vào core rule engine.
+- `REK_STANDARD` — default technical ruleset cho Rek Khmer.
+- `MIN_REK_CHANH` — event-triggered Hao Rek variant using transition-owned `HaoRekContext`; unresolved historical edges are explicit technical policy.
 
-## Nguồn luật và độ tin cậy
+Compatibility only:
 
-- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide: CONFIRMED / STRONG EVIDENCE / ENGINE INTERPRETATION / UNVERIFIED.
-- `SPEC_ENGINE_CO_REK_KHMER.md` — technical contract mà engine hiện thực thi.
-- `ENGINE_ARCHITECTURE_REK_KHMER.md` — sơ đồ module, turn flow và ranh giới rule research.
-- `RESEARCH_LUAT_REK_KHMER_2026.md` — source registry + evidence matrix toàn bộ gameplay Rek Khmer.
-- `RESEARCH_HAO_REK_2026.md` — research note chuyên sâu về exact `ហៅរែក`, candidate event semantics và evidence gate trước khi đổi `MIN_REK_CHANH`.
-- `PLAN_PHAT_TRIEN_CO_REK.md` — kế hoạch phát triển.
+```text
+REK_POAT -> REK_STANDARD
+```
 
-**Google Play / Apple App Store developer descriptions, app tutorials, screenshots và app behavior không được dùng làm positive rule evidence.** Comment/review do người dùng viết bên dưới app có thể được đọc để đối chiếu, nhưng chỉ được ghi là `COMMUNITY SIGNAL`: dùng để phát hiện edge case/từ khóa/board fixture cần xác minh độc lập, không được dùng một mình để sửa luật.
+`GameMode` là deprecated alias. Rek và Poat là mechanics; Hao Rek là call/obligation rule-state candidate trong Min Rek Chanh, không phải game mode riêng.
 
-## Setup canonical
+`Local`, `Online`, `vs AI`, `AI vs AI`, `Easy/Medium/Hard` là application match type hoặc AI difficulty, không phải core ruleset.
 
-Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you`):
+## Evidence policy
+
+Canonical labels dùng trong project:
+
+- `CONFIRMED`
+- `STRONG EVIDENCE`
+- `SECONDARY`
+- `ENGINE INTERPRETATION`
+- `COMMUNITY SIGNAL`
+- `UNVERIFIED`
+- `UNSUPPORTED`
+- `REJECTED AS POSITIVE EVIDENCE`
+
+Google Play / Apple App Store developer descriptions, app tutorials, screenshots, app behavior và scraper/copy của chúng **không được dùng làm positive rule evidence**. User comments có thể được đọc như `COMMUNITY SIGNAL` để tìm edge case/keyword/fixture, nhưng không tự khóa SPEC hay engine.
+
+Các tài liệu chính:
+
+- `RESEARCH_FINAL_V1_FREEZE.md` — frozen v1 evidence matrix + reopen criteria.
+- `RESEARCH_HAO_REK_2026.md` — Hao Rek research, media evidence, source/claim labels.
+- `RESEARCH_LUAT_REK_KHMER_2026.md` — source registry + gameplay evidence matrix.
+- `HUONG_DAN_LUAT_CO_REK_KHMER.md` — evidence-based rule guide.
+- `SPEC_ENGINE_CO_REK_KHMER.md` — current technical contract.
+- `ENGINE_ARCHITECTURE_REK_KHMER.md` — architecture + rule/state boundaries.
+- `PLAN_PHAT_TRIEN_CO_REK.md` — roadmap.
+- `AUDIT_REK_KHMER_2026-09-06.md` — full repo/game audit và prioritized next work.
+
+## Canonical setup
+
+Bàn 8×8, mỗi bên 1 King + 15 Men:
 
 ```text
     a   b   c   d   e   f   g   h
@@ -40,22 +67,106 @@ Bàn 8×8, mỗi bên 16 quân = 1 King + 15 Men. Nhìn từ phía Trắng (`you
 1   .   ○   ○   ○   ○   ○   ○   ○
 ```
 
-- Trắng: King `a2`; Men `b1-h1`, `a3-h3`; `a1` trống.
-- Đen: King `h7`; Men `a6-h6`, `a8-g8`; `h8` trống.
+- White/`you`: King `a2`; Men `b1-h1`, `a3-h3`; `a1` empty.
+- Black/`opp`: King `h7`; Men `a6-h6`, `a8-g8`; `h8` empty.
 - Hai bên đối xứng quay 180°.
 
-## Core engine
+**Không restore initial setup King d1/d8 cũ.** Custom test/puzzle positions có thể đặt King ở ô khác nhưng đó không phải initial setup.
 
-- `lib/rek-engine/types.ts` — `RuleSet`, `RuleSetInput`, `GameState`, `CanonicalGameState` và compatibility aliases.
-- `lib/rek-engine/catalog.ts` — identity của game + catalog 2 canonical ruleset cho UI/server discovery; không chứa legality/capture logic.
-- `lib/rek-engine/captures.ts` — primitive Rek + Poat.
-- `lib/rek-engine/engine.ts` — setup, movement, preview, execute, terminal/draw adjudication.
-- `lib/rek-engine/session.ts` — `RekGame`, undo, canonical state, snapshot migration/save/load.
-- `lib/rek-engine/ai.ts` — AI chỉ search trên legal moves từ core engine.
-- `lib/rek-engine/ai-tournament.ts` — deterministic AI tournament regression.
-- `lib/rek-engine/puzzles.ts` — tactical fixtures.
+## Evidence-backed core vs engine interpretation
+
+Evidence mạnh hiện hỗ trợ:
+
+- Rek là trò Khmer;
+- board 8×8;
+- 1 King + 15 Men mỗi bên;
+- một quân mỗi lượt;
+- mục tiêu capture opposing King;
+- two-sided Rek capture;
+- trapping/encirclement concept;
+- canonical setup + regular orthogonal sliding có secondary support mạnh.
+
+Current engine còn có interpretations/extensions chưa được gọi historical truth:
+
+- dual-axis Rek => capture 4;
+- Poat = BFS connected group + zero orthogonal liberties;
+- Rek resolve trước Poat;
+- newly-created-response diff as the exact Hao transition predicate;
+- responder-choice policy when one move creates multiple NEW Hao responses;
+- stationary King in Min;
+- zero-geometric-move instant win;
+- Poat in Min;
+- threefold repetition;
+- lone-King draw limit 32.
+
+## Hao Rek v1
+
+Research + reconstructable real-board media support an event/action-triggered obligation more strongly than the old board-global interpretation.
+
+Current v1 engine:
+
+```text
+BEFORE responder Rek set
+→ opponent move
+→ AFTER responder Rek set
+→ NEW = AFTER - BEFORE
+→ active HaoRekContext.allowedResponses
+→ responder answers NEW response
+→ response may create counter-Hao
+```
+
+Board-global “any Rek exists => compulsory” is no longer the engine contract.
+
+Historical edges still not promoted as truth:
+
+- multiple NEW responses: responder-choice is a technical policy;
+- verbal call is not required by software;
+- Poat-in-Min remains unverified;
+- King stationary in Min remains historically unverified;
+- zero-geometric-move instant win remains an engine interpretation.
+
+See `RESEARCH_FINAL_V1_FREEZE.md` for the frozen evidence matrix and reopen criteria.
+
+## Product MVP
+
+Đã có:
+
+- canonical responsive 8×8 board UI;
+- Local two-player match;
+- vs AI: Easy / Medium / Hard, AI dùng full state-aware engine search;
+- Khmer / Vietnamese / English presentation;
+- local Save / Load bằng engine snapshot;
+- replay dựng lại bằng `RekGame.makeMove()`;
+- Online MVP: create/join room qua WebSocket, creator = White, joiner = Black;
+- server authoritative: turn + move đều được validate bằng `RekGame`.
+
+Online MVP hiện **chưa** có auth, database, matchmaking, reconnect/session-resume, spectator hoặc production deployment config.
+
+## Modules
+
+Core:
+
+- `lib/rek-engine/types.ts` — canonical rulesets, compatibility inputs, state types.
+- `lib/rek-engine/catalog.ts` — single-game identity + presentation metadata.
+- `lib/rek-engine/captures.ts` — current Rek + Poat primitives.
+- `lib/rek-engine/engine.ts` — setup, geometry, move resolution, terminal/draw adjudication.
+- `lib/rek-engine/session.ts` — `RekGame`, canonical state, undo, snapshot validation/migration.
+- `lib/rek-engine/ai.ts` — engine-backed AI search.
+- `lib/rek-engine/ai-tournament.ts` — deterministic Hard-vs-Medium tournament harness.
+- `lib/rek-engine/puzzles.ts` — curated **engine tactical fixtures**.
+
+Application/network:
+
+- `src/App.tsx` — Local / vs AI / Online UI orchestration.
+- `src/i18n.ts` — Khmer / Vietnamese / English UI copy.
+- `src/persistence.ts` — versioned local match persistence metadata.
+- `src/online.ts` — browser WebSocket transport.
+- `shared/online-protocol.ts` — shared create/join/move room protocol.
+- `server/online-server.ts` — authoritative two-player room server.
 
 ## Public API
+
+Application code mới nên dùng `RekGame`:
 
 ```ts
 import {
@@ -84,60 +195,99 @@ const to = coordToIdx('a4')
 if (game.getLegalMoves(from).includes(to)) {
   game.makeMove(from, to)
 }
-
-console.log(ruleset) // REK_STANDARD
-console.log(getRuleSetMetadata(game.getState().mode).displayName)
 ```
 
-Public type boundary được chia rõ:
+Public type boundary:
 
-- `RuleSet` — chỉ canonical values: `REK_STANDARD | MIN_REK_CHANH`.
-- `RuleSetInput` — input compatibility boundary; ngoài hai giá trị canonical còn nhận legacy `REK_POAT`.
-- `CanonicalGameState` — state trả ra từ `RekGame.getState()` và `deserializeGameState()`; `mode` luôn là `RuleSet`, không bao giờ là `REK_POAT`.
-- `GameState` — compatibility/wire/custom-state shape dùng khi cần nhận dữ liệu legacy trước bước normalize.
-- `GameMode` — deprecated alias, chỉ giữ để source cũ vẫn compile; code mới không nên dùng.
+- `RuleSet` — canonical values only.
+- `RuleSetInput` — canonical + legacy `REK_POAT` input.
+- `CanonicalGameState` — public normalized state; never emits `REK_POAT`.
+- `GameState` — compatibility/custom-load shape.
+- `GameMode` — deprecated.
 
-UI/server nên dùng `listRuleSets()` để render lựa chọn ruleset. Không tự hard-code thêm `REK_POAT` thành lựa chọn thứ ba và không dùng metadata catalog để quyết định move legality; legality/capture luôn gọi core engine.
+`engine.ts` còn export stateful `RekEngine` wrapper cho compatibility, nhưng **new application code nên ưu tiên `RekGame`**. `RekEngine` is deprecated and its state-change semantics are regression-locked to match `RekGame`.
 
-Legacy callers vẫn chạy:
+## Snapshot compatibility
 
-```ts
-const legacyInput: RuleSetInput = 'REK_POAT'
-const legacy = createGame(legacyInput)
-const canonical: CanonicalGameState = legacy.getState()
+Snapshot schema hiện version `1`:
 
-console.log(canonical.mode) // REK_STANDARD
-console.log(getRuleSetMetadata('REK_POAT').id) // REK_STANDARD
-```
+- loader nhận legacy `mode: "REK_POAT"`;
+- normalize sang `REK_STANDARD`;
+- legacy repetition keys migrate/merge;
+- serializer mới chỉ emit canonical ruleset.
 
-Snapshot schema vẫn là version `1`; loader nhận snapshot cũ có `mode: "REK_POAT"`, migrate mode + repetition keys sang `REK_STANDARD`, và khi serialize lại chỉ phát canonical identifier.
-
-## Rule boundary quan trọng
-
-Những phần đã có evidence mạnh: bàn 8×8, 16 quân/bên, setup 7+King+8 của project, movement trực giao, Rek ăn cặp hai phía, nguyên lý vây/bí, bắt King là mục tiêu.
-
-Những phần **current engine đang chạy nhưng chưa được coi là historical truth**:
-
-- exact Hao Rek trigger trong `MIN_REK_CHANH`;
-- global compulsory Rek interpretation;
-- dual-axis Rek = 4 captures;
-- exact Rek → Poat ordering/timing;
-- zero-move instant win;
-- threefold repetition;
-- lone-King draw limit.
-
-Research pass 2026 về Hao Rek có một `COMMUNITY SIGNAL` Khmer chi tiết cho thấy **một cặp Rek mở sẵn có thể không tự tạo “lời gọi”**, và obligation có thể phụ thuộc vào một nước đi làm lộ pair. Tín hiệu này đủ để nghi ngờ global state-trigger hiện tại nhưng **không phải authoritative evidence và chưa đủ để đổi engine**. Chi tiết nằm trong `RESEARCH_HAO_REK_2026.md`; toàn bộ matrix nằm trong `RESEARCH_LUAT_REK_KHMER_2026.md`.
-
-Không thay các rule này chỉ vì suy đoán. Khi research đủ mạnh, cập nhật guide → SPEC → code → regression tests theo đúng thứ tự.
+Validation hiện kiểm structural shape plus persisted semantic invariants for Kings/status, Hao context, repetition identity and lone-King counters.
 
 ## AI
 
-- `easy`: random có bias capture.
+- `easy`: random có capture bias.
 - `medium`: deterministic alpha-beta depth 2.
 - `hard`: deterministic depth 3, adaptive depth 4/5 ở narrow endgame.
-- AI không tự viết movement/Rek/Poat/Hao Rek riêng; legal set lấy từ core engine.
+- live/tournament legality uses state-aware engine boundaries;
+- AI does not implement movement/Rek/Poat/Hao independently;
+- live search carries engine-owned repetition/lone-King draw state.
 
-Tournament baseline chạy cả `REK_STANDARD` và `MIN_REK_CHANH`.
+## Tactical fixtures
+
+`KHMER_PUZZLES` là **engine training/tactical fixtures**, không tự động là “7 thế truyền thống Khmer”. Một số fixture dùng custom King positions hoặc phụ thuộc current BFS Poat / Rek→Poat ordering. Chỉ gọi puzzle là historical/traditional khi có provenance riêng.
+
+## Checkpoint
+
+Checkpoint gần nhất của project:
+
+```text
+Engine regressions: 109/109 PASS
+Medium baseline: 798 nodes
+Hard baseline: 7,532 nodes / 652 cutoffs
+Tournament smoke illegalMoves = 0
+Observed runner test runtime: ~77s -> ~16s after legal-move pipeline optimization
+```
+
+## Run / build / test
+
+Install:
+
+```bash
+npm install --no-package-lock
+```
+
+Web client:
+
+```bash
+npm run dev
+npm run typecheck:web
+npm run build:web
+```
+
+Online server:
+
+```bash
+npm run server:online
+# default: ws://localhost:8787
+# optional server env: REK_WS_HOST / REK_WS_PORT
+npm run typecheck:server
+npm run test:online
+```
+
+Production web client endpoint:
+
+```bash
+cp .env.example .env.local
+# Set this to the deployed WebSocket endpoint.
+VITE_REK_WS_URL=wss://your-rek-server.example.com
+npm run build:web
+```
+
+When the web app is served over HTTPS, configure a `wss://` endpoint to avoid mixed-content blocking. The Online settings field remains editable at runtime for testing/self-hosted servers.
+
+Engine:
+
+```bash
+npm run typecheck
+npm run test:engine
+```
+
+Tournament:
 
 ```bash
 npm run tournament:ai
@@ -145,12 +295,18 @@ node scripts/run-ai-tournament.cjs --games-per-mode=10 --opening-plies=4 --max-p
 npm run tournament:ai:200
 ```
 
-## Test
+CI hiện chạy **engine typecheck + web build + online-server typecheck + two-client WebSocket smoke + full engine regressions** cho các path liên quan, cùng canonical rule/spec/research Markdown (`RESEARCH_*.md`).
 
-```bash
-npm install --no-package-lock
-npm run typecheck
-npm test
+## Rule-change workflow
+
+```text
+research evidence
+→ HUONG_DAN confidence promotion
+→ SPEC technical decision
+→ failing board regression
+→ engine
+→ session/snapshot migration if needed
+→ AI/tournament verification
 ```
 
-Rule changes phải giữ engine pure TypeScript và không được duplicate legality/capture logic ở UI, server hoặc AI.
+Không dùng app-store shortcut. Research v1 is frozen; reopen rule semantics only on materially stronger evidence.
