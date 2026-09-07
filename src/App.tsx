@@ -45,6 +45,53 @@ const RULESETS: { id: RuleSet; label: string; note: string }[] = [
 
 const DIFFICULTIES: AiDifficulty[] = ['easy', 'medium', 'hard']
 
+type IconName =
+  | 'temple'
+  | 'naga'
+  | 'lotus'
+  | 'local'
+  | 'ai'
+  | 'online'
+  | 'rules'
+  | 'status'
+  | 'undo'
+  | 'reset'
+  | 'save'
+  | 'load'
+  | 'replay'
+  | 'spark'
+  | 'crown'
+
+function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 1.8,
+    strokeLinecap: 'round' as const,
+    strokeLinejoin: 'round' as const,
+    'aria-hidden': true,
+  }
+
+  if (name === 'temple') return <svg {...common}><path d="M3 21h18M5 21v-7h14v7M7 14V9h10v5M9 9V5h6v4M12 3l2 2h-4l2-2Z"/><path d="M8 17h2m4 0h2"/></svg>
+  if (name === 'naga') return <svg {...common}><path d="M5 18c2.2 2 5.3 1.4 6.6-.8 1.5-2.5-.7-4.5-2.5-3.7-2 .8-1.4 3.8.8 4.1 4.8.8 9.5-2 9.5-6.7 0-3-2.3-5.5-5.2-5.9"/><path d="M16.7 4.7 19 3l-.4 3 2.4.9-2.6 1.1.3 3-2.3-1.7"/></svg>
+  if (name === 'lotus') return <svg {...common}><path d="M12 21c0-4-2.6-6.6-6.8-7 1.1 3.7 3.4 5.8 6.8 7Z"/><path d="M12 21c0-4 2.6-6.6 6.8-7-1.1 3.7-3.4 5.8-6.8 7Z"/><path d="M12 18c-3-2.2-3.6-5.4 0-9 3.6 3.6 3 6.8 0 9Z"/><path d="M12 12c-2.4-1.5-3.1-4.4-1.4-7 1 .8 1.4 1.6 1.4 2.8 0-1.2.4-2 1.4-2.8 1.7 2.6 1 5.5-1.4 7Z"/></svg>
+  if (name === 'local') return <svg {...common}><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20c.4-3.4 2.1-5 5-5s4.6 1.6 5 5M11 20c.4-3.4 2.1-5 5-5s4.6 1.6 5 5"/></svg>
+  if (name === 'ai') return <svg {...common}><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M9 10h.01M15 10h.01M8 15h8M12 2v3"/></svg>
+  if (name === 'online') return <svg {...common}><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.6 3.6 5.6 3.6 9S14.4 18.4 12 21c-2.4-2.6-3.6-5.6-3.6-9S9.6 5.6 12 3Z"/></svg>
+  if (name === 'rules') return <svg {...common}><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg>
+  if (name === 'status') return <svg {...common}><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg>
+  if (name === 'undo') return <svg {...common}><path d="m9 7-5 5 5 5"/><path d="M20 17a8 8 0 0 0-8-8H4"/></svg>
+  if (name === 'reset') return <svg {...common}><path d="M20 6v5h-5"/><path d="M19 11a8 8 0 1 0 1 5"/></svg>
+  if (name === 'save') return <svg {...common}><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7"/></svg>
+  if (name === 'load') return <svg {...common}><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/></svg>
+  if (name === 'replay') return <svg {...common}><path d="M4 11a8 8 0 1 1 2 6"/><path d="M4 5v6h6"/><path d="m10 9 6 3-6 3Z"/></svg>
+  if (name === 'spark') return <svg {...common}><path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
+  return <svg {...common}><path d="m4 9 4 3 4-7 4 7 4-3-2 10H6L4 9Z"/><path d="M7 19h10"/></svg>
+}
+
 function PieceView({ piece }: { piece: NonNullable<Cell> }) {
   const side = piece.player === 'you' ? 'white' : 'black'
   return (
