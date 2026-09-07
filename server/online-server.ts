@@ -12,12 +12,14 @@ interface Room {
   youToken: string
   oppToken: string | null
   expiryTimer: ReturnType<typeof setTimeout> | null
+  idleTimer: ReturnType<typeof setTimeout> | null
 }
 
 export interface OnlineServerOptions {
   port?: number
   host?: string
   resumeGraceMs?: number
+  roomIdleMs?: number
 }
 
 function send(socket: WebSocket | null, message: OnlineServerMessage): void {
@@ -104,6 +106,7 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
   const rooms = new Map<string, Room>()
   const socketRooms = new Map<WebSocket, string>()
   const resumeGraceMs = options.resumeGraceMs ?? 120_000
+  const roomIdleMs = options.roomIdleMs ?? 30 * 60_000
   const wss = new WebSocketServer({
     port: options.port ?? 8787,
     host: options.host,
@@ -116,8 +119,33 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
     room.expiryTimer = null
   }
 
+  const clearIdle = (room: Room) => {
+    if (!room.idleTimer) return
+    clearTimeout(room.idleTimer)
+    room.idleTimer = null
+  }
+
+  const expireRoom = (room: Room, message: string) => {
+    clearExpiry(room)
+    clearIdle(room)
+    rooms.delete(room.id)
+    for (const socket of [room.you, room.opp]) {
+      if (!socket) continue
+      socketRooms.delete(socket)
+      send(socket, { type: 'error', message })
+      socket.close(1000, message)
+    }
+  }
+
+  const touchRoom = (room: Room) => {
+    clearIdle(room)
+    room.idleTimer = setTimeout(() => expireRoom(room, 'Room expired'), roomIdleMs)
+    room.idleTimer.unref?.()
+  }
+
   const scheduleExpiryIfEmpty = (room: Room) => {
     if (room.you || room.opp || room.expiryTimer) return
+    clearIdle(room)
     room.expiryTimer = setTimeout(() => {
       rooms.delete(room.id)
     }, resumeGraceMs)
@@ -167,8 +195,10 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
           youToken: createResumeToken(),
           oppToken: null,
           expiryTimer: null,
+          idleTimer: null,
         }
         rooms.set(id, room)
+        touchRoom(room)
         socketRooms.set(socket, id)
         sendRoom(socket, room, 'you', room.youToken, false)
         return
@@ -194,6 +224,7 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
         room.opp = socket
         room.oppToken = createResumeToken()
         socketRooms.set(socket, room.id)
+        touchRoom(room)
         sendRoom(socket, room, 'opp', room.oppToken, false)
         send(room.you, { type: 'peer', roomId: room.id, status: 'joined' })
         return
@@ -233,6 +264,7 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
 
         clearExpiry(room)
         socketRooms.set(socket, room.id)
+        touchRoom(room)
         sendRoom(socket, room, color, message.resumeToken, true)
         const peer = color === 'you' ? room.opp : room.you
         send(peer, { type: 'peer', roomId: room.id, status: 'joined' })
@@ -261,6 +293,8 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
         return
       }
 
+      touchRoom(room)
+
       const update: OnlineServerMessage = {
         type: 'state',
         roomId: room.id,
@@ -287,7 +321,8 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
         send(room.you, { type: 'peer', roomId, status: 'left' })
       }
 
-      scheduleExpiryIfEmpty(room)
+      if (room.you || room.opp) touchRoom(room)
+      else scheduleExpiryIfEmpty(room)
     })
   })
 
