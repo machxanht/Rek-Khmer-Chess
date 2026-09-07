@@ -12,6 +12,7 @@ import {
   type RuleSet,
 } from '../lib/rek-engine'
 import type { OnlineServerMessage } from '../shared/online-protocol'
+import { getDefaultOnlineServerUrl } from './config'
 import { LANGUAGE_LABELS, UI_COPY, type UiCopy, type UiLanguage } from './i18n'
 import { RekOnlineClient } from './online'
 import { sameReplayState } from './replay'
@@ -133,7 +134,7 @@ export function App() {
   const [storageMessage, setStorageMessage] = useState('')
 
   const [onlineClient, setOnlineClient] = useState<RekOnlineClient | null>(null)
-  const [onlineUrl, setOnlineUrl] = useState('ws://localhost:8787')
+  const [onlineUrl, setOnlineUrl] = useState(getDefaultOnlineServerUrl)
   const [roomInput, setRoomInput] = useState('')
   const [roomId, setRoomId] = useState('')
   const [onlineColor, setOnlineColor] = useState<PlayerColor | null>(null)
