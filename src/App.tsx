@@ -29,6 +29,7 @@ import {
 } from './persistence'
 
 type MatchType = StoredMatchType | 'ONLINE'
+type AppView = 'home' | 'play' | 'online' | 'history' | 'settings'
 type OnlineStatus =
   | 'idle'
   | 'connecting'
@@ -184,6 +185,7 @@ function buildReplayState(ruleset: RuleSet, moves: StoredMove[], ply: number): C
 
 export function App() {
   const [savedOnlineSession] = useState(loadOnlineSession)
+  const [view, setView] = useState<AppView>(savedOnlineSession ? 'online' : 'home')
   const [language, setLanguage] = useState<UiLanguage>('km')
   const [ruleset, setRuleset] = useState<RuleSet>('REK_STANDARD')
   const [matchType, setMatchType] = useState<MatchType>(
@@ -519,194 +521,217 @@ export function App() {
     isReplaying ||
     (matchType === 'ONLINE' && !canOnlineMove)
 
+  const navItems: { id: AppView; icon: IconName; label: string }[] = [
+    { id: 'home', icon: 'home', label: 'Home' },
+    { id: 'play', icon: 'local', label: 'Play' },
+    { id: 'online', icon: 'online', label: copy.online },
+    { id: 'history', icon: 'replay', label: copy.history },
+    { id: 'settings', icon: 'settings', label: copy.language },
+  ]
+
+  const openPlay = (nextMatch: MatchType, nextRuleset = ruleset) => {
+    startFreshGame(nextRuleset, nextMatch)
+    setView('play')
+  }
+
+  const pageTitle =
+    view === 'home' ? 'រែកខ្មែរ' :
+    view === 'play' ? (ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh') :
+    view === 'online' ? copy.online :
+    view === 'history' ? copy.history :
+    copy.language
+
   return (
-    <main className="app-shell ouk-shell">
-      <header className="ouk-topbar"><div className="ouk-brand"><span className="ouk-brandmark"><UiIcon name="temple" size={22} /></span><span><strong>រែកខ្មែរ</strong><small>REK KHMER</small></span></div><div className="ouk-online-dot"><i /> Khmer traditional board game</div></header>
+    <main className="app-shell ouk-shell ouk-app">
       <div className="ambient ambient--one" aria-hidden="true" />
       <div className="ambient ambient--two" aria-hidden="true" />
 
-      <header className="hero">
-        <div className="hero-emblem" aria-hidden="true"><UiIcon name="temple" size={34} /></div>
-        <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
-        <h1>រែកខ្មែរ</h1>
-        <p className="subtitle">{copy.subtitle}</p>
-        <div className="heritage-strip" aria-label="Khmer cultural motifs">
-          <div className="heritage-card"><UiIcon name="temple" /><span><strong>អង្គរ</strong><small>Angkor spirit</small></span></div>
-          <div className="heritage-card"><UiIcon name="naga" /><span><strong>នាគ</strong><small>Naga guardian</small></span></div>
-          <div className="heritage-card"><UiIcon name="lotus" /><span><strong>ផ្កាឈូក</strong><small>Lotus balance</small></span></div>
-        </div>
+      <header className="ouk-topbar">
+        <button type="button" className="ouk-brand ouk-brand-button" onClick={() => setView('home')}>
+          <span className="ouk-brandmark"><UiIcon name="temple" size={22} /></span>
+          <span><strong>រែកខ្មែរ</strong><small>REK KHMER</small></span>
+        </button>
+        <div className="ouk-page-title">{pageTitle}</div>
+        <div className="ouk-online-dot"><i /> {matchType === 'ONLINE' ? onlineStatusLabel : 'Dark Khmer UI'}</div>
       </header>
 
-      <section className="game-layout">
-        <aside className="panel" aria-label={copy.match}>
-          <div className="panel-ornament" aria-hidden="true"><span /><i /><span /></div>
-          <div>
-            <span className="panel-label"><UiIcon name="spark" size={14} />{copy.language}</span>
-            <div className="choice-row choice-row--three">
-              {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
-                <button type="button" key={item} className={language === item ? 'choice choice--active' : 'choice'} onClick={() => setLanguage(item)}>
-                  {LANGUAGE_LABELS[item]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <span className="panel-label"><UiIcon name="local" size={14} />{copy.match}</span>
-            <div className="choice-row choice-row--match">
-              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}><UiIcon name="local" />{copy.local}</button>
-              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}><UiIcon name="ai" />{copy.vsAi}</button>
-              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}><UiIcon name="online" />{copy.online}</button>
-            </div>
-          </div>
-
-          {matchType === 'ONLINE' ? (
-            <div className="online-panel">
-              <span className="panel-label"><UiIcon name="online" size={14} />{copy.server}</span>
-              <input className="online-input" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} spellCheck={false} />
-              <div className="online-create">
-                <button type="button" className="action-button" onClick={() => openOnline('create')}><UiIcon name="online" />{copy.createRoom}</button>
+      <section className="ouk-page">
+        {view === 'home' ? (
+          <div className="ouk-home">
+            <section className="ouk-hero-card kbach-frame">
+              <div className="ouk-hero-copy">
+                <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
+                <h1>រែកខ្មែរ</h1>
+                <p>{copy.subtitle}</p>
               </div>
-              <span className="panel-label">{copy.roomCode}</span>
-              <div className="online-join">
-                <input className="online-input room-input" value={roomInput} onChange={(event) => setRoomInput(event.target.value.toUpperCase())} maxLength={6} spellCheck={false} />
-                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}><UiIcon name="online" />{copy.joinRoom}</button>
-              </div>
-              {roomId ? <p className="online-room"><strong>{copy.roomCode}:</strong> {roomId}</p> : null}
-              {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
-              {onlineStatus === 'disconnected' && roomId && onlineResumeToken ? (
-                <button type="button" className="action-button" onClick={resumeOnline}>
-                  <UiIcon name="online" />{copy.reconnect}
-                </button>
-              ) : null}
-              <p className="storage-note">{onlineStatusLabel}</p>
-            </div>
-          ) : null}
+              <button type="button" className="ouk-primary-cta" onClick={() => { setMatchType('ONLINE'); setView('online') }}>
+                <span className="cta-icon"><UiIcon name="online" size={24} /></span>
+                <span><strong>{copy.online}</strong><small>{copy.createRoom} / {copy.joinRoom}</small></span>
+                <span>›</span>
+              </button>
+            </section>
 
-          {matchType === 'VS_AI' ? (
-            <div>
-              <span className="panel-label"><UiIcon name="ai" size={14} />{copy.aiDifficulty}</span>
-              <div className="choice-row choice-row--three">
-                {DIFFICULTIES.map((item) => (
-                  <button type="button" key={item} className={difficulty === item ? 'choice choice--active' : 'choice'} onClick={() => setDifficulty(item)}>
-                    {copy[item]}
-                  </button>
-                ))}
-              </div>
+            <div className="ouk-section-head"><span><UiIcon name="spark" size={15} /> Game modes</span></div>
+            <div className="ouk-mode-grid">
+              <button type="button" className="ouk-mode-card" onClick={() => openPlay('VS_AI')}>
+                <span className="ouk-card-icon"><UiIcon name="ai" size={22} /></span>
+                <span><strong>{copy.vsAi}</strong><small>{copy.easy} · {copy.medium} · {copy.hard}</small></span>
+              </button>
+              <button type="button" className="ouk-mode-card" onClick={() => openPlay('LOCAL')}>
+                <span className="ouk-card-icon"><UiIcon name="local" size={22} /></span>
+                <span><strong>{copy.local}</strong><small>{copy.localHint}</small></span>
+              </button>
             </div>
-          ) : null}
 
-          <div>
-            <span className="panel-label"><UiIcon name="rules" size={14} />{copy.ruleset}</span>
-            <div className="segmented">
+            <div className="ouk-section-head"><span><UiIcon name="rules" size={15} /> {copy.ruleset}</span></div>
+            <div className="ouk-rules-grid">
               {RULESETS.map((item) => (
-                <button
-                  type="button"
-                  key={item.id}
-                  disabled={matchType === 'ONLINE' && !!roomId}
-                  className={ruleset === item.id ? 'segment segment--active' : 'segment'}
-                  onClick={() => startFreshGame(item.id, matchType)}
-                >
-                  <span className="segment-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} /></span>
+                <button key={item.id} type="button" className={`ouk-rule-card ${ruleset === item.id ? 'is-selected' : ''}`} onClick={() => { setRuleset(item.id); openPlay(matchType === 'ONLINE' ? 'LOCAL' : matchType, item.id) }}>
+                  <span className="ouk-card-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} size={22} /></span>
                   <span><strong>{item.label}</strong><small>{item.note}</small></span>
                 </button>
               ))}
             </div>
+
+            <section className="ouk-wisdom-card">
+              <span className="ouk-card-icon"><UiIcon name="lotus" size={24} /></span>
+              <div><small>Khmer heritage</small><strong>Rek · Poat · Hao Rek</strong><p>Traditional identity, evidence-labeled rules, canonical Rek engine.</p></div>
+            </section>
           </div>
+        ) : null}
 
-          <div className="status-card">
-            <span className="panel-label"><UiIcon name="status" size={14} />
-              {matchType === 'LOCAL' ? copy.localMatch : matchType === 'VS_AI' ? copy.youAreWhite : copy.online}
-            </span>
-            <dl>
-              <div><dt>{copy.status}</dt><dd>{statusLabel}</dd></div>
-              <div><dt>{copy.whitePieces}</dt><dd>{counts.you}</dd></div>
-              <div><dt>{copy.blackPieces}</dt><dd>{counts.opp}</dd></div>
-              <div><dt>{copy.moves}</dt><dd>{displayState.moveCount}</dd></div>
-              <div><dt>{copy.lastRek}</dt><dd>{displayState.lastRek ? copy.yes : copy.no}</dd></div>
-              <div><dt>{copy.lastPoat}</dt><dd>{displayState.lastPoat ? copy.yes : copy.no}</dd></div>
-            </dl>
-          </div>
+        {view === 'online' ? (
+          <div className="ouk-stack">
+            <section className="ouk-page-card">
+              <div className="ouk-section-head compact"><span><UiIcon name="online" size={15} /> {copy.online}</span><b>{onlineStatusLabel}</b></div>
+              <label className="ouk-field"><span>{copy.server}</span><input value={onlineUrl} onChange={(e) => setOnlineUrl(e.target.value)} spellCheck={false} /></label>
+            </section>
 
-          {matchType !== 'ONLINE' ? (
-            <>
-              <div className="actions">
-                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}><UiIcon name="undo" />{copy.undo}</button>
-                <button type="button" className="action-button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button>
-              </div>
-              <div className="storage-actions">
-                <button type="button" className="action-button" onClick={saveMatch}><UiIcon name="save" />{copy.save}</button>
-                <button type="button" className="action-button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button>
-                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}><UiIcon name="replay" />{copy.replay}</button>
-              </div>
-              {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
-            </>
-          ) : null}
-
-          {state.winReason && !isReplaying ? <p className="result-note">{state.winReason}</p> : null}
-
-          {moveLog.length > 0 ? (
-            <div className="move-history">
-              <span className="panel-label"><UiIcon name="replay" size={14} />{copy.history}</span>
-              <ol>
-                {moveLog.slice(-8).map((move, index) => (
-                  <li key={moveLog.length - Math.min(moveLog.length, 8) + index}>{idxToCoord(move.from)} → {idxToCoord(move.to)}</li>
+            <section className="ouk-page-card">
+              <div className="ouk-step-head"><span>1</span><strong>{copy.ruleset}</strong></div>
+              <div className="ouk-segment-grid">
+                {RULESETS.map((item) => (
+                  <button type="button" key={item.id} className={ruleset === item.id ? 'active' : ''} disabled={!!roomId} onClick={() => setRuleset(item.id)}>{item.label}</button>
                 ))}
-              </ol>
-            </div>
-          ) : null}
+              </div>
+            </section>
 
-          {matchType !== 'ONLINE' ? <p className="phase-note">{matchType === 'VS_AI' ? copy.vsAiHint : copy.localHint}</p> : null}
-        </aside>
+            <section className="ouk-page-card">
+              <div className="ouk-step-head"><span>2</span><strong>Room</strong></div>
+              <div className="ouk-online-actions">
+                <button type="button" className="ouk-action-primary" onClick={() => openOnline('create')}><UiIcon name="online" /> {copy.createRoom}</button>
+                <div className="ouk-join-row">
+                  <input value={roomInput} onChange={(e) => setRoomInput(e.target.value.toUpperCase())} placeholder={copy.roomCode} maxLength={6} />
+                  <button type="button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}>{copy.joinRoom}</button>
+                </div>
+                {roomId ? <div className="ouk-room-pill"><span>{copy.roomCode}</span><strong>{roomId}</strong></div> : null}
+                {onlineStatus === 'disconnected' && roomId && onlineResumeToken ? <button type="button" className="ouk-action-secondary" onClick={resumeOnline}>{copy.reconnect}</button> : null}
+              </div>
+            </section>
 
-        <section className="board-card">
-          <span className="khmer-corner khmer-corner--tl" aria-hidden="true">✦</span>
-          <span className="khmer-corner khmer-corner--tr" aria-hidden="true">✦</span>
-          <span className="khmer-corner khmer-corner--bl" aria-hidden="true">✦</span>
-          <span className="khmer-corner khmer-corner--br" aria-hidden="true">✦</span>
-          <div className="board-card__head">
-            <div>
-              <span className="panel-label"><UiIcon name="temple" size={14} />
-                {isReplaying
-                  ? `${copy.replay} · ${replayPly}/${moveLog.length}`
-                  : matchType === 'LOCAL'
-                    ? copy.localBoardLabel
-                    : matchType === 'VS_AI'
-                      ? `${copy.vsAiBoardLabel} · ${difficultyLabel}`
-                      : `${copy.online} · ${roomId || '—'}`}
-              </span>
-              <h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2>
-            </div>
-            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}><UiIcon name="crown" size={15} />{statusLabel}</span>
+            <section className="ouk-page-card ouk-online-status-card">
+              <div><span>{copy.status}</span><strong>{onlineStatusLabel}</strong></div>
+              <div><span>{copy.onlineAs}</span><strong>{onlineColor ? (onlineColor === 'you' ? copy.white : copy.black) : '—'}</strong></div>
+              <button type="button" className="ouk-action-primary" disabled={onlineStatus !== 'connected'} onClick={() => setView('play')}>Enter board</button>
+            </section>
           </div>
+        ) : null}
 
-          <Board
-            state={displayState}
-            selected={isReplaying ? null : selected}
-            legalMoves={isReplaying ? new Set() : legalMoves}
-            disabled={boardDisabled}
-            copy={copy}
-            onSquareClick={handleSquareClick}
-          />
-
-          {isReplaying ? (
-            <div className="replay-bar">
-              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.max(0, (ply ?? 0) - 1))} disabled={replayPly === 0}>{copy.previous}</button>
-              <span>{copy.replayPosition} {replayPly}/{moveLog.length}</span>
-              <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.min(moveLog.length, (ply ?? 0) + 1))} disabled={replayPly === moveLog.length}>{copy.next}</button>
-              <button type="button" className="action-button replay-exit" onClick={() => setReplayPly(null)}>{copy.exitReplay}</button>
-            </div>
-          ) : null}
-
-          <div className="legend" aria-label="Piece legend">
-            <span><i className="legend-piece legend-piece--white" /> {copy.white}</span>
-            <span><i className="legend-piece legend-piece--black" /> {copy.black}</span>
-            <span><i className="legend-king">♚</i> {copy.king}</span>
-            <span><i className="legend-dot" /> {copy.legalMove}</span>
+        {view === 'history' ? (
+          <div className="ouk-stack">
+            <section className="ouk-page-card">
+              <div className="ouk-section-head compact"><span><UiIcon name="replay" size={15} /> {copy.history}</span><b>{moveLog.length} {copy.moves}</b></div>
+              {moveLog.length === 0 ? <p className="ouk-empty">No moves yet.</p> : (
+                <ol className="ouk-history-list">
+                  {moveLog.map((move, index) => (
+                    <li key={index}><span className="ouk-card-icon"><UiIcon name="replay" size={16} /></span><span><strong>Move {index + 1}</strong><small>{idxToCoord(move.from)} → {idxToCoord(move.to)}</small></span></li>
+                  ))}
+                </ol>
+              )}
+            </section>
+            <button type="button" className="ouk-action-primary" disabled={!moveLog.length} onClick={() => { setReplayPly(0); setView('play') }}>{copy.replay}</button>
           </div>
-        </section>
+        ) : null}
+
+        {view === 'settings' ? (
+          <div className="ouk-stack">
+            <section className="ouk-page-card">
+              <div className="ouk-section-head compact"><span><UiIcon name="settings" size={15} /> {copy.language}</span></div>
+              <div className="ouk-segment-grid">
+                {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
+                  <button type="button" key={item} className={language === item ? 'active' : ''} onClick={() => setLanguage(item)}>{LANGUAGE_LABELS[item]}</button>
+                ))}
+              </div>
+            </section>
+            <section className="ouk-page-card">
+              <div className="ouk-section-head compact"><span><UiIcon name="rules" size={15} /> {copy.ruleset}</span></div>
+              <div className="ouk-rules-list">
+                {RULESETS.map((item) => (
+                  <button type="button" key={item.id} className={ruleset === item.id ? 'is-selected' : ''} onClick={() => startFreshGame(item.id, matchType === 'ONLINE' ? 'LOCAL' : matchType)}>
+                    <span className="ouk-card-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} /></span>
+                    <span><strong>{item.label}</strong><small>{item.note}</small></span>
+                  </button>
+                ))}
+              </div>
+            </section>
+            <section className="ouk-page-card">
+              <div className="ouk-section-head compact"><span><UiIcon name="ai" size={15} /> {copy.aiDifficulty}</span></div>
+              <div className="ouk-segment-grid">
+                {DIFFICULTIES.map((item) => <button type="button" key={item} className={difficulty === item ? 'active' : ''} onClick={() => setDifficulty(item)}>{copy[item]}</button>)}
+              </div>
+            </section>
+            <section className="ouk-page-card ouk-dark-default"><span className="ouk-card-icon"><UiIcon name="spark" /></span><div><strong>Dark theme</strong><small>Default presentation, matching the Ouk shell direction.</small></div><b>ON</b></section>
+          </div>
+        ) : null}
+
+        {view === 'play' ? (
+          <div className="ouk-play">
+            <section className="ouk-player-strip">
+              <div><span className="ouk-avatar black"><UiIcon name="crown" /></span><span><small>{copy.black}</small><strong>{counts.opp} pieces</strong></span></div>
+              <div className={`ouk-turn-badge ${displayState.turn === 'opp' ? 'active' : ''}`}>{displayState.turn === 'opp' ? statusLabel : ruleset}</div>
+            </section>
+
+            <section className="board-card ouk-board-card">
+              <div className="board-card__head">
+                <div><span className="panel-label"><UiIcon name="temple" size={14} /> {matchType === 'LOCAL' ? copy.localBoardLabel : matchType === 'VS_AI' ? `${copy.vsAiBoardLabel} · ${difficultyLabel}` : `${copy.online} · ${roomId || '—'}`}</span><h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2></div>
+                <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}><UiIcon name="crown" size={15} />{statusLabel}</span>
+              </div>
+              <Board state={displayState} selected={isReplaying ? null : selected} legalMoves={isReplaying ? new Set() : legalMoves} disabled={boardDisabled} copy={copy} onSquareClick={handleSquareClick} />
+              {isReplaying ? (
+                <div className="replay-bar">
+                  <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.max(0, (ply ?? 0) - 1))} disabled={replayPly === 0}>{copy.previous}</button>
+                  <span>{copy.replayPosition} {replayPly}/{moveLog.length}</span>
+                  <button type="button" className="action-button" onClick={() => setReplayPly((ply) => Math.min(moveLog.length, (ply ?? 0) + 1))} disabled={replayPly === moveLog.length}>{copy.next}</button>
+                  <button type="button" className="action-button replay-exit" onClick={() => setReplayPly(null)}>{copy.exitReplay}</button>
+                </div>
+              ) : null}
+            </section>
+
+            <section className="ouk-player-strip you">
+              <div><span className="ouk-avatar white"><UiIcon name="crown" /></span><span><small>{copy.white}</small><strong>{counts.you} pieces</strong></span></div>
+              <div className={`ouk-turn-badge ${displayState.turn === 'you' ? 'active' : ''}`}>{displayState.turn === 'you' ? statusLabel : copy.status}</div>
+            </section>
+
+            <section className="ouk-game-actions">
+              {matchType !== 'ONLINE' ? <button type="button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}><UiIcon name="undo" />{copy.undo}</button> : null}
+              <button type="button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button>
+              {matchType !== 'ONLINE' ? <button type="button" onClick={saveMatch}><UiIcon name="save" />{copy.save}</button> : null}
+              {matchType !== 'ONLINE' ? <button type="button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button> : null}
+            </section>
+
+            {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
+            {state.winReason && !isReplaying ? <p className="result-note">{state.winReason}</p> : null}
+          </div>
+        ) : null}
       </section>
-      <nav className="ouk-bottom-nav" aria-label="Primary navigation"><button type="button" className="ouk-nav-item"><UiIcon name="home" /><span>Home</span></button><button type="button" className="ouk-nav-item ouk-nav-item--active"><UiIcon name="local" /><span>Play</span></button><button type="button" className="ouk-nav-item" onClick={() => setReplayPly(moveLog.length ? 0 : null)} disabled={!moveLog.length}><UiIcon name="replay" /><span>{copy.history}</span></button><button type="button" className="ouk-nav-item"><UiIcon name="rules" /><span>{copy.ruleset}</span></button><button type="button" className="ouk-nav-item"><UiIcon name="settings" /><span>{copy.language}</span></button></nav>
+
+      <nav className="ouk-bottom-nav" aria-label="Primary navigation">
+        {navItems.map((item) => (
+          <button type="button" key={item.id} className={view === item.id ? 'ouk-nav-item ouk-nav-item--active' : 'ouk-nav-item'} onClick={() => setView(item.id)}>
+            <UiIcon name={item.icon} /><span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </main>
   )
 }
