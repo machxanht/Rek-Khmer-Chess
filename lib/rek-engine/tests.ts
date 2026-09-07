@@ -160,7 +160,7 @@ export function runAllUnitTests(): {
     return 'Board edges count as walls; a8 has zero liberties after a6 -> a7.'
   })
 
-  run('TC-05', 'Min Rek Chanh - compulsory Rek forfeit', () => {
+  run('TC-05', 'Min Rek Chanh - active Hao response forfeit', () => {
     const board = emptyBoard()
     put(board, 'd1', 'you', true, 'you_king')
     put(board, 'd8', 'opp', true, 'opp_king')
@@ -170,14 +170,20 @@ export function runAllUnitTests(): {
 
     const state = makeState(board, 'you', 'MIN_REK_CHANH')
     const from = coordToIdx('c1')
+    const required = coordToIdx('c4')
     const illegalChoice = coordToIdx('c2')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from, to: required }],
+    }
     const next = executeMove(state, from, illegalChoice)
 
-    expect(next.status === 'won', 'Ignoring a compulsory Rek must end Min Rek Chanh')
-    expect(next.winner === 'opp', 'The player who ignores compulsory Rek must lose')
-    expect(next.board[from]?.id === board[from]?.id, 'Forfeit must not execute the illegal move')
+    expect(next.status === 'won', 'Ignoring an active Hao response must end Min Rek Chanh')
+    expect(next.winner === 'opp', 'The player who ignores active Hao must lose')
+    expect(next.board[from]?.id === board[from]?.id, 'Forfeit must not execute the submitted move')
     expect(next.board[illegalChoice] === null, 'Forfeit destination must remain empty')
-    return 'A geometrically valid non-Rek attempt is adjudicated as an immediate forfeit.'
+    return 'A geometrically valid move outside active Hao responses is an immediate forfeit.'
   })
 
   run('TC-06', 'Khối liên thông Poat', () => {
@@ -241,16 +247,16 @@ export function runAllUnitTests(): {
     return 'Canonical Standard exposes both tactical Rek and ordinary movement.'
   })
 
-  run('REG-05', 'MIN_REK_CHANH exposes only compulsory Rek destinations', () => {
+  run('REG-05', 'MIN_REK_CHANH board-only moves stay context-free without active Hao', () => {
     const board = emptyBoard()
     put(board, 'c1', 'you')
     put(board, 'b4', 'opp')
     put(board, 'd4', 'opp')
 
     const moves = getMoveResults(board, coordToIdx('c1'), 'MIN_REK_CHANH')
-    expect(!moves.has(coordToIdx('c2')), 'Non-Rek c2 must be filtered while Rek exists')
-    expect(moves.has(coordToIdx('c4')), 'The actual Rek destination must remain available')
-    return 'Current Min contract requires a Rek whenever its global obligation condition is active.'
+    expect(moves.has(coordToIdx('c2')), 'Context-free c1 -> c2 must remain available without active Hao')
+    expect(moves.has(coordToIdx('c4')), 'Existing Rek c1 -> c4 must remain available')
+    return 'Board-only move generation no longer invents Hao obligation from a pre-existing Rek.'
   })
 
   run('REG-06', 'King mobility differs by ruleset', () => {

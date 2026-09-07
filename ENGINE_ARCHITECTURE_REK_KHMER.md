@@ -1,11 +1,12 @@
 # SƠ ĐỒ GAME ENGINE REK KHMER
 
 > **Repository:** `machxanht/Rek-Khmer-Chess`  
-> **Mục tiêu:** mô tả kiến trúc engine sau khi chuẩn hóa khái niệm **Game / RuleSet / MatchType / AI Difficulty**.
+> **Ngày cập nhật:** 2026-09-06  
+> **Mục tiêu:** mô tả kiến trúc engine sau khi chuẩn hóa Game / RuleSet / MatchType / AI Difficulty và ghi rõ boundary giữa historical evidence với current software contract.
 
 ---
 
-## 1. PHÂN CẤP KHÁI NIỆM
+## 1. Phân cấp khái niệm
 
 Project chỉ có một game:
 
@@ -13,7 +14,7 @@ Project chỉ có một game:
 Game = REK_KHMER
 ```
 
-Core engine hiện hỗ trợ hai rule set:
+Core engine hỗ trợ hai canonical rulesets:
 
 ```text
 RuleSet
@@ -21,13 +22,13 @@ RuleSet
 └── MIN_REK_CHANH
 ```
 
-`REK_POAT` là compatibility alias cũ:
+Compatibility alias:
 
 ```text
-REK_POAT  --normalize-->  REK_STANDARD
+REK_POAT --normalize--> REK_STANDARD
 ```
 
-Những thứ sau **không phải rule set**:
+Không phải ruleset:
 
 ```text
 MatchType
@@ -42,32 +43,28 @@ AiDifficulty
 └── hard
 ```
 
-Match type thuộc application/server layer. Difficulty thuộc AI layer. Không đưa chúng vào core rule adjudication.
+Rek và Poat là mechanics. Hao Rek là rule/state/event candidate trong Min Rek Chanh, không phải game mode.
 
 ---
 
-## 2. MODULE GRAPH
+## 2. Repository/module graph hiện tại
 
 ```mermaid
 flowchart TD
-    UI[UI / Web / Mobile tương lai]
-    SERVER[Online Match / Server tương lai]
-    CLI[CLI / Replay / Tooling]
-
-    API[index.ts\nPublic exports]
-    SESSION[session.ts\nRekGame facade]
-    ENGINE[engine.ts\nRule adjudication]
+    APP[Future UI / Server / CLI]
+    API[index.ts]
+    CAT[catalog.ts]
+    SESSION[session.ts\nRekGame canonical facade]
+    ENGINE[engine.ts\nPure rule adjudication]
     CAP[captures.ts\nRek + Poat primitives]
-    TYPES[types.ts\nRuleSet + GameState]
-    AI[ai.ts\nSearch / evaluation]
-    TOURNEY[ai-tournament.ts\nRegression harness]
+    TYPES[types.ts]
+    AI[ai.ts\nSearch/evaluation]
+    TOURNEY[ai-tournament.ts]
     PUZZLES[puzzles.ts]
-    TESTS[*-tests.ts]
+    TESTS[13 test suites]
 
-    UI --> API
-    SERVER --> API
-    CLI --> API
-
+    APP --> API
+    API --> CAT
     API --> SESSION
     API --> ENGINE
     API --> AI
@@ -80,6 +77,7 @@ flowchart TD
     CAP --> TYPES
 
     AI --> ENGINE
+    AI --> CAP
     AI --> TYPES
     TOURNEY --> SESSION
     TOURNEY --> AI
@@ -94,19 +92,21 @@ flowchart TD
 
 | Module | Có trách nhiệm | Không được làm |
 |---|---|---|
-| `types.ts` | Data types, `RuleSet`, legacy aliases | Không phán capture |
-| `captures.ts` | Rek/Poat primitive | Không quản turn/history |
-| `engine.ts` | setup, movement, preview, execute, terminal | Không quản UI/network |
-| `session.ts` | state, undo, snapshot migration | Không tự viết capture rule |
-| `ai.ts` | search trên legal set từ engine | Không tự định nghĩa legality |
-| `ai-tournament.ts` | AI match harness + metrics | Không đổi rule |
-| UI/server | input/output, match lifecycle | Không duplicate engine rule |
+| `types.ts` | data types, canonical rulesets, compatibility input | capture adjudication |
+| `catalog.ts` | game identity + presentation metadata | legality/capture |
+| `captures.ts` | Rek/Poat primitives | turn/history/session |
+| `engine.ts` | setup, movement, preview, execute, terminal/draw | UI/network |
+| `session.ts` | canonical state, undo, snapshot validation/migration | duplicate capture logic |
+| `ai.ts` | search trên engine-owned legal moves | tự định nghĩa legality |
+| `ai-tournament.ts` | deterministic match harness + metrics | đổi rules |
+| `puzzles.ts` | engine tactical fixtures | historical provenance tự động |
+| future UI/server | render/transport/match lifecycle | duplicate core rules |
 
 ---
 
-## 3. PUBLIC CALL FLOW
+## 3. Canonical public path
 
-Consumer nên dùng `RekGame`:
+Application code mới nên dùng `RekGame`:
 
 ```mermaid
 sequenceDiagram
@@ -116,77 +116,90 @@ sequenceDiagram
     participant X as captures.ts
 
     C->>S: createGame(REK_STANDARD)
-    S->>E: createInitialState(REK_STANDARD)
-    E-->>S: canonical GameState
+    S->>E: createInitialState()
+    E-->>S: canonical state
 
     C->>S: getLegalMoves(from)
-    S->>E: getMoveResults(board, from, ruleset)
+    S->>E: getMoveResults(board,from,ruleset)
     E->>X: Rek / Poat calculations
-    X-->>E: tactical metadata
-    E-->>S: rule-legal targets
+    X-->>E: capture metadata
+    E-->>S: rule-legal destinations
     S-->>C: targets
 
     C->>S: makeMove(from,to)
     S->>E: executeMove(state,from,to)
     E->>X: resolve captures
-    X-->>E: victims
     E-->>S: immutable next state
-    S-->>C: success
+    S-->>C: state changed?
 ```
 
-UI/server chỉ render/transport. Nếu UI tự quyết “nước này Rek được không?” thì architecture đã bị phá.
+UI/server không được tự quyết “move này Rek/Poat/Hao hợp lệ không?”.
 
 ---
 
-## 4. RULESET NORMALIZATION LAYER
+## 4. Public API layering
 
-`types.ts` expose:
+### Canonical session facade
+
+```text
+session.ts -> RekGame
+```
+
+`RekGame` owns:
+
+- canonical state exposure;
+- undo;
+- serialization/deserialization;
+- legacy snapshot normalization;
+- public rule-legal move projection.
+
+### Legacy/secondary stateful wrapper
+
+`engine.ts` còn export class `RekEngine` ngoài pure functions.
+
+Audit 2026-09-06 phát hiện một semantic mismatch:
+
+- `RekGame.makeMove()` có thể trả `true` khi a geometrically legal current-Min quiet move làm state chuyển sang forfeit loss;
+- `RekEngine.makeMove()` cũng chuyển state sang loss nhưng trả `false` nếu preview thấy `isHaoRekViolation`.
+
+Đây là **API technical debt**. New consumers phải ưu tiên `RekGame`. Không sửa wrapper trong docs-only pass này.
+
+---
+
+## 5. Ruleset normalization layer
 
 ```ts
 type RuleSet = 'REK_STANDARD' | 'MIN_REK_CHANH'
-type LegacyGameMode = 'REK_POAT'
+type RuleSetInput = RuleSet | 'REK_POAT'
 ```
-
-Compatibility path:
 
 ```mermaid
 flowchart LR
-    OLD[REK_POAT input / snapshot] --> N[normalizeRuleSet]
+    OLD[REK_POAT input/snapshot] --> N[normalizeRuleSet]
     N --> STD[REK_STANDARD]
     STD --> STATE[canonical public state]
     STATE --> SNAP[new snapshot emits REK_STANDARD]
 ```
 
-`createPositionKey()` cũng normalize alias trước khi tạo repetition key. Vì vậy:
+`createPositionKey()` normalize alias trước khi tạo repetition namespace.
 
-```text
-REK_POAT|you|...
-REK_STANDARD|you|...
-```
-
-không được coi là hai position khác nhau.
-
-Legacy snapshot `positionCounts` được migrate bằng cách đổi namespace `REK_POAT|` → `REK_STANDARD|` và merge count nếu cần.
-
-Snapshot schema vẫn version 1 vì migration là backward-compatible.
+Legacy `positionCounts` migrate `REK_POAT|` → `REK_STANDARD|` và merge counts.
 
 ---
 
-## 5. SETUP PIPELINE
+## 6. Setup pipeline
 
 ```text
 createGame()
-   ↓
+  ↓
 DEFAULT_RULESET = REK_STANDARD
-   ↓
+  ↓
 createInitialState()
-   ↓
+  ↓
 createInitialBoard()
-   ↓
-canonical 7 + King + 8 setup
+  ↓
+canonical 7 + King + 8
 ```
-
-Setup dùng chung cho `REK_STANDARD` và `MIN_REK_CHANH`:
 
 ```text
 8   ● ● ● ● ● ● ● .
@@ -199,101 +212,61 @@ Setup dùng chung cho `REK_STANDARD` và `MIN_REK_CHANH`:
 1   . ○ ○ ○ ○ ○ ○ ○
 ```
 
+Initial Kings luôn `a2` / `h7`. Custom puzzles có thể đặt King ở squares khác nhưng không đổi initial setup.
+
 ---
 
-## 6. MOVE LEGALITY LAYER
-
-Hai tầng legality phải được giữ riêng:
+## 7. Move legality layers
 
 ```mermaid
 flowchart LR
     P[piece] --> GEO[getLegalMoves]
     GEO --> G[geometric destinations]
-    G --> RULE[getMoveResults]
-    RULE --> R[rule-legal destinations]
+    G --> RULE[getMoveResults / getAllMoveResults]
+    RULE --> R[rule-legal moves + capture metadata]
 ```
 
-### `getLegalMoves()`
+### Geometry
 
-- scan North/South/East/West;
-- chỉ đi qua empty square;
-- stop tại blocker đầu tiên;
-- destination không occupied;
-- current `MIN_REK_CHANH` contract: King stationary.
+- N/S/E/W sliding;
+- empty squares only;
+- stop at blocker;
+- no jump/diagonal;
+- current Min: King stationary.
 
-### `getMoveResults()`
+### Rule legality
 
-- dùng geometric candidates;
-- preview từng move;
-- current Min contract lọc quiet moves nếu compulsory-Rek condition active;
-- trả `MoveResult` có Rek/Poat metadata.
+- Standard: geometric set remains available;
+- Min: active Hao legality is owned by `GameState.haoRekContext`;
+- board-only move-result helpers do not invent Hao from existing Rek;
+- session/live AI use state-aware legality.
 
-Consumer không được dùng geometric set như final legal set.
+Consumer không dùng geometric set như final legal set.
 
 ---
 
-## 7. TURN EXECUTION PIPELINE
-
-```mermaid
-flowchart TD
-    A[from -> to] --> B{playing?}
-    B -- no --> STOP[no-op]
-    B -- yes --> C{piece belongs to turn?}
-    C -- no --> STOP
-    C -- yes --> D[normalize ruleset]
-    D --> E[getLegalMoves geometry]
-    E --> F{destination geometric legal?}
-    F -- no --> STOP
-    F -- yes --> G[previewMove]
-
-    G --> MIN{MIN_REK_CHANH?}
-    MIN -- current compulsory violation --> LOSS[forfeit under current engine contract]
-    MIN -- allowed --> MOVE[move piece]
-    G -- REK_STANDARD --> MOVE
-
-    MOVE --> REK[resolve Rek]
-    REK --> POAT[resolve Poat on post-Rek board]
-    POAT --> TERM[terminal checks]
-    TERM --> DRAW[project draw extensions]
-    DRAW --> NEXT[next turn + canonical state]
-```
-
-Phần nào “current engine contract” nhưng chưa historical-confirmed phải được giữ nguyên label đó trong docs/tests.
-
----
-
-## 8. REK LAYER
-
-`checkRekCaptures()` kiểm hai trục độc lập quanh landing square:
+## 8. Rek layer
 
 ```text
-Horizontal
 X | T | X
-
-Vertical
-X
-|
-T
-|
-X
 ```
 
-Current implementation union cả hai trục, nên có thể bắt 4.
+và vertical equivalent.
+
+Current implementation union both axes, nên có thể capture 4.
 
 Evidence boundary:
 
 ```text
-capture opposite pair        = CONFIRMED core principle
-dual-axis => 4 captures      = UNVERIFIED / engine interpretation
+two-sided pair capture = CONFIRMED
+dual-axis => 4         = ENGINE INTERPRETATION / UNVERIFIED
 ```
 
-Nếu research sau này bác Rek-4, thay đổi tập trung ở `captures.ts` + tests; không cần viết lại session/UI/AI.
+Nếu future evidence bác Rek-4, thay đổi tập trung ở `captures.ts` + regression fixtures.
 
 ---
 
-## 9. POAT LAYER
-
-Current implementation:
+## 9. Poat layer
 
 ```mermaid
 flowchart TD
@@ -306,141 +279,298 @@ flowchart TD
 
 Evidence boundary:
 
-- vây/bí dẫn tới capture: strong/confirmed principle;
-- connected-component semantics: strong interpretation;
-- exact BFS/liberty formula: engine interpretation;
-- exact timing sau Rek: engine interpretation.
+- trapping/encirclement capture concept = confirmed;
+- connected component + zero-liberties = engine interpretation;
+- edge treatment = engine interpretation;
+- timing after Rek = engine interpretation.
 
 ---
 
-## 10. `REK_STANDARD`
+## 10. Current turn execution
 
-Canonical default:
+```mermaid
+flowchart TD
+    A[from -> to] --> B{playing?}
+    B -- no --> STOP[no-op]
+    B -- yes --> C{piece belongs to turn?}
+    C -- no --> STOP
+    C -- yes --> D[normalize ruleset]
+    D --> E[geometric legality]
+    E --> F{legal geometry?}
+    F -- no --> STOP
+    F -- yes --> G[preview]
+    G --> H{current Min violation?}
+    H -- yes --> LOSS[forfeit; board unchanged]
+    H -- no --> MOVE[apply mover]
+    MOVE --> REK[resolve Rek]
+    REK --> POAT[resolve Poat]
+    POAT --> TERM[terminal]
+    TERM --> DRAW[project draw extensions]
+    DRAW --> NEXT[next canonical state]
+```
+
+---
+
+## 11. `REK_STANDARD`
 
 ```text
 REK_STANDARD
 ├── canonical setup
-├── core movement
-├── optional Rek under current contract
-├── Poat implementation
+├── regular movement
+├── Rek optional under current contract
+├── Poat engine interpretation
 └── King-capture terminal
 ```
 
-Tên này cố ý trung tính. Nó không tuyên bố rằng “Rek Poat” là một historically proven separate mode.
+Tên neutral, không tuyên bố “Rek Poat” là separate traditional mode.
 
 ---
 
-## 11. `MIN_REK_CHANH`
+## 12. `MIN_REK_CHANH`: current vs candidate historical model
 
-Current engine model:
+### Current engine model
 
 ```text
-board + current player
-    ↓
-getAllRekOpportunities()
-    ↓
-any Rek exists?
-    ├── no  -> ordinary geometric moves remain
-    └── yes -> only Rek moves remain rule-legal
-               quiet submitted move => forfeit
+previous state
+   ↓
+execute opponent move
+   ↓
+BEFORE/AFTER responder Rek diff
+   ↓
+newlyCreated responses
+   ↓
+HaoRekContext.allowedResponses
+   ↓
+state-aware response / forfeit
+   ↓
+derive next Hao context
 ```
 
-Đây là điểm research quan trọng nhất.
+### Evidence update 2026-09-06
 
-Nếu exact Hao Rek phụ thuộc previous move/call/target pair, architecture tương lai nên thêm explicit context:
+Secondary Khmer wording:
+
+```text
+opponent បើកឲ្យរែក
+→ responder must Rek
+→ if not -> automatic loss
+```
+
+Do đó candidate historical flow hiện được support hơn:
+
+```mermaid
+flowchart LR
+    PREV[previous board] --> MOVE[opponent move/action]
+    MOVE --> DETECT[detect បើកឲ្យរែក]
+    DETECT --> CTX[active Hao Rek obligation]
+    CTX --> RESPONSE[allowed response set]
+    RESPONSE --> NEXT[next state]
+```
+
+Event-triggered Hao is now implemented through Rek-set transition diff. The exact historical rule for multiple NEW responses and verbal calling remains unverified and is kept outside the architecture as technical policy.
+
+---
+
+## 13. Hao Rek state boundary
+
+Current engine uses:
 
 ```ts
 interface HaoRekContext {
   active: boolean
   createdByMove: { from: number; to: number } | null
-  targetPairs: number[][]
-  allowedResponses?: { from: number; to: number }[]
+  allowedResponses: { from: number; to: number }[]
 }
 ```
 
-Possible flow:
+Implemented lifecycle:
 
-```mermaid
-flowchart LR
-    PREV[previous move] --> DETECT[derive HaoRek context]
-    BOARD[current board] --> DETECT
-    DETECT --> CTX[HaoRekContext]
-    CTX --> STATE[GameState]
-    STATE --> LEGAL[getMoveResults]
+```text
+previous state
+   ↓
+execute opponent move
+   ↓
+derive call context from verified rule
+   ↓
+persist context in canonical state/snapshot
+   ↓
+next player's rule-legal generation
+   ↓
+response / violation adjudication
+   ↓
+expire or chain context by verified rule
 ```
 
-**Không implement context này cho đến khi research xác nhận semantics.**
+Snapshot v1 stores Hao context as an additive optional field and validates active response semantics.
 
 ---
 
-## 12. TERMINAL / DRAW
+### 13.1. Reconstructed media implications
 
-Current terminal order về cơ bản:
+Real-board footage `1000009344.mp4` provides multiple reconstructable events:
+
+- blocker leaves the middle square and exposes a new response;
+- mover enters a new position and creates a pair around a gap;
+- pre-existing Rek can coexist with a newly-created call response;
+- one response can create a counter-response and continue the chain.
+
+Therefore future architecture must preserve **transition identity**, not only board identity.
+
+Candidate lifecycle:
+
+```text
+previous state
+   ↓
+compute responder Rek set BEFORE
+   ↓
+execute opponent move
+   ↓
+compute responder Rek set AFTER
+   ↓
+newlyCreated = AFTER - BEFORE
+   ↓
+persist active Hao context if newlyCreated != empty
+   ↓
+next player's rule-legal generation exposes engine-owned allowedResponses
+   ↓
+response / violation adjudication
+   ↓
+response becomes next transition
+   ↓
+derive next Hao context
+   ↓
+chain until no newly-created response exists
+```
+
+This is **IMPLEMENTED IN V1**. Multiple-new-target choice and verbal-call requirements remain historically unresolved; responder-choice/no-verbal-state are explicit technical policies.
+
+The board alone is insufficient to distinguish a pre-existing Rek from a newly-created Hao response. This matters for snapshots/replays, undo, online synchronization, AI search and deterministic tournament reconstruction.
+
+---
+
+## 14. Terminal/draw boundary
+
+Current order:
 
 ```text
 King captured
   ↓
-all pieces gone
+all enemy pieces gone
   ↓
 zero geometric moves
   ↓
-threefold repetition
+threefold
   ↓
 lone-King limit
 ```
 
-Evidence status:
-
-| Rule | Status |
+| Rule | Evidence status |
 |---|---|
-| King capture = win | CONFIRMED |
-| zero-move instant win | UNVERIFIED |
-| threefold | PROJECT EXTENSION |
-| lone-King default 32 | PROJECT EXTENSION |
+| King capture = win | strong/confirmed objective |
+| zero-move instant win | unverified |
+| threefold | project extension |
+| lone-King default 32 | project extension |
 
-AI hiện search theo current engine contract, không phải theo “research future contract”. Khi terminal semantics đổi, AI regression phải đổi cùng core engine.
+Zero-move terminal now uses `Opponent has no geometric moves`, keeping mobility distinct from Poat/liberties. The rule itself remains historically unverified.
 
 ---
 
-## 13. MATCH TYPE TƯƠNG LAI
+## 15. AI architecture
 
-Application layer có thể thiết kế:
+AI live legal path:
 
 ```text
-Choose RuleSet
-├── REK_STANDARD
-└── MIN_REK_CHANH
-
-Then Choose MatchType
-├── LOCAL
-├── VS_AI
-│   ├── easy
-│   ├── medium
-│   └── hard
-├── ONLINE
-└── AI_VS_AI
+GameState
+   ↓
+state-aware engine legality
+   ↓
+engine-owned Hao/Rek/Poat/capture semantics
+   ↓
+ordering/evaluation/minimaxState
 ```
 
-Core engine không cần biết human/AI/network.
+Board-only AI helpers remain for compatibility/benchmarks but live/tournament Min legality uses full state.
+
+Điểm tốt:
+
+- AI không duplicate movement/Rek/Poat;
+- exact capture metadata được reuse;
+- deterministic Medium/Hard regression;
+- tournament uses `RekGame` for actual state transitions.
+
+Draw-history debt đã được xử lý trong live state search: repetition history, lone-King counter và draw limit đi qua `GameState` / `executeMove()`. Threefold/lone-King vẫn là project extensions, không phải historical truth.
 
 ---
 
-## 14. SAFE RULE-CHANGE FLOW
+## 16. Puzzle architecture
+
+`puzzles.ts` hiện là **engine tactical fixtures**, không phải database đã chứng minh provenance truyền thống.
+
+Một số fixture phụ thuộc:
+
+- BFS zero-liberties Poat;
+- Rek→Poat ordering;
+- custom King placements;
+- descriptive tactical names.
+
+Future UI phải label đúng “engine training/tactical fixture” trừ khi từng puzzle có nguồn Khmer độc lập.
+
+---
+
+## 17. Test/CI architecture
+
+`npm run test:engine` compile và chạy 13 report groups, gồm core/spec/AI/state/draw/puzzle/simulation/tournament/API locks.
+
+Checkpoint gần nhất trước research freeze: **109/109 PASS**.
+
+CI engine workflow chạy khi paths thay đổi trong:
+
+- `lib/rek-engine/**`;
+- `scripts/**`;
+- `package.json`;
+- `tsconfig.json`;
+- workflow itself.
+
+Rule/spec/research Markdown hiện nằm trong CI path trigger, gồm wildcard `RESEARCH_*.md`.
+
+---
+
+## 18. Recommended future application split
 
 ```text
-Khmer evidence / real-board sequence
+Core
+├── RuleSet: REK_STANDARD | MIN_REK_CHANH
+└── CanonicalGameState
+
+Application
+├── MatchType: LOCAL | VS_AI | ONLINE | AI_VS_AI
+├── AiDifficulty: easy | medium | hard
+├── presentation/i18n/audio
+└── networking/replay storage
+```
+
+Core không cần biết human/AI/network.
+
+---
+
+## 19. Safe rule-change flow
+
+```text
+Khmer evidence / reconstructable board event
         ↓
-HUONG_DAN_LUAT_CO_REK_KHMER.md
+RESEARCH_HAO / RESEARCH_LUAT
         ↓
-confidence promoted?
-        ↓ yes
-SPEC_ENGINE_CO_REK_KHMER.md
+HUONG_DAN confidence promotion
         ↓
-regression fixture
+SPEC technical contract
+        ↓
+new failing regression fixture
         ↓
 core engine
         ↓
-session / AI / tournament consume new contract
+session/snapshot migration if needed
+        ↓
+AI/tournament verification
 ```
 
-Không sửa UI trước engine. Không sửa AI để “bắt chước rule” trước core. Không dùng app store làm source.
+Không dùng app store làm source. Không sửa UI/AI để “bắt chước” rule future trước core.

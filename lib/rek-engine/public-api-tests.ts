@@ -14,7 +14,12 @@ import {
   getRuleSetMetadata,
   listRuleSets,
 } from './catalog'
-import { coordToIdx, createPositionKey, getAllRekOpportunities } from './engine'
+import {
+  RekEngine,
+  coordToIdx,
+  createPositionKey,
+  getAllRekOpportunities,
+} from './engine'
 import {
   REK_GAME_SNAPSHOT_VERSION,
   RekGame,
@@ -218,19 +223,25 @@ export function runPublicApiTests(): {
     put(board, 'b4', 'opp', false, 'opp_b4')
     put(board, 'd4', 'opp', false, 'opp_d4')
 
-    const game = new RekGame(makeState(board, 'you', 'MIN_REK_CHANH'))
-    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no legal moves under current compulsory-Rek contract')
+    const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
+    const game = new RekGame(state)
+    expect(game.getLegalMoves(coordToIdx('h1')).length === 0, 'Quiet piece must expose no moves during active Hao')
     expect(
       game.getLegalMoves(coordToIdx('c1')).includes(coordToIdx('c4')),
-      'Actual Rek move must remain exposed'
+      'Called Hao response must remain exposed'
     )
 
-    expect(game.makeMove(coordToIdx('h1'), coordToIdx('h2')), 'Submitted Hao Rek violation must be adjudicated as a state change')
+    expect(game.makeMove(coordToIdx('h1'), coordToIdx('h2')), 'Submitted Hao violation must be adjudicated as a state change')
     const terminal = game.getState()
     expect(terminal.status === 'won' && terminal.winner === 'opp', 'Core engine must award the violation to opponent')
     expect(terminal.board[coordToIdx('h1')]?.id === 'you_quiet', 'Illegal quiet move must not alter board')
 
-    return 'Current Min variant remains behaviorally unchanged while its exact historical trigger stays under research.'
+    return 'Public legality now consumes transition-owned Hao context and keeps ignored-call forfeit semantics.'
   })
 
   run('API-07', 'legacy REK_POAT callers and snapshots migrate to REK_STANDARD', () => {
@@ -312,6 +323,64 @@ export function runPublicApiTests(): {
     expect(reloadedMode === 'REK_STANDARD', 'Canonical deserialize return type must never expose legacy mode')
 
     return 'Typecheck now proves compatibility input is separate from canonical session output.'
+  })
+
+  run('API-11', 'active Hao context round-trips through canonical snapshots', () => {
+    const board = emptyBoard()
+    put(board, 'a2', 'you', true, 'you_king')
+    put(board, 'h7', 'opp', true, 'opp_king')
+    put(board, 'c1', 'you', false, 'you_rek')
+    put(board, 'b4', 'opp', false, 'opp_b4')
+    put(board, 'd4', 'opp', false, 'opp_d4')
+
+    const state = makeState(board, 'you', 'MIN_REK_CHANH')
+    state.haoRekContext = {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    }
+
+    const loaded = deserializeGameState(serializeGameState(state))
+    expect(loaded.haoRekContext?.active === true, 'Active Hao flag must survive save/load')
+    expect(loaded.haoRekContext?.allowedResponses.length === 1, 'Allowed response set must survive save/load')
+    expect(
+      loaded.haoRekContext?.allowedResponses[0].from === coordToIdx('c1') &&
+        loaded.haoRekContext?.allowedResponses[0].to === coordToIdx('c4'),
+      'Exact Hao response coordinates must survive save/load'
+    )
+
+    return 'Snapshot v1 remains backward-compatible because Hao context is an additive optional field normalized to null when absent.'
+  })
+
+  run('API-12', 'legacy RekEngine matches RekGame state-change semantics for active Hao forfeit', () => {
+    const legacy = new RekEngine('MIN_REK_CHANH')
+    legacy.loadCustomSetup((board) => {
+      put(board, 'a2', 'you', true, 'you_king')
+      put(board, 'h7', 'opp', true, 'opp_king')
+      put(board, 'd3', 'you', false, 'you_d3')
+      put(board, 'd4', 'you', false, 'you_blocker')
+      put(board, 'd5', 'you', false, 'you_d5')
+      put(board, 'h4', 'opp', false, 'opp_h4')
+      put(board, 'a8', 'opp', false, 'opp_quiet')
+    })
+
+    expect(
+      legacy.makeMove(coordToIdx('d4'), coordToIdx('c4')),
+      'Opening move must execute and create the active Hao response'
+    )
+    expect(
+      legacy.makeMove(coordToIdx('a8'), coordToIdx('a7')),
+      'Legacy facade must return true when ignored active Hao changes state to a forfeit'
+    )
+
+    const terminal = legacy.getState()
+    expect(terminal.status === 'won' && terminal.winner === 'you', 'Ignoring active Hao must award the game to the caller')
+    expect(terminal.board[coordToIdx('a8')]?.id === 'opp_quiet', 'Forfeiting quiet move must not alter the board')
+    expect(terminal.board[coordToIdx('a7')] === null, 'Forfeiting destination must remain empty')
+    expect(legacy.undo(), 'Legacy facade must retain undo history for the adjudicated state change')
+    expect(legacy.getState().status === 'playing', 'Undo must restore the pre-forfeit active-Hao state')
+
+    return 'Deprecated RekEngine now matches RekGame boolean semantics under the transition-owned Hao contract.'
   })
 
   const passed = results.filter((result) => result.passed).length
