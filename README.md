@@ -264,10 +264,21 @@ Online server:
 ```bash
 npm run server:online
 # default: ws://localhost:8787
-# optional: REK_WS_HOST / REK_WS_PORT
+# optional server env: REK_WS_HOST / REK_WS_PORT
 npm run typecheck:server
 npm run test:online
 ```
+
+Production web client endpoint:
+
+```bash
+cp .env.example .env.local
+# Set this to the deployed WebSocket endpoint.
+VITE_REK_WS_URL=wss://your-rek-server.example.com
+npm run build:web
+```
+
+When the web app is served over HTTPS, configure a `wss://` endpoint to avoid mixed-content blocking. The Online settings field remains editable at runtime for testing/self-hosted servers.
 
 Engine:
 
