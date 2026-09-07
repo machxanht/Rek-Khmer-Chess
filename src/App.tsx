@@ -571,7 +571,7 @@ export function App() {
               {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
               {onlineStatus === 'disconnected' && roomId && onlineResumeToken ? (
                 <button type="button" className="action-button" onClick={resumeOnline}>
-                  {copy.reconnect}
+                  <UiIcon name="online" />{copy.reconnect}
                 </button>
               ) : null}
               <p className="storage-note">{onlineStatusLabel}</p>
@@ -655,9 +655,13 @@ export function App() {
         </aside>
 
         <section className="board-card">
+          <span className="khmer-corner khmer-corner--tl" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--tr" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--bl" aria-hidden="true">✦</span>
+          <span className="khmer-corner khmer-corner--br" aria-hidden="true">✦</span>
           <div className="board-card__head">
             <div>
-              <span className="panel-label">
+              <span className="panel-label"><UiIcon name="temple" size={14} />
                 {isReplaying
                   ? `${copy.replay} · ${replayPly}/${moveLog.length}`
                   : matchType === 'LOCAL'
@@ -668,7 +672,7 @@ export function App() {
               </span>
               <h2>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</h2>
             </div>
-            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}>{statusLabel}</span>
+            <span className={`turn-chip ${displayState.status !== 'playing' ? 'turn-chip--finished' : ''}`}><UiIcon name="crown" size={15} />{statusLabel}</span>
           </div>
 
           <Board
