@@ -256,6 +256,16 @@ export function App() {
 
   const handleOnlineMessage = (message: OnlineServerMessage) => {
     if (message.type === 'error') {
+      if (
+        message.message === 'Room expired' ||
+        message.message === 'Room not found' ||
+        message.message === 'Invalid resume token'
+      ) {
+        clearOnlineSession()
+        setRoomId('')
+        setOnlineResumeToken('')
+        setOnlineColor(null)
+      }
       setOnlineStatus('error')
       setOnlineError(message.message)
       return
@@ -311,7 +321,7 @@ export function App() {
       onMessage: handleOnlineMessage,
       onClose: () => {
         setOnlineClient((current) => current === client ? null : current)
-        setOnlineStatus('disconnected')
+        setOnlineStatus((current) => current === 'error' ? current : 'disconnected')
       },
     })
     setOnlineClient(client)
