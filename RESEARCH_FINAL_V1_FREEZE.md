@@ -195,3 +195,61 @@ new evidence
 → AI/tournament
 → new freeze revision
 ```
+
+
+---
+
+## 9. 2026-09-08 consensus reconciliation
+
+This section is the canonical clarification of the v1 freeze after the final ChatGPT ↔ Gemini Studio evidence review. Where older wording in this file conflicts with this section, this section controls.
+
+### Three-layer rule model
+
+1. **EVIDENCE-BACKED RULE** — historical/native/secondary/real-board evidence supports the claim itself.
+2. **ENGINE INTERPRETATION / TECHNICAL POLICY** — deterministic software behavior needed where historical evidence does not resolve every edge case.
+3. **PROJECT EXTENSION** — deliberately added product behavior, not claimed as traditional Rek Khmer law.
+
+### Hao Rek claim split
+
+| ID | Claim | Final classification | V1 disposition |
+|---|---|---|---|
+| H1 | Hao is triggered by an opponent action/move opening Rek | STRONG EVIDENCE | KEEP |
+| H2 | Observed opponent moves can create a new Rek opportunity that the responder immediately answers | STRONG EVIDENCE within observed geometries | KEEP |
+| H3 | Universal `NEW = AFTER - BEFORE` set-difference algorithm | TECHNICAL POLICY / ENGINE CONTRACT | KEEP |
+| H4 | Every member of `NEW` is an eligible Hao response | TECHNICAL POLICY | KEEP |
+| H5 | If `|NEW| > 1`, responder may choose any member | UNVERIFIED historically / TECHNICAL POLICY | KEEP until new evidence |
+| H6 | A pre-existing Rek cannot satisfy an active newly-opened Hao | UNVERIFIED historically / TECHNICAL POLICY | KEEP until new evidence |
+
+M1 real-board reconstruction supports both **blocker-leaves** and **mover-enters** as observed ways an opponent action can open Rek. Neither geometry is declared universal or exclusive.
+
+Hao-chain **existence** has strong candidate support from M1 plus secondary text. Recursive application of the set-difference algorithm to every chain link remains a technical policy.
+
+The historical consequence “ignore required Rek => lose” remains SECONDARY evidence. Exact software representation of that consequence is TECHNICAL POLICY.
+
+### Other unresolved historical boundaries
+
+- King stationary in `MIN_REK_CHANH`: ENGINE INTERPRETATION / UNVERIFIED.
+- Poat enabled in `MIN_REK_CHANH`: ENGINE INTERPRETATION / UNVERIFIED.
+- BFS connected-component + zero-liberty Poat: ENGINE INTERPRETATION.
+- Rek-before-Poat ordering: ENGINE INTERPRETATION / TECHNICAL POLICY.
+- zero geometric moves => immediate win: ENGINE INTERPRETATION / UNVERIFIED.
+- simultaneous dual-axis Rek-4: ENGINE INTERPRETATION / UNVERIFIED.
+- threefold repetition and lone-King 32: PROJECT EXTENSIONS.
+
+### Remaining historical questions
+
+1. Who chooses when one move opens multiple Hao targets?
+2. Can a pre-existing Rek satisfy a newly opened Hao obligation?
+3. Is the King legally stationary in Min Rek Chanh?
+4. Is Poat historically active, inactive, or variant-dependent in Min Rek Chanh?
+
+No gameplay change is authorized by this reconciliation. Current deterministic engine behavior stays in place until materially stronger evidence passes the research → guide → SPEC → tests → engine workflow.
+
+### Canonical document authority
+
+1. `RESEARCH_FINAL_V1_FREEZE.md` — canonical evidence matrix and final research conclusion.
+2. `HUONG_DAN_LUAT_CO_REK_KHMER.md` — human-readable evidence-labeled guide.
+3. `SPEC_ENGINE_CO_REK_KHMER.md` — deterministic software contract.
+4. `ENGINE_ARCHITECTURE_REK_KHMER.md` — implementation architecture.
+5. `RESEARCH_HAO_REK_2026.md` — detailed Hao evidence/reconstruction record.
+6. `RESEARCH_LUAT_REK_KHMER_2026.md` — historical research trail; superseded conclusions are not current authority.
