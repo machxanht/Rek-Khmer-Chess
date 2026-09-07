@@ -574,3 +574,23 @@ AI/tournament verification
 ```
 
 Không dùng app store làm source. Không sửa UI/AI để “bắt chước” rule future trước core.
+
+---
+
+## 16. 2026-09-08 evidence/architecture boundary
+
+Architecture must preserve a strict distinction between **why a historical obligation exists** and **how v1 computes it deterministically**.
+
+For Hao Rek:
+
+- opponent-action/event-triggered obligation: **STRONG EVIDENCE**;
+- observed newly-opened responses: **STRONG EVIDENCE within reconstructed cases**;
+- `NEW = AFTER - BEFORE`: **TECHNICAL POLICY / ENGINE CONTRACT**;
+- multiple-NEW responder choice: **UNVERIFIED / TECHNICAL POLICY**;
+- exclusion of pre-existing Rek during active Hao: **UNVERIFIED / TECHNICAL POLICY**.
+
+Therefore `HaoRekContext.allowedResponses` is an engine-owned deterministic representation, not itself historical evidence.
+
+Likewise, stationary King in Min, Poat-in-Min, BFS/zero-liberty Poat, Rek-before-Poat, zero-move terminal and dual-axis Rek remain engine interpretations. Threefold/lone-King draw behavior remains a project extension.
+
+UI, AI and network consumers must continue consuming engine-owned legality and must not reinterpret these unresolved rules independently.
