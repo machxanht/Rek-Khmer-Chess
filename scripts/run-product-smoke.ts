@@ -1,5 +1,5 @@
 import {
-  chooseAiMoveForState,
+  chooseAiMove,
   coordToIdx,
   createGame,
 } from '../lib/rek-engine'
