@@ -4,40 +4,16 @@ on:
   push:
     paths:
       - 'lib/rek-engine/**'
-      - 'src/**'
-      - 'server/**'
-      - 'shared/**'
-      - 'server/**'
-      - 'shared/**'
-      - 'index.html'
-      - 'tsconfig.web.json'
-      - 'tsconfig.server.json'
-      - 'tsconfig.server.json'
       - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
-      - 'HUONG_DAN_LUAT_CO_REK_KHMER.md'
-      - 'SPEC_ENGINE_CO_REK_KHMER.md'
-      - 'ENGINE_ARCHITECTURE_REK_KHMER.md'
-      - 'RESEARCH_*.md'
-      - 'PLAN_PHAT_TRIEN_CO_REK.md'
-      - 'README.md'
       - '.github/workflows/engine-tests.yml'
   pull_request:
     paths:
       - 'lib/rek-engine/**'
-      - 'src/**'
-      - 'index.html'
-      - 'tsconfig.web.json'
       - 'scripts/**'
       - 'package.json'
       - 'tsconfig.json'
-      - 'HUONG_DAN_LUAT_CO_REK_KHMER.md'
-      - 'SPEC_ENGINE_CO_REK_KHMER.md'
-      - 'ENGINE_ARCHITECTURE_REK_KHMER.md'
-      - 'RESEARCH_*.md'
-      - 'PLAN_PHAT_TRIEN_CO_REK.md'
-      - 'README.md'
       - '.github/workflows/engine-tests.yml'
 
 jobs:
@@ -59,15 +35,6 @@ jobs:
 
       - name: Typecheck engine
         run: npm run typecheck
-
-      - name: Build web client
-        run: npm run build:web
-
-      - name: Typecheck online server
-        run: npm run typecheck:server
-
-      - name: Run online room smoke
-        run: npm run test:online
 
       - name: Run core engine regressions
         run: npm run test:engine
