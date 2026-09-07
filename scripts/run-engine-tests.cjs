@@ -27,6 +27,7 @@ const sourceFiles = [
   'lib/rek-engine/move-regression-tests.ts',
   'lib/rek-engine/rule-guide-lock-tests.ts',
   'lib/rek-engine/public-api-tests.ts',
+  'lib/rek-engine/hao-rek-tests.ts',
 ]
 
 function printReport(label, report) {
@@ -87,6 +88,7 @@ try {
   const { runMoveRegressionTests } = load('move-regression-tests.js')
   const { runRuleGuideLockTests } = load('rule-guide-lock-tests.js')
   const { runPublicApiTests } = load('public-api-tests.js')
+  const { runHaoRekTests } = load('hao-rek-tests.js')
 
   const reports = [
     ['Rek core engine', runAllUnitTests()],
@@ -102,6 +104,7 @@ try {
     ['Rek movement regression', runMoveRegressionTests()],
     ['Rek Khmer guide lock', runRuleGuideLockTests()],
     ['Rek public session API', runPublicApiTests()],
+    ['Rek Hao transition', runHaoRekTests()],
   ]
 
   for (const [label, report] of reports) printReport(label, report)

@@ -28,6 +28,7 @@ export function sameReplayState(
     captured: state.captured,
     moveCount: state.moveCount,
     availableRekMovesCount: state.availableRekMovesCount,
+    haoRekContext: state.haoRekContext ?? null,
     positionCounts: sortedPositionCounts(state.positionCounts),
     loneKingMoveCount: state.loneKingMoveCount ?? 0,
     drawMoveLimit: state.drawMoveLimit ?? 32,

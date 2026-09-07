@@ -1,5 +1,6 @@
-// 7 curated Rek Khmer tactical/defense puzzles.
-// Every published solution is required to be legal under the engine SPEC.
+// 7 curated engine-owned Rek Khmer tactical/defense fixtures.
+// Every published solution is required to be legal under the current engine SPEC.
+// Titles/descriptions are presentation labels, not claims of archival or traditional provenance.
 
 import { Cell, TacticalPuzzle } from './types'
 import { idx } from './captures'
@@ -12,7 +13,7 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 1,
     titleKhmer: 'ក្បួនទី ១: ខែលត្រីកោណបាតវាំង (Triangle Palace Shield)',
     titleEn: 'Level 1: The Triangle Palace Shield',
-    desc: 'Vua (h1) đang đối mặt với các đòn thọc thẳng. Dùng quân Lính tại h5 trượt xuống h2 bịt kín trục dọc để che chắn an toàn tuyệt đối cho Vua.',
+    desc: 'Fixture engine: Vua (h1) đang đối mặt với các đòn thọc thẳng. Dùng quân Lính tại h5 trượt xuống h2 bịt kín trục dọc để che chắn an toàn tuyệt đối cho Vua.',
     difficulty: 'Beginner',
     hint: 'Trượt Lính từ h5 xuống h2 để hoàn thiện lá chắn tam giác!',
     solution: { fromCoord: 'h5', toCoord: 'h2' },
@@ -31,7 +32,7 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 2,
     titleKhmer: 'ក្បួនទី ២: សសរភ្លោះការពារចំហៀង (Dual Column Guard)',
     titleEn: 'Level 2: The Dual Column Bastion',
-    desc: 'Thiết lập bức tường cột đôi vững chắc để chặn đòn thọc sườn hiểm hóc của đối phương.',
+    desc: 'Fixture engine: Thiết lập bức tường cột đôi vững chắc để chặn đòn thọc sườn hiểm hóc của đối phương.',
     difficulty: 'Beginner',
     hint: 'Trượt quân từ b4 sang f4 chặn ngay trước mũi tiến công của quân Đen.',
     solution: { fromCoord: 'b4', toCoord: 'f4' },
@@ -50,7 +51,7 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 3,
     titleKhmer: 'ក្បួនទី ៣: បង្ក្រាបកណ្តាលបំបែកទ័ព (Central Flank Strike)',
     titleEn: 'Level 3: The Central Rek Split',
-    desc: 'Hai quân Lính địch đứng thẳng hàng tại b4 và d4. Trượt quân vào ô c4 để thi triển đòn Gánh (Rek) chia tách đội hình đối phương.',
+    desc: 'Fixture engine: Hai quân Lính địch đứng thẳng hàng tại b4 và d4. Trượt quân vào ô c4 để thi triển đòn Gánh (Rek) chia tách đội hình đối phương.',
     difficulty: 'Intermediate',
     hint: 'Trượt Lính từ c1 lên c4 để gánh cùng lúc cả b4 và d4!',
     solution: { fromCoord: 'c1', toCoord: 'c4' },
@@ -67,7 +68,7 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 4,
     titleKhmer: 'ក្បួនទី ៤: រែកចាប់ស្ដេច (Direct King Assassination)',
     titleEn: 'Level 4: The Royal King Ambush',
-    desc: 'Vua Đen ở d3 và Lính Đen ở d5 đứng kề hai phía của ô d4. Trượt quân vào d4 để Gánh bắt Vua ngay lập tức.',
+    desc: 'Fixture engine: Vua Đen ở d3 và Lính Đen ở d5 đứng kề hai phía của ô d4. Trượt quân vào d4 để Gánh bắt Vua ngay lập tức.',
     difficulty: 'Intermediate',
     hint: 'Trượt quân từ a4 sang d4; hai nạn nhân phải nằm kề sát ở d3 và d5.',
     solution: { fromCoord: 'a4', toCoord: 'd4' },
@@ -83,9 +84,9 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 5,
     titleKhmer: 'ក្បួនទី ៥: សំណាញ់ព័ទ្ធជ្រុង (Corner Poat Encirclement)',
     titleEn: 'Level 5: The Corner Poat Net',
-    desc: 'Quân Đen ở góc a8 đã bị vây 1 phía bởi b8. Hãy trượt quân lên a7 để bịt kín ô khí cuối cùng, ăn gọn quân địch bằng đòn Bao Vây (Poat)!',
+    desc: 'Fixture engine cho current Poat interpretation: Quân Đen ở góc a8 đã bị vây 1 phía bởi b8. Hãy trượt quân lên a7 để bịt kín ô khí cuối cùng và ăn quân theo thuật toán Poat hiện tại.',
     difficulty: 'Intermediate',
-    hint: 'Trượt quân từ a5 lên a7 để tước toàn bộ khí (0 liberties) của quân góc a8!',
+    hint: 'Trượt quân từ a5 lên a7 để đưa current engine group ở a8 về 0 liberties.',
     solution: { fromCoord: 'a5', toCoord: 'a7' },
     setup: (board: Cell[]) => {
       board.fill(null)
@@ -100,9 +101,9 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 6,
     titleKhmer: 'ក្បួនទី ៦: ព័ទ្ធកម្ទេចកងវរជន (Phalanx Mass Encirclement)',
     titleEn: 'Level 6: Phalanx Mass Encirclement',
-    desc: 'Cụm liên kết 3 quân Đen (a7, a8, b8) đang bị bao vây chặt bởi a6 và c8. Trượt quân vào b7 để triệt tiêu toàn bộ đường thoát của cả cụm 3 quân!',
+    desc: 'Fixture engine cho current connected-group Poat interpretation: Cụm 3 quân Đen (a7, a8, b8) được thiết kế để mất toàn bộ liberties sau nước b7.',
     difficulty: 'Master',
-    hint: 'Di chuyển quân từ e7 sang b7 để đóng chiếc lồng sắt vây bắt cả 3 quân Đen!',
+    hint: 'Di chuyển quân từ e7 sang b7 để test current connected-component/liberty behavior.',
     solution: { fromCoord: 'e7', toCoord: 'b7' },
     setup: (board: Cell[]) => {
       board.fill(null)
@@ -120,9 +121,9 @@ export const KHMER_PUZZLES: TacticalPuzzle[] = [
     id: 7,
     titleKhmer: 'ក្បួនទី ៧: រែកហើយព័ទ្ធចាប់ស្ដេច (Rek-Poat Cascade)',
     titleEn: 'Level 7: The Rek-Poat Royal Cascade',
-    desc: 'Một nước hợp lệ tạo đồng thời hai tầng chiến thuật: trượt c1→c4 để Gánh b4/d4, rồi quân vừa đáp c4 khóa khí cuối cùng của Vua Đen ở c5 để Poat kết thúc ván.',
+    desc: 'Fixture engine cho current pipeline: c1→c4 tạo Rek b4/d4, sau đó current Poat scan trên bàn hậu-Rek bắt Vua Đen ở c5. Đây là regression fixture, không phải claim rằng ordering này đã được historical-confirmed.',
     difficulty: 'Master',
-    hint: 'Đi c1 → c4. Engine phải xử Rek trước, sau đó mới quét Poat trên bàn cờ hậu-Rek.',
+    hint: 'Đi c1 → c4 để test current engine ordering Rek → Poat.',
     solution: { fromCoord: 'c1', toCoord: 'c4' },
     setup: (board: Cell[]) => {
       board.fill(null)
