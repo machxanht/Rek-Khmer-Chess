@@ -61,6 +61,8 @@ type IconName =
   | 'replay'
   | 'spark'
   | 'crown'
+  | 'home'
+  | 'settings'
 
 function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
   const common = {
@@ -88,6 +90,8 @@ function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
   if (name === 'save') return <svg {...common}><path d="M5 3h12l2 2v16H5zM8 3v6h8V3M8 21v-7h8v7"/></svg>
   if (name === 'load') return <svg {...common}><path d="M12 3v12m0 0-4-4m4 4 4-4"/><path d="M5 19h14"/></svg>
   if (name === 'replay') return <svg {...common}><path d="M4 11a8 8 0 1 1 2 6"/><path d="M4 5v6h6"/><path d="m10 9 6 3-6 3Z"/></svg>
+  if (name === 'home') return <svg {...common}><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg>
+  if (name === 'settings') return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
   if (name === 'spark') return <svg {...common}><path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
   return <svg {...common}><path d="m4 9 4 3 4-7 4 7 4-3-2 10H6L4 9Z"/><path d="M7 19h10"/></svg>
 }
@@ -516,7 +520,8 @@ export function App() {
     (matchType === 'ONLINE' && !canOnlineMove)
 
   return (
-    <main className="app-shell">
+    <main className="app-shell ouk-shell">
+      <header className="ouk-topbar"><div className="ouk-brand"><span className="ouk-brandmark"><UiIcon name="temple" size={22} /></span><span><strong>រែកខ្មែរ</strong><small>REK KHMER</small></span></div><div className="ouk-online-dot"><i /> Khmer traditional board game</div></header>
       <div className="ambient ambient--one" aria-hidden="true" />
       <div className="ambient ambient--two" aria-hidden="true" />
 
@@ -701,6 +706,7 @@ export function App() {
           </div>
         </section>
       </section>
+      <nav className="ouk-bottom-nav" aria-label="Primary navigation"><button type="button" className="ouk-nav-item"><UiIcon name="home" /><span>Home</span></button><button type="button" className="ouk-nav-item ouk-nav-item--active"><UiIcon name="local" /><span>Play</span></button><button type="button" className="ouk-nav-item" onClick={() => setReplayPly(moveLog.length ? 0 : null)} disabled={!moveLog.length}><UiIcon name="replay" /><span>{copy.history}</span></button><button type="button" className="ouk-nav-item"><UiIcon name="rules" /><span>{copy.ruleset}</span></button><button type="button" className="ouk-nav-item"><UiIcon name="settings" /><span>{copy.language}</span></button></nav>
     </main>
   )
 }
