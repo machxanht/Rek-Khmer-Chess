@@ -517,16 +517,26 @@ export function App() {
 
   return (
     <main className="app-shell">
+      <div className="ambient ambient--one" aria-hidden="true" />
+      <div className="ambient ambient--two" aria-hidden="true" />
+
       <header className="hero">
+        <div className="hero-emblem" aria-hidden="true"><UiIcon name="temple" size={34} /></div>
         <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
         <h1>រែកខ្មែរ</h1>
         <p className="subtitle">{copy.subtitle}</p>
+        <div className="heritage-strip" aria-label="Khmer cultural motifs">
+          <div className="heritage-card"><UiIcon name="temple" /><span><strong>អង្គរ</strong><small>Angkor spirit</small></span></div>
+          <div className="heritage-card"><UiIcon name="naga" /><span><strong>នាគ</strong><small>Naga guardian</small></span></div>
+          <div className="heritage-card"><UiIcon name="lotus" /><span><strong>ផ្កាឈូក</strong><small>Lotus balance</small></span></div>
+        </div>
       </header>
 
       <section className="game-layout">
         <aside className="panel" aria-label={copy.match}>
+          <div className="panel-ornament" aria-hidden="true"><span /><i /><span /></div>
           <div>
-            <span className="panel-label">{copy.language}</span>
+            <span className="panel-label"><UiIcon name="spark" size={14} />{copy.language}</span>
             <div className="choice-row choice-row--three">
               {(Object.keys(LANGUAGE_LABELS) as UiLanguage[]).map((item) => (
                 <button type="button" key={item} className={language === item ? 'choice choice--active' : 'choice'} onClick={() => setLanguage(item)}>
@@ -537,25 +547,25 @@ export function App() {
           </div>
 
           <div>
-            <span className="panel-label">{copy.match}</span>
+            <span className="panel-label"><UiIcon name="local" size={14} />{copy.match}</span>
             <div className="choice-row choice-row--match">
-              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}>{copy.local}</button>
-              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}>{copy.vsAi}</button>
-              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}>{copy.online}</button>
+              <button type="button" className={matchType === 'LOCAL' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'LOCAL')}><UiIcon name="local" />{copy.local}</button>
+              <button type="button" className={matchType === 'VS_AI' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'VS_AI')}><UiIcon name="ai" />{copy.vsAi}</button>
+              <button type="button" className={matchType === 'ONLINE' ? 'choice choice--active' : 'choice'} onClick={() => startFreshGame(ruleset, 'ONLINE')}><UiIcon name="online" />{copy.online}</button>
             </div>
           </div>
 
           {matchType === 'ONLINE' ? (
             <div className="online-panel">
-              <span className="panel-label">{copy.server}</span>
+              <span className="panel-label"><UiIcon name="online" size={14} />{copy.server}</span>
               <input className="online-input" value={onlineUrl} onChange={(event) => setOnlineUrl(event.target.value)} spellCheck={false} />
               <div className="online-create">
-                <button type="button" className="action-button" onClick={() => openOnline('create')}>{copy.createRoom}</button>
+                <button type="button" className="action-button" onClick={() => openOnline('create')}><UiIcon name="online" />{copy.createRoom}</button>
               </div>
               <span className="panel-label">{copy.roomCode}</span>
               <div className="online-join">
                 <input className="online-input room-input" value={roomInput} onChange={(event) => setRoomInput(event.target.value.toUpperCase())} maxLength={6} spellCheck={false} />
-                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}>{copy.joinRoom}</button>
+                <button type="button" className="action-button" onClick={() => openOnline('join')} disabled={roomInput.trim().length !== 6}><UiIcon name="online" />{copy.joinRoom}</button>
               </div>
               {roomId ? <p className="online-room"><strong>{copy.roomCode}:</strong> {roomId}</p> : null}
               {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
@@ -570,7 +580,7 @@ export function App() {
 
           {matchType === 'VS_AI' ? (
             <div>
-              <span className="panel-label">{copy.aiDifficulty}</span>
+              <span className="panel-label"><UiIcon name="ai" size={14} />{copy.aiDifficulty}</span>
               <div className="choice-row choice-row--three">
                 {DIFFICULTIES.map((item) => (
                   <button type="button" key={item} className={difficulty === item ? 'choice choice--active' : 'choice'} onClick={() => setDifficulty(item)}>
@@ -582,7 +592,7 @@ export function App() {
           ) : null}
 
           <div>
-            <span className="panel-label">{copy.ruleset}</span>
+            <span className="panel-label"><UiIcon name="rules" size={14} />{copy.ruleset}</span>
             <div className="segmented">
               {RULESETS.map((item) => (
                 <button
@@ -592,15 +602,15 @@ export function App() {
                   className={ruleset === item.id ? 'segment segment--active' : 'segment'}
                   onClick={() => startFreshGame(item.id, matchType)}
                 >
-                  <strong>{item.label}</strong>
-                  <small>{item.note}</small>
+                  <span className="segment-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} /></span>
+                  <span><strong>{item.label}</strong><small>{item.note}</small></span>
                 </button>
               ))}
             </div>
           </div>
 
           <div className="status-card">
-            <span className="panel-label">
+            <span className="panel-label"><UiIcon name="status" size={14} />
               {matchType === 'LOCAL' ? copy.localMatch : matchType === 'VS_AI' ? copy.youAreWhite : copy.online}
             </span>
             <dl>
@@ -616,13 +626,13 @@ export function App() {
           {matchType !== 'ONLINE' ? (
             <>
               <div className="actions">
-                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}>{copy.undo}</button>
-                <button type="button" className="action-button" onClick={resetGame}>{copy.reset}</button>
+                <button type="button" className="action-button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}><UiIcon name="undo" />{copy.undo}</button>
+                <button type="button" className="action-button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button>
               </div>
               <div className="storage-actions">
-                <button type="button" className="action-button" onClick={saveMatch}>{copy.save}</button>
-                <button type="button" className="action-button" onClick={loadMatch}>{copy.load}</button>
-                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}>{copy.replay}</button>
+                <button type="button" className="action-button" onClick={saveMatch}><UiIcon name="save" />{copy.save}</button>
+                <button type="button" className="action-button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button>
+                <button type="button" className="action-button" onClick={() => setReplayPly(0)} disabled={moveLog.length === 0}><UiIcon name="replay" />{copy.replay}</button>
               </div>
               {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
             </>
@@ -632,7 +642,7 @@ export function App() {
 
           {moveLog.length > 0 ? (
             <div className="move-history">
-              <span className="panel-label">{copy.history}</span>
+              <span className="panel-label"><UiIcon name="replay" size={14} />{copy.history}</span>
               <ol>
                 {moveLog.slice(-8).map((move, index) => (
                   <li key={moveLog.length - Math.min(moveLog.length, 8) + index}>{idxToCoord(move.from)} → {idxToCoord(move.to)}</li>
