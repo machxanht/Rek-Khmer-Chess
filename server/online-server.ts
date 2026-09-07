@@ -7,23 +7,35 @@ interface Room {
   id: string
   game: RekGame
   ruleset: RuleSet
-  you: WebSocket
+  you: WebSocket | null
   opp: WebSocket | null
+  youToken: string
+  oppToken: string | null
+  expiryTimer: ReturnType<typeof setTimeout> | null
 }
 
 export interface OnlineServerOptions {
   port?: number
   host?: string
+  resumeGraceMs?: number
 }
 
-function send(socket: WebSocket, message: OnlineServerMessage): void {
-  if (socket.readyState === WebSocket.OPEN) {
+function send(socket: WebSocket | null, message: OnlineServerMessage): void {
+  if (socket?.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(message))
   }
 }
 
 function isBoardIndex(value: unknown): value is number {
   return Number.isInteger(value) && Number(value) >= 0 && Number(value) < 64
+}
+
+function isRoomId(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-Z0-9]{6}$/.test(value)
+}
+
+function isResumeToken(value: unknown): value is string {
+  return typeof value === 'string' && /^[A-F0-9]{32}$/.test(value)
 }
 
 function parseMessage(data: RawData): OnlineClientMessage | null {
@@ -44,18 +56,25 @@ function parseMessage(data: RawData): OnlineClientMessage | null {
     return { type: 'create', ruleset: message.ruleset }
   }
 
-  if (
-    message.type === 'join' &&
-    typeof message.roomId === 'string' &&
-    /^[A-Z0-9]{6}$/.test(message.roomId)
-  ) {
+  if (message.type === 'join' && isRoomId(message.roomId)) {
     return { type: 'join', roomId: message.roomId }
   }
 
   if (
+    message.type === 'resume' &&
+    isRoomId(message.roomId) &&
+    isResumeToken(message.resumeToken)
+  ) {
+    return {
+      type: 'resume',
+      roomId: message.roomId,
+      resumeToken: message.resumeToken,
+    }
+  }
+
+  if (
     message.type === 'move' &&
-    typeof message.roomId === 'string' &&
-    /^[A-Z0-9]{6}$/.test(message.roomId) &&
+    isRoomId(message.roomId) &&
     isBoardIndex(message.from) &&
     isBoardIndex(message.to)
   ) {
@@ -77,14 +96,51 @@ function createRoomId(rooms: Map<string, Room>): string {
   }
 }
 
+function createResumeToken(): string {
+  return randomBytes(16).toString('hex').toUpperCase()
+}
+
 export function createOnlineServer(options: OnlineServerOptions = {}): WebSocketServer {
   const rooms = new Map<string, Room>()
   const socketRooms = new Map<WebSocket, string>()
+  const resumeGraceMs = options.resumeGraceMs ?? 120_000
   const wss = new WebSocketServer({
     port: options.port ?? 8787,
     host: options.host,
     maxPayload: 4096,
   })
+
+  const clearExpiry = (room: Room) => {
+    if (!room.expiryTimer) return
+    clearTimeout(room.expiryTimer)
+    room.expiryTimer = null
+  }
+
+  const scheduleExpiryIfEmpty = (room: Room) => {
+    if (room.you || room.opp || room.expiryTimer) return
+    room.expiryTimer = setTimeout(() => {
+      rooms.delete(room.id)
+    }, resumeGraceMs)
+    room.expiryTimer.unref?.()
+  }
+
+  const sendRoom = (
+    socket: WebSocket,
+    room: Room,
+    color: 'you' | 'opp',
+    resumeToken: string,
+    resumed: boolean,
+  ) => {
+    send(socket, {
+      type: 'room',
+      roomId: room.id,
+      color,
+      snapshot: room.game.serialize(),
+      resumeToken,
+      peerConnected: color === 'you' ? room.opp !== null : room.you !== null,
+      resumed,
+    })
+  }
 
   wss.on('connection', (socket) => {
     socket.on('message', (raw) => {
@@ -108,15 +164,13 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
           ruleset: message.ruleset,
           you: socket,
           opp: null,
+          youToken: createResumeToken(),
+          oppToken: null,
+          expiryTimer: null,
         }
         rooms.set(id, room)
         socketRooms.set(socket, id)
-        send(socket, {
-          type: 'room',
-          roomId: id,
-          color: 'you',
-          snapshot: game.serialize(),
-        })
+        sendRoom(socket, room, 'you', room.youToken, false)
         return
       }
 
@@ -131,20 +185,57 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
           send(socket, { type: 'error', message: 'Room not found' })
           return
         }
-        if (room.opp) {
+        if (room.oppToken) {
           send(socket, { type: 'error', message: 'Room is full' })
           return
         }
 
+        clearExpiry(room)
         room.opp = socket
+        room.oppToken = createResumeToken()
         socketRooms.set(socket, room.id)
-        send(socket, {
-          type: 'room',
-          roomId: room.id,
-          color: 'opp',
-          snapshot: room.game.serialize(),
-        })
+        sendRoom(socket, room, 'opp', room.oppToken, false)
         send(room.you, { type: 'peer', roomId: room.id, status: 'joined' })
+        return
+      }
+
+      if (message.type === 'resume') {
+        if (socketRooms.has(socket)) {
+          send(socket, { type: 'error', message: 'Socket already belongs to a room' })
+          return
+        }
+
+        const room = rooms.get(message.roomId)
+        if (!room) {
+          send(socket, { type: 'error', message: 'Room not found' })
+          return
+        }
+
+        let color: 'you' | 'opp'
+        if (message.resumeToken === room.youToken) {
+          if (room.you) {
+            send(socket, { type: 'error', message: 'Seat already connected' })
+            return
+          }
+          color = 'you'
+          room.you = socket
+        } else if (room.oppToken && message.resumeToken === room.oppToken) {
+          if (room.opp) {
+            send(socket, { type: 'error', message: 'Seat already connected' })
+            return
+          }
+          color = 'opp'
+          room.opp = socket
+        } else {
+          send(socket, { type: 'error', message: 'Invalid resume token' })
+          return
+        }
+
+        clearExpiry(room)
+        socketRooms.set(socket, room.id)
+        sendRoom(socket, room, color, message.resumeToken, true)
+        const peer = color === 'you' ? room.opp : room.you
+        send(peer, { type: 'peer', roomId: room.id, status: 'joined' })
         return
       }
 
@@ -153,7 +244,7 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
         send(socket, { type: 'error', message: 'Not joined to this room' })
         return
       }
-      if (!room.opp) {
+      if (!room.you || !room.opp) {
         send(socket, { type: 'error', message: 'Waiting for opponent' })
         return
       }
@@ -189,18 +280,14 @@ export function createOnlineServer(options: OnlineServerOptions = {}): WebSocket
       if (!room) return
 
       if (room.you === socket) {
-        if (room.opp) {
-          send(room.opp, { type: 'peer', roomId, status: 'left' })
-          socketRooms.delete(room.opp)
-        }
-        rooms.delete(roomId)
-        return
-      }
-
-      if (room.opp === socket) {
+        room.you = null
+        send(room.opp, { type: 'peer', roomId, status: 'left' })
+      } else if (room.opp === socket) {
         room.opp = null
         send(room.you, { type: 'peer', roomId, status: 'left' })
       }
+
+      scheduleExpiryIfEmpty(room)
     })
   })
 
