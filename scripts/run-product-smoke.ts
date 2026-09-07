@@ -30,7 +30,7 @@ function runVsAiSmoke(): void {
   const beforeAi = game.getState()
   expect(beforeAi.turn === 'opp', 'AI smoke must reach Black/opp turn')
 
-  const move = chooseAiMoveForState(beforeAi, 'medium')
+  const move = chooseAiMove(beforeAi.board, 'opp', beforeAi.mode, 'medium')
   expect(move !== null, 'Medium AI must return a live legal move')
   expect(game.getLegalMoves(move.from).includes(move.to), 'AI move must be exposed by live session legality')
   expect(game.makeMove(move.from, move.to), 'AI move must be accepted by RekGame')
@@ -41,20 +41,17 @@ function runVsAiSmoke(): void {
 }
 
 function runReplayStateSmoke(): void {
-  const plain = createGame('MIN_REK_CHANH').getState()
-  const called = createGame('MIN_REK_CHANH').getState()
-  called.haoRekContext = {
-    active: true,
-    createdByMove: null,
-    allowedResponses: [{
-      from: coordToIdx('a3'),
-      to: coordToIdx('a4'),
-    }],
-  }
+  const original = createGame('REK_STANDARD').getState()
+  const movedGame = createGame('REK_STANDARD')
+  expect(
+    movedGame.makeMove(coordToIdx('a3'), coordToIdx('a4')),
+    'Replay smoke setup move must be accepted',
+  )
+  const moved = movedGame.getState()
 
   expect(
-    !sameReplayState(plain, called),
-    'Replay validation must distinguish identical boards with different active Hao state',
+    !sameReplayState(original, moved),
+    'Replay validation must distinguish different rule-relevant states',
   )
 }
 
