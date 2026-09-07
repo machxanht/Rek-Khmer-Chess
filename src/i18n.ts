@@ -21,6 +21,8 @@ export interface UiCopy {
   waitingOpponent: string
   opponentConnected: string
   opponentLeft: string
+  disconnected: string
+  reconnect: string
   onlineAs: string
   onlineError: string
   aiDifficulty: string
@@ -86,6 +88,8 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     waitingOpponent: 'កំពុងរង់ចាំគូប្រកួត…',
     opponentConnected: 'គូប្រកួតបានភ្ជាប់។',
     opponentLeft: 'គូប្រកួតបានចាកចេញ។',
+    disconnected: 'ការតភ្ជាប់បានផ្ដាច់។ អ្នកអាចភ្ជាប់ឡើងវិញ។',
+    reconnect: 'ភ្ជាប់ឡើងវិញ',
     onlineAs: 'អ្នកលេងជា',
     onlineError: 'បញ្ហាអនឡាញ',
     aiDifficulty: 'កម្រិត AI',
@@ -149,6 +153,8 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     waitingOpponent: 'Đang chờ đối thủ…',
     opponentConnected: 'Đối thủ đã kết nối.',
     opponentLeft: 'Đối thủ đã rời phòng.',
+    disconnected: 'Mất kết nối. Bạn có thể nối lại ván.',
+    reconnect: 'Kết nối lại',
     onlineAs: 'Bạn cầm',
     onlineError: 'Lỗi online',
     aiDifficulty: 'Độ khó AI',
@@ -212,6 +218,8 @@ export const UI_COPY: Record<UiLanguage, UiCopy> = {
     waitingOpponent: 'Waiting for opponent…',
     opponentConnected: 'Opponent connected.',
     opponentLeft: 'Opponent left.',
+    disconnected: 'Connection lost. You can resume this match.',
+    reconnect: 'Reconnect',
     onlineAs: 'You are',
     onlineError: 'Online error',
     aiDifficulty: 'AI difficulty',
