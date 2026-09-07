@@ -714,7 +714,7 @@ export function App() {
 
             <section className="ouk-game-actions">
               {matchType !== 'ONLINE' ? <button type="button" onClick={undoMove} disabled={!game.canUndo() || aiThinking || isReplaying}><UiIcon name="undo" />{copy.undo}</button> : null}
-              <button type="button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button>
+              {matchType !== 'ONLINE' ? <button type="button" onClick={resetGame}><UiIcon name="reset" />{copy.reset}</button> : null}
               {matchType !== 'ONLINE' ? <button type="button" onClick={saveMatch}><UiIcon name="save" />{copy.save}</button> : null}
               {matchType !== 'ONLINE' ? <button type="button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button> : null}
             </section>
