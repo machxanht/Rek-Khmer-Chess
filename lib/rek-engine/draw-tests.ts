@@ -179,6 +179,34 @@ export function runDrawTests(): {
     return 'Win/forfeit adjudication remains higher priority than draw bookkeeping.'
   })
 
+  run('DRAW-07', 'Repetition identity distinguishes active Hao response context', () => {
+    const board = emptyBoard()
+    put(board, 'a1', 'you', true, 'you_king')
+    put(board, 'h8', 'opp', true, 'opp_king')
+    put(board, 'c1', 'you', false, 'you_man')
+    put(board, 'b4', 'opp', false, 'opp_b4')
+    put(board, 'd4', 'opp', false, 'opp_d4')
+
+    const plain = createPositionKey(board, 'you', 'MIN_REK_CHANH')
+    const called = createPositionKey(board, 'you', 'MIN_REK_CHANH', {
+      active: true,
+      createdByMove: { from: coordToIdx('b3'), to: coordToIdx('b4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    })
+    const calledSameResponses = createPositionKey(board, 'you', 'MIN_REK_CHANH', {
+      active: true,
+      createdByMove: { from: coordToIdx('d3'), to: coordToIdx('d4') },
+      allowedResponses: [{ from: coordToIdx('c1'), to: coordToIdx('c4') }],
+    })
+
+    expect(plain !== called, 'Same board with and without active Hao must not be the same repetition position')
+    expect(
+      called === calledSameResponses,
+      'Repetition identity should depend on legal Hao response set, not cosmetic opener provenance'
+    )
+    return 'Board + turn + ruleset + active Hao response set define the rule-relevant repetition position.'
+  })
+
   const passed = results.filter((result) => result.passed).length
   return { total: results.length, passed, failed: results.length - passed, results }
 }

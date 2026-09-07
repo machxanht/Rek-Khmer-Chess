@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-  chooseAiMove,
+  chooseAiMoveForState,
   createGame,
   deserializeGame,
   idxToCoord,
@@ -40,7 +40,7 @@ type OnlineStatus =
 
 const RULESETS: { id: RuleSet; label: string; note: string }[] = [
   { id: 'REK_STANDARD', label: 'Rek Standard', note: 'Rek + current Poat engine contract' },
-  { id: 'MIN_REK_CHANH', label: 'Min Rek Chanh', note: 'Current compulsory Rek engine contract' },
+  { id: 'MIN_REK_CHANH', label: 'Min Rek Chanh', note: 'Event-triggered Hao Rek contract' },
 ]
 
 const DIFFICULTIES: AiDifficulty[] = ['easy', 'medium', 'hard']
@@ -289,7 +289,7 @@ export function App() {
         return
       }
 
-      const move = chooseAiMove(current.board, 'opp', current.mode, difficulty)
+      const move = chooseAiMoveForState(current, difficulty)
       if (move && game.makeMove(move.from, move.to)) {
         setMoveLog((moves) => [...moves, { from: move.from, to: move.to }])
       }
