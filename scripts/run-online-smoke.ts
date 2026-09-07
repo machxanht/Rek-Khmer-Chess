@@ -33,7 +33,12 @@ async function openSocket(url: string): Promise<WebSocket> {
 }
 
 async function main(): Promise<void> {
-  const server = createOnlineServer({ port: 0, host: '127.0.0.1', resumeGraceMs: 1000 })
+  const server = createOnlineServer({
+    port: 0,
+    host: '127.0.0.1',
+    resumeGraceMs: 1000,
+    roomIdleMs: 5000,
+  })
   await once(server, 'listening')
 
   const address = server.address()
@@ -116,7 +121,33 @@ async function main(): Promise<void> {
     server.close((error) => error ? reject(error) : resolve())
   })
 
-  console.log('Online smoke: create/join/turn-validation/move-sync/resume PASS')
+  const expiryServer = createOnlineServer({
+    port: 0,
+    host: '127.0.0.1',
+    resumeGraceMs: 1000,
+    roomIdleMs: 50,
+  })
+  await once(expiryServer, 'listening')
+  const expiryAddress = expiryServer.address()
+  if (!expiryAddress || typeof expiryAddress === 'string') {
+    throw new Error('Unexpected expiry server address')
+  }
+
+  const expiring = await openSocket(`ws://127.0.0.1:${expiryAddress.port}`)
+  expiring.send(JSON.stringify({ type: 'create', ruleset: 'REK_STANDARD' }))
+  await nextMessage(expiring, (message) => message.type === 'room')
+  const expiredClose = once(expiring, 'close')
+  const expired = await nextMessage(
+    expiring,
+    (message) => message.type === 'error' && message.message === 'Room expired',
+  )
+  if (expired.type !== 'error') throw new Error('Idle room did not emit expiry error')
+  await expiredClose
+  await new Promise<void>((resolve, reject) => {
+    expiryServer.close((error) => error ? reject(error) : resolve())
+  })
+
+  console.log('Online smoke: create/join/turn-validation/move-sync/resume/expiry PASS')
 }
 
 main().catch((error) => {
