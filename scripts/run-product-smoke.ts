@@ -3,6 +3,7 @@ import {
   coordToIdx,
   createGame,
 } from '../lib/rek-engine'
+import { sameReplayState } from '../src/replay'
 
 function expect(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message)
@@ -39,6 +40,25 @@ function runVsAiSmoke(): void {
   expect(afterAi.moveCount === 2, 'AI smoke must advance exactly two plies')
 }
 
+function runReplayStateSmoke(): void {
+  const plain = createGame('MIN_REK_CHANH').getState()
+  const called = createGame('MIN_REK_CHANH').getState()
+  called.haoRekContext = {
+    active: true,
+    createdByMove: null,
+    allowedResponses: [{
+      from: coordToIdx('a3'),
+      to: coordToIdx('a4'),
+    }],
+  }
+
+  expect(
+    !sameReplayState(plain, called),
+    'Replay validation must distinguish identical boards with different active Hao state',
+  )
+}
+
 runLocalSmoke()
 runVsAiSmoke()
-console.log('Product smoke: Local + vs AI PASS')
+runReplayStateSmoke()
+console.log('Product smoke: Local + vs AI + replay state PASS')

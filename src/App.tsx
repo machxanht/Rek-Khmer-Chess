@@ -14,6 +14,7 @@ import {
 import type { OnlineServerMessage } from '../shared/online-protocol'
 import { LANGUAGE_LABELS, UI_COPY, type UiCopy, type UiLanguage } from './i18n'
 import { RekOnlineClient } from './online'
+import { sameReplayState } from './replay'
 import {
   loadStoredMatch,
   saveStoredMatch,
@@ -116,9 +117,6 @@ function buildReplayState(ruleset: RuleSet, moves: StoredMove[], ply: number): C
   return replay.getState()
 }
 
-function sameBoard(a: CanonicalGameState, b: CanonicalGameState): boolean {
-  return a.turn === b.turn && a.status === b.status && JSON.stringify(a.board) === JSON.stringify(b.board)
-}
 
 export function App() {
   const [language, setLanguage] = useState<UiLanguage>('km')
@@ -364,7 +362,7 @@ export function App() {
       if (loadedState.mode !== stored.ruleset) throw new Error('Saved ruleset mismatch')
 
       const rebuilt = buildReplayState(stored.ruleset, stored.moves, stored.moves.length)
-      const replayMoves = sameBoard(rebuilt, loadedState) ? stored.moves : []
+      const replayMoves = sameReplayState(rebuilt, loadedState) ? stored.moves : []
 
       setLanguage(stored.language)
       setRuleset(stored.ruleset)
