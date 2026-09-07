@@ -424,3 +424,25 @@ Core Rek có evidence tốt cho identity, 8×8, 1 King + 15 Men, one-piece-per-t
 Finding mới quan trọng nhất là S7: wording `បើកឲ្យរែក → ត្រូវតែរែក → មិនរែក = ចាញ់ដោយស្វ័យប្រវត្តិ` tạo **SECONDARY evidence trực tiếp** rằng Hao Rek được mô tả như nghĩa vụ phát sinh từ action của opponent.
 
 Điều này làm current **board-global compulsory scan** yếu hơn về mặt historical model. Tuy nhiên exact geometry của `បើកឲ្យរែក` vẫn chưa chứng minh; vì vậy **không thay SPEC gameplay/engine semantics trong pass này**.
+
+---
+
+## SUPERSEDED RESEARCH-STATE NOTICE — 2026-09-08
+
+This file is retained as the historical research trail. Some Hao Rek conclusions below reflect the state **before** user-supplied real-board footage M1 was reconstructed and are therefore not the current canonical conclusion.
+
+Current authority is `RESEARCH_FINAL_V1_FREEZE.md`, with detailed Hao provenance in `RESEARCH_HAO_REK_2026.md`.
+
+The current consensus is:
+
+- opponent-action/event-triggered Hao: **STRONG EVIDENCE**;
+- newly opened Rek responses: **STRONG EVIDENCE within observed M1 geometries**;
+- blocker-leaves and mover-enters: observed real-board behaviors;
+- universal `NEW = AFTER - BEFORE`: **TECHNICAL POLICY**, not historical algorithm;
+- multiple NEW target choice: **UNVERIFIED / TECHNICAL POLICY**;
+- pre-existing Rek exclusion: **UNVERIFIED / TECHNICAL POLICY**;
+- stationary King in Min and Poat-in-Min remain unresolved historical questions.
+
+Older statements in this file such as “exact Hao trigger not yet implemented” or “newly exposed geometry is only community signal” describe an earlier research phase and must not override the final freeze. They remain here only for provenance.
+
+No gameplay change follows from this notice.
