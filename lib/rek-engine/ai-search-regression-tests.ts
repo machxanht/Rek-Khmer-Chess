@@ -1,7 +1,6 @@
 import {
   BOARD_SIZE,
   Cell,
-  GameState,
   PlayerColor,
   RuleSet,
   TestResult,
@@ -9,14 +8,12 @@ import {
 import {
   coordToIdx,
   createPositionKey,
-  executeMove,
   previewMove,
 } from './engine'
 import {
   analyzeAiMove,
-  analyzeAiState,
+  countRuleLegalMoves,
   getAllLegalMoves,
-  getAllLegalMovesForState,
   minimax,
   type AiMove,
 } from './ai'
@@ -64,68 +61,6 @@ function compulsoryRekFixture(): Cell[] {
   return board
 }
 
-function activeMinState(board: Cell[], from: string, to: string): GameState {
-  return {
-    board,
-    turn: 'you',
-    status: 'playing',
-    winner: null,
-    winReason: null,
-    mode: 'MIN_REK_CHANH',
-    lastMove: null,
-    lastCaptured: [],
-    lastRek: false,
-    lastPoat: false,
-    captured: { you: [], opp: [] },
-    moveCount: 0,
-    availableRekMovesCount: 1,
-    haoRekContext: {
-      active: true,
-      createdByMove: null,
-      allowedResponses: [{ from: coordToIdx(from), to: coordToIdx(to) }],
-    },
-  }
-}
-
-function makeState(
-  board: Cell[],
-  turn: PlayerColor = 'you',
-  mode: RuleSet = 'REK_STANDARD'
-): GameState {
-  return {
-    board,
-    turn,
-    status: 'playing',
-    winner: null,
-    winReason: null,
-    mode,
-    lastMove: null,
-    lastCaptured: [],
-    lastRek: false,
-    lastPoat: false,
-    captured: { you: [], opp: [] },
-    moveCount: 0,
-    availableRekMovesCount: 0,
-    haoRekContext: null,
-    positionCounts: { [createPositionKey(board, turn, mode)]: 1 },
-    loneKingMoveCount: 0,
-    drawMoveLimit: 32,
-  }
-}
-
-/**
- * White has a lone King at a1. Opponent blockers at b1/a3 leave exactly a2 as
- * White's only geometric move without creating Rek/Poat side effects.
- */
-function singleMoveLoneKingFixture(): GameState {
-  const board = emptyBoard()
-  put(board, 'a1', 'you', true, 'you_king')
-  put(board, 'b1', 'opp', false, 'opp_b1')
-  put(board, 'a3', 'opp', false, 'opp_a3')
-  put(board, 'h8', 'opp', true, 'opp_king')
-  return makeState(board, 'you', 'REK_STANDARD')
-}
-
 function royalThreatFixture(): Cell[] {
   const board = emptyBoard()
   put(board, 'd1', 'you', true, 'you_king')
@@ -169,18 +104,19 @@ export function runAiSearchRegressionTests(): {
     }
   }
 
-  run('AIS-01', 'State-aware AI search sees only active Hao responses', () => {
+  run('AIS-01', 'AI mobility heuristic counts rule-legal Min Rek Chanh moves only', () => {
     const board = compulsoryRekFixture()
-    const state = activeMinState(board, 'c1', 'c4')
-    const legal = getAllLegalMovesForState(state)
+    const legal = getAllLegalMoves(board, 'you', 'MIN_REK_CHANH')
+    const count = countRuleLegalMoves(board, 'you', 'MIN_REK_CHANH')
 
-    expect(legal.length === 1, `Fixture must expose exactly one active Hao response, got ${legal.length}`)
+    expect(legal.length === 1, `Fixture must expose exactly one compulsory Rek, got ${legal.length}`)
+    expect(count === legal.length, `Rule mobility count ${count} must equal engine-backed AI legal count ${legal.length}`)
     expect(
       legal[0].from === coordToIdx('c1') && legal[0].to === coordToIdx('c4'),
-      'The only live legal move must be c1→c4 Rek'
+      'The only legal move must be c1→c4 Rek'
     )
 
-    return 'MIN_REK_CHANH live search consumes transition-owned Hao context without board-global filtering.'
+    return 'MIN_REK_CHANH evaluation can no longer inflate mobility with forbidden quiet slides.'
   })
 
   run('AIS-02', 'Depth-zero minimax still recognizes engine terminal immobilization', () => {
@@ -256,20 +192,19 @@ export function runAiSearchRegressionTests(): {
     put(board, 'b3', 'opp')
     put(board, 'b5', 'opp')
 
-    const state = activeMinState(board, 'a4', 'b4')
-    const medium = analyzeAiState(state, 'medium')
-    const hard = analyzeAiState(state, 'hard')
+    const medium = analyzeAiMove(board, 'you', 'MIN_REK_CHANH', 'medium')
+    const hard = analyzeAiMove(board, 'you', 'MIN_REK_CHANH', 'hard')
 
-    expect(medium.move && hard.move, 'Both deterministic difficulties must find the active Hao response')
+    expect(medium.move && hard.move, 'Both deterministic difficulties must find the compulsory Rek')
     expect(medium.depth === 2, `Medium depth must remain 2, got ${medium.depth}`)
     expect(hard.depth === 5, `Hard should deepen a <=4-move root to depth 5, got ${hard.depth}`)
     expect(
       hard.move.from === coordToIdx('a4') && hard.move.to === coordToIdx('b4'),
-      'Hard must play the active a4→b4 Hao response that immobilizes the remaining Palace King'
+      'Hard must play the compulsory a4→b4 Rek that immobilizes the remaining Palace King'
     )
     expect((hard.move.score ?? 0) > 90000, 'Immediate immobilization win must receive a mate-like score')
 
-    return 'State-aware Hard deepens the single-response Hao position while immediate terminal wins short-circuit search.'
+    return 'Hard spends extra depth only where branching is narrow, while immediate terminal wins short-circuit search.'
   })
 
   run('AIS-06', 'Alpha-beta pruned bounds are not cached as exact transposition values', () => {
@@ -303,56 +238,6 @@ export function runAiSearchRegressionTests(): {
     expect(hardA.stats.leaves > 0 && hardA.stats.legalMoveGenerations > 0, 'Hard diagnostics must record leaves and legal generations')
 
     return `Medium depth ${mediumA.depth}: ${mediumA.stats.nodes} nodes; Hard depth ${hardA.depth}: ${hardA.stats.nodes} nodes, ${hardA.stats.cutoffs} cutoffs.`
-  })
-
-  run('AIS-08', 'State-aware AI recognizes a third repetition as an engine draw', () => {
-    const state = singleMoveLoneKingFixture()
-    state.drawMoveLimit = 100
-
-    const nextBoard = [...state.board]
-    nextBoard[coordToIdx('a2')] = nextBoard[coordToIdx('a1')]
-    nextBoard[coordToIdx('a1')] = null
-    const currentKey = createPositionKey(state.board, state.turn, state.mode, state.haoRekContext)
-    const nextKey = createPositionKey(nextBoard, 'opp', state.mode, null)
-    state.positionCounts = { [currentKey]: 1, [nextKey]: 2 }
-
-    const countsBefore = JSON.stringify(state.positionCounts)
-    const analysis = analyzeAiState(state, 'medium')
-    expect(analysis.move, 'State-aware AI must return the only legal move')
-    expect(
-      analysis.move.from === coordToIdx('a1') && analysis.move.to === coordToIdx('a2'),
-      'Fixture must force a1→a2'
-    )
-    expect(analysis.move.score === 0, `Immediate engine draw must score exactly 0, got ${analysis.move.score}`)
-    expect(JSON.stringify(state.positionCounts) === countsBefore, 'AI search must not mutate input repetition history')
-
-    const next = executeMove(state, analysis.move.from, analysis.move.to)
-    expect(next.status === 'draw' && next.winReason === 'Threefold Repetition', 'Core engine must adjudicate the searched move as third repetition')
-
-    return 'Live-state search sees the engine-owned repetition counter instead of treating the board as history-free.'
-  })
-
-  run('AIS-09', 'State-aware AI recognizes the lone-King draw threshold', () => {
-    const state = singleMoveLoneKingFixture()
-    state.drawMoveLimit = 3
-    state.loneKingMoveCount = 2
-
-    const countsBefore = JSON.stringify(state.positionCounts)
-    const analysis = analyzeAiState(state, 'medium')
-    expect(analysis.move, 'State-aware AI must return the only legal move')
-    expect(
-      analysis.move.from === coordToIdx('a1') && analysis.move.to === coordToIdx('a2'),
-      'Fixture must force a1→a2'
-    )
-    expect(analysis.move.score === 0, `Immediate lone-King draw must score exactly 0, got ${analysis.move.score}`)
-    expect(JSON.stringify(state.positionCounts) === countsBefore, 'AI search must not mutate input draw bookkeeping')
-    expect(state.loneKingMoveCount === 2, 'AI search must not mutate the input lone-King counter')
-
-    const next = executeMove(state, analysis.move.from, analysis.move.to)
-    expect(next.status === 'draw' && next.loneKingMoveCount === 3, 'Core engine must reach the configured lone-King threshold')
-    expect(next.winReason === 'Lone King survived 3 counted moves', 'Core engine must own the lone-King draw reason')
-
-    return 'Live-state search delegates the configurable lone-King clock to executeMove() instead of duplicating it in AI.'
   })
 
   const passed = results.filter((result) => result.passed).length

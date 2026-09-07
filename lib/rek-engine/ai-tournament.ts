@@ -1,5 +1,5 @@
 import { PlayerColor, RuleSet, RuleSetInput, normalizeRuleSet } from './types'
-import { analyzeAiState, getAllLegalMovesForState, AiDifficulty } from './ai'
+import { analyzeAiMove, getAllLegalMoves, AiDifficulty } from './ai'
 import { createGame } from './session'
 
 export interface TournamentGameConfig {
@@ -73,7 +73,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
     if (state.status !== 'playing') break
 
     if (completedPlies < openingPlies) {
-      const legal = getAllLegalMovesForState(state)
+      const legal = getAllLegalMoves(state.board, state.turn, state.mode)
       if (legal.length === 0) break
       seed = nextSeed(seed + completedPlies + 1)
       const move = legal[seed % legal.length]
@@ -86,7 +86,7 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
     }
 
     const difficulty = state.turn === 'you' ? config.youDifficulty : config.oppDifficulty
-    const analysis = analyzeAiState(state, difficulty)
+    const analysis = analyzeAiMove(state.board, state.turn, state.mode, difficulty)
     const move = analysis.move
     const nodes = analysis.stats.nodes
 
@@ -96,12 +96,12 @@ export function playTournamentGame(config: TournamentGameConfig): TournamentGame
     else mediumSearchNodes += nodes
 
     if (!move) {
-      const legal = getAllLegalMovesForState(state)
+      const legal = getAllLegalMoves(state.board, state.turn, state.mode)
       if (legal.length !== 0) illegalMoves++
       break
     }
 
-    const legal = getAllLegalMovesForState(state)
+    const legal = getAllLegalMoves(state.board, state.turn, state.mode)
     if (!legal.some((candidate) => candidate.from === move.from && candidate.to === move.to)) {
       illegalMoves++
       break

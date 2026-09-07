@@ -42,17 +42,6 @@ export interface MoveCoordinate {
   toCol: number
 }
 
-export interface HaoRekResponse {
-  from: number
-  to: number
-}
-
-export interface HaoRekContext {
-  active: boolean
-  createdByMove: HaoRekResponse | null
-  allowedResponses: HaoRekResponse[]
-}
-
 export interface MoveResult {
   from: number
   to: number
@@ -86,12 +75,6 @@ export interface GameState {
   captured: { you: Piece[]; opp: Piece[] }
   moveCount: number
   availableRekMovesCount: number
-
-  /**
-   * Transition-owned Hao Rek obligation. Optional for compatibility with older
-   * custom/snapshot states; canonical session state normalizes absence to null.
-   */
-  haoRekContext?: HaoRekContext | null
 
   /**
    * Threefold repetition bookkeeping. Optional for compatibility with older
