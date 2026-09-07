@@ -1,15 +1,12 @@
 # ĐẶC TẢ KỸ THUẬT GAME ENGINE: រែកខ្មែរ - REK KHMER
 
 > **Repository:** `machxanht/Rek-Khmer-Chess`  
-> **Ngày cập nhật contract:** 2026-09-06  
 > **Vai trò:** technical contract của code hiện tại.  
-> **Không phải:** tuyên bố rằng mọi edge case dưới đây đều đã được lịch sử Khmer xác nhận. Evidence status nằm trong `HUONG_DAN_LUAT_CO_REK_KHMER.md` và research notes.
-
-**V1 contract đã áp dụng event-triggered Hao Rek.** Evidence boundary và technical policies được ghi trong guide/research nhưng exact geometry chưa đủ để thay current Min contract.
+> **Không phải:** tuyên bố rằng mọi edge case dưới đây đều đã được lịch sử Khmer xác nhận. Evidence status nằm trong `HUONG_DAN_LUAT_CO_REK_KHMER.md`.
 
 ---
 
-## 1. Terminology contract
+## 1. TERMINOLOGY CONTRACT
 
 ### 1.1. Một game
 
@@ -17,7 +14,7 @@
 Game = REK_KHMER
 ```
 
-### 1.2. Canonical rulesets
+### 1.2. Canonical rule sets
 
 ```ts
 export type RuleSet = 'REK_STANDARD' | 'MIN_REK_CHANH'
@@ -26,50 +23,25 @@ export type RuleSet = 'REK_STANDARD' | 'MIN_REK_CHANH'
 - `REK_STANDARD`: default technical ruleset.
 - `MIN_REK_CHANH`: variant với current compulsory-Rek interpretation.
 
-### 1.3. Compatibility input
+### 1.3. Legacy compatibility
 
 ```ts
-export type LegacyRuleSet = 'REK_POAT'
-export type RuleSetInput = RuleSet | LegacyRuleSet
-/** @deprecated */
-export type GameMode = RuleSetInput
+export type LegacyGameMode = 'REK_POAT'
 ```
 
-Normalization:
+`REK_POAT` không còn là canonical ruleset name. Mọi public session/snapshot phải normalize:
 
 ```text
-REK_POAT      -> REK_STANDARD
-REK_STANDARD  -> REK_STANDARD
-MIN_REK_CHANH -> MIN_REK_CHANH
+REK_POAT -> REK_STANDARD
 ```
 
-`REK_POAT` không phải canonical ruleset và không được emit trong new public session state/snapshot.
+`GameMode` chỉ còn là backward-compatible input union. New code nên dùng `RuleSet`.
 
 ---
 
-## 2. Public metadata contract
+## 2. DATA MODEL
 
-Stable single-game identity:
-
-```ts
-REK_GAME.id === 'REK_KHMER'
-REK_GAME.defaultRuleSet === 'REK_STANDARD'
-```
-
-`listRuleSets()` expose đúng hai entries theo stable order:
-
-```text
-REK_STANDARD
-MIN_REK_CHANH
-```
-
-Catalog metadata chỉ dùng presentation/discovery, **không dùng để quyết định legality/capture**.
-
----
-
-## 3. Data model
-
-Board = flat 64 cells.
+Engine dùng flat board 64 cells.
 
 ```ts
 export type PlayerColor = 'you' | 'opp'
@@ -82,25 +54,13 @@ export interface Piece {
 
 export type Cell = Piece | null
 
-export interface MoveResult {
-  from: number
-  to: number
-  rekCaptures: number[]
-  poatCaptures: number[]
-  captures: number[]
-  rek: boolean
-  poat: boolean
-  isHaoRekViolation?: boolean
-  sanNotation?: string
-}
-
 export interface GameState {
   board: Cell[]
   turn: PlayerColor
   status: 'playing' | 'won' | 'draw'
   winner: PlayerColor | 'draw' | null
   winReason: string | null
-  mode: RuleSetInput
+  mode: GameMode
   lastMove: { from: number; to: number } | null
   lastCaptured: number[]
   lastRek: boolean
@@ -112,42 +72,22 @@ export interface GameState {
   loneKingMoveCount?: number
   drawMoveLimit?: number
 }
-
-export type CanonicalGameState =
-  Omit<GameState, 'mode'> & { mode: RuleSet }
 ```
 
-`GameState` là compatibility/custom-load shape. `RekGame.getState()` và `deserializeGameState()` trả `CanonicalGameState`.
-
-### 3.1. Hao Rek state boundary
-
-Current state **không có explicit Hao Rek call context**. Current Min obligation được suy hoàn toàn từ current board.
-
-Nếu future evidence xác nhận event-trigger semantics, board-only state có thể không đủ. Candidate future shape:
-
-```ts
-interface HaoRekContext {
-  active: boolean
-  createdByMove: { from: number; to: number } | null
-  targetPairs: number[][]
-  allowedResponses?: { from: number; to: number }[]
-}
-```
-
-**Không implement field này trước khi exact trigger/response/lifetime được evidence-lock.**
+`mode` được giữ tên field cũ để snapshot/API compatibility; canonical runtime value từ `RekGame` là `REK_STANDARD` hoặc `MIN_REK_CHANH`.
 
 ---
 
-## 4. Coordinates
+## 3. COORDINATES
 
-Public notation:
+Public coordinate notation:
 
 ```text
 files: a b c d e f g h
 ranks: 1 2 3 4 5 6 7 8
 ```
 
-Internal:
+Internal board:
 
 ```text
 index = row * 8 + col
@@ -166,7 +106,7 @@ col = file.charCodeAt(0) - 'a'.charCodeAt(0)
 
 ---
 
-## 5. Initial setup — canonical lock
+## 4. INITIAL SETUP
 
 Mỗi bên 16 quân = 1 King + 15 Men.
 
@@ -182,82 +122,83 @@ Mỗi bên 16 quân = 1 King + 15 Men.
 1   .   ○   ○   ○   ○   ○   ○   ○
 ```
 
-White / `you`:
+White/`you`:
 
-- King `a2`;
-- Men `b1-h1`;
-- Men `a3-h3`;
-- `a1` empty.
+- King `a2`.
+- Men `b1-h1`.
+- Men `a3-h3`.
 
-Black / `opp`:
+Black/`opp`:
 
-- King `h7`;
-- Men `a6-h6`;
-- Men `a8-g8`;
-- `h8` empty.
+- King `h7`.
+- Men `a6-h6`.
+- Men `a8-g8`.
 
-Hai sides đối xứng 180°; setup giống nhau ở cả hai ruleset.
-
-**Initial setup d1/d8 cũ bị loại và không được phục hồi.** Custom fixtures/puzzles có thể đặt King ở ô khác nhưng không được hiểu là initial setup.
+Setup giống nhau ở cả hai ruleset.
 
 ---
 
-## 6. Geometric movement
+## 5. GEOMETRIC MOVEMENT
 
-`getLegalMoves(board, from, mode)` trả geometric destinations.
+`getLegalMoves(board, from, mode)` tạo geometric destinations.
 
-Rules:
+Rule:
 
 1. piece phải tồn tại;
-2. scan 4 hướng orthogonal;
-3. add empty squares liên tiếp trên ray;
-4. stop tại occupied square hoặc edge;
-5. occupied square không là destination;
-6. không jump;
-7. không diagonal.
+2. scan 4 hướng trực giao;
+3. mỗi ray thêm empty squares liên tiếp;
+4. stop tại first occupied square hoặc board edge;
+5. occupied square không bao giờ là destination;
+6. không nhảy;
+7. không đi chéo.
 
-Current `MIN_REK_CHANH`: King trả zero geometric moves.
+Current `MIN_REK_CHANH` contract: King không có geometric move.
 
-`getLegalMoves()` **không phải final rule-legal set** trong Min. Public/search consumer dùng `getMoveResults()` / `getAllMoveResults()` / `RekGame.getLegalMoves()`.
+`getLegalMoves()` **không phải final rule-legal set** trong Min. Consumer dùng `getMoveResults()` hoặc `RekGame.getLegalMoves()`.
 
 ---
 
-## 7. Rek capture primitive
+## 6. REK CAPTURE PRIMITIVE
 
 Sau khi mover tới landing square `T`:
 
-```text
-Horizontal: Enemy | T | Enemy
+Horizontal:
 
-Vertical:   Enemy
-              |
-              T
-              |
-            Enemy
+```text
+Enemy | T | Enemy
+```
+
+Vertical:
+
+```text
+Enemy
+  |
+  T
+  |
+Enemy
 ```
 
 `checkRekCaptures()` kiểm hai trục độc lập và union victims.
 
 Current consequence:
 
-- một trục đúng -> 2 captures;
-- cả hai trục đúng -> 4 captures.
+- một trục đúng → 2 captures;
+- cả hai trục đúng → 4 captures.
 
-Evidence boundary:
-
-- two-sided pair capture = confirmed core principle;
-- dual-axis four-capture = current engine interpretation, historical semantics unverified.
+**Evidence note:** pair capture là core principle mạnh; dual-axis 4 vẫn là engine interpretation chưa native-confirmed đủ mạnh.
 
 ---
 
-## 8. Poat capture primitive
+## 7. POAT CAPTURE PRIMITIVE
 
 `checkPoatCaptures(board, oppPlayer)`:
 
-1. duyệt opponent piece chưa visited;
+1. duyệt từng opponent piece chưa visited;
 2. BFS connected component cùng màu qua 4 hướng;
-3. đếm adjacent empty cells;
-4. group có zero liberties -> capture toàn group.
+3. trong BFS, đếm adjacent empty cells;
+4. nếu group có `0 liberties` → capture toàn group.
+
+Pseudo-flow:
 
 ```text
 for opponent group C:
@@ -268,199 +209,96 @@ for opponent group C:
 
 Board edge không tạo liberty.
 
-Evidence boundary:
-
-- trapping/encirclement capture concept có evidence mạnh;
-- exact connected-component/liberty algorithm = engine interpretation.
+**Evidence note:** surrounding/no-escape capture có evidence; exact connected-component/liberty algorithm là technical interpretation.
 
 ---
 
-## 9. Move resolution pipeline
+## 8. MOVE PREVIEW PIPELINE
 
-`resolveValidatedMove()` / `previewMove()` current flow:
+`previewMove(board, from, to, mover, mode)`:
 
 ```text
 1. normalize ruleset
 2. validate mover/piece
 3. validate geometric move
 4. current MIN obligation check
-5. move on temporary board
+5. move piece on temporary board
 6. resolve Rek
 7. remove Rek victims
 8. resolve Poat on post-Rek board
-9. union capture metadata
+9. return MoveResult
 ```
 
-Current `Rek -> Poat` ordering là **technical contract**, không historical claim.
+`MoveResult`:
+
+```ts
+interface MoveResult {
+  from: number
+  to: number
+  rekCaptures: number[]
+  poatCaptures: number[]
+  captures: number[]
+  rek: boolean
+  poat: boolean
+  isHaoRekViolation?: boolean
+  sanNotation?: string
+}
+```
 
 ---
 
-## 10. `REK_STANDARD`
+## 9. `REK_STANDARD`
+
+Canonical default.
 
 Current behavior:
 
-- canonical setup;
-- geometric orthogonal movement;
-- King moves theo same geometric core;
-- Rek opportunity không suppress quiet moves;
-- Rek + Poat theo sections 7–9;
-- King capture decisive.
+- normal geometric movement;
+- King moves theo geometric core;
+- Rek opportunity không suppress quiet move;
+- Rek + Poat resolution theo sections 6-8;
+- King capture is decisive.
 
 Không có global compulsory-Rek filter.
 
 ---
 
-## 11. `MIN_REK_CHANH`
+## 10. `MIN_REK_CHANH`
 
-### 11.1. Current software contract
+### 10.1. Current engine interpretation
 
-`MIN_REK_CHANH` uses transition-owned `HaoRekContext`.
+`getAllRekOpportunities(board, player, MIN_REK_CHANH)` scan toàn side.
 
-```text
-before = responder Rek opportunities before previous move
-after  = responder Rek opportunities after previous move
-newlyCreated = after - before
-```
-
-If `newlyCreated` is non-empty:
+Nếu ít nhất một Rek tồn tại:
 
 ```text
-haoRekContext.active = true
-haoRekContext.allowedResponses = newlyCreated
+rule-legal moves = only moves that produce Rek
 ```
 
-State-aware legality exposes only `allowedResponses` while the call is active.
-
-Submitting another geometrically valid move:
+Nếu user/client submit một geometric quiet move bất chấp obligation:
 
 ```text
 status = won
 winner = opponent(mover)
-board move is NOT applied
-winReason = 'Min Rek Chanh violation: active Hao Rek response was ignored'
+board move is not applied
 ```
 
-A valid response can create the next side's Hao context. King remains stationary in the current Min contract, but that movement restriction is still not historical-confirmed.
+King stationary trong current Min contract.
 
-### 11.2. Evidence boundary / v1 freeze
+### 10.2. Research boundary
 
-Secondary evidence mới mô tả:
+Exact traditional trigger vẫn `UNVERIFIED`. Không được suy diễn thêm rằng current global scan chính là Hao Rek lịch sử.
 
-```text
-opponent បើកឲ្យរែក
-→ responder must Rek
-→ if not -> automatic loss
-```
-
-Điều này trực tiếp challenge giả định rằng **mere existence of any current-board Rek** là exact historical trigger.
-
-Technical decision hiện tại:
-
-- use transition-owned Hao context;
-- derive NEW responses from BEFORE/AFTER Rek-set difference;
-- responder may choose any NEW response when several exist: explicit technical policy;
-- no verbal-call state is required;
-- Poat-in-Min remains unchanged as an engine interpretation.
-
-### 11.3. Không suy diễn từ community geometry
-
-Các candidate rules như “blocking piece moves away”, “pre-existing pair không call”, “multiple pairs responder chọn” chưa vào SPEC vì mới ở `COMMUNITY SIGNAL / UNVERIFIED`.
+Nếu future research xác nhận Hao Rek phụ thuộc previous move/call/target pair, `GameState` có thể cần explicit context; thay đổi đó phải đi qua guide + spec + tests trước khi code.
 
 ---
 
-## 11.4. Implemented Hao Rek transition contract
-
-Reconstructed real-board evidence now supports an event/transition model more strongly than the current board-global scan.
-
-**This contract is implemented in v1.** Unresolved historical edges remain explicitly classified as technical policy.
-
-Candidate future contract:
-
-```ts
-interface HaoRekContext {
-  active: boolean
-  createdByMove: { from: number; to: number } | null
-  // Engine-owned responses that were newly created by createdByMove.
-  allowedResponses: { from: number; to: number }[]
-}
-```
-
-Candidate derivation:
-
-```text
-before = getAllRekOpportunities(previousBoard, responder)
-apply opponent move under core rules
-after  = getAllRekOpportunities(nextBoard, responder)
-
-newlyCreated = after - before
-
-if newlyCreated.length > 0:
-    nextState.haoRekContext = active(newlyCreated)
-else:
-    nextState.haoRekContext = inactive
-```
-
-Important constraints from evidence:
-
-1. Do **not** implement Hao as `any Rek exists on current board`.
-2. Do **not** hard-code only the geometry “blocking piece moves away”; real-board footage also shows a mover entering a new square to create a pair around a gap.
-3. Pre-existing Rek opportunities must remain distinguishable from newly-created call responses.
-4. A valid response may itself create a new Hao context for the other side, forming a chain.
-5. Chain termination candidate: no newly-created Hao response after the latest move.
-6. Multiple newly-created responses from one move remain `UNVERIFIED`; do not choose responder-vs-caller policy yet.
-7. Verbal declaration remains `UNVERIFIED`.
-8. 2013 Khmer text supplies `SECONDARY` support for automatic loss when the required Rek is ignored; exact software representation remains a technical decision.
-
-Snapshot impact if implemented:
-
-- Hao context is transition-derived state and cannot safely be reconstructed from board alone;
-- persisted/replay state may need `haoRekContext` or enough previous-move context to deterministically derive it;
-- snapshot version/migration must be reviewed before implementation.
-
-AI impact if implemented:
-
-- AI must consume engine-owned `allowedResponses`;
-- AI must not diff Rek sets itself;
-- tournament/replay tests must include Hao chain state.
-
-Regression coverage exists for pre-existing-vs-new Rek, blocker-leaves, Hao chain, multiple NEW technical policy, snapshot context, repetition identity and state-aware AI legality.
-
----
-
-### 11.5. Technical policy for unresolved Hao edge cases
-
-Until stronger historical evidence is found, implementation uses these explicit software policies:
-
-1. `allowedResponses` contains **all** newly-created Rek responses produced by the previous opponent move.
-2. The responder chooses any member of `allowedResponses`.
-3. No verbal-call bit is stored or required.
-4. A geometrically legal move outside a non-empty active `allowedResponses` set is a state-changing immediate forfeit.
-5. Existing Poat behavior remains unchanged in this Hao migration; this is not evidence that Poat historically belongs to Min Rek Chanh.
-
-These are **TECHNICAL POLICY / NOT HISTORICAL TRUTH** and must remain easy to replace when evidence improves.
-
----
-
-## 12. Rule-legal generation boundary
-
-### Board-only move-result helpers
-
-`getMoveResults(board, from, mode)` and `getAllMoveResults(board, player, mode)` are context-free with respect to Hao. Board state alone cannot distinguish a pre-existing Rek from a newly-created call.
-
-### State-aware move-result helpers
-
-Application/session/live AI legality must consume canonical `GameState` through state-aware engine boundaries so active `haoRekContext.allowedResponses` is enforced.
-
-AI không được diff Rek sets hoặc tự suy Hao obligation.
-
----
-
-## 13. Execute move
+## 11. EXECUTE MOVE
 
 `executeMove(state, from, to)`:
 
 ```text
-state playing?
+playing?
   ↓
 piece belongs to turn?
   ↓
@@ -470,43 +308,41 @@ geometric legal?
   ↓
 previewMove
   ↓
-MIN violation? -> forfeit state; board unchanged
-  ↓ otherwise
+MIN violation? -> current forfeit path
+  ↓
 apply move
   ↓
-remove captures
+remove all preview captures
   ↓
 terminal checks
   ↓
-project draw checks
+draw extensions
   ↓
-metadata + next turn
+update metadata / switch turn
 ```
 
-Input state không mutate.
+Input state không được mutate.
 
 ---
 
-## 14. Terminal contract
+## 12. TERMINAL CONTRACT
 
-Current decisive checks after a normal executed move:
+Current decisive checks:
 
-1. opponent King missing -> mover wins (`Royal King Captured`);
-2. mover King missing -> opponent wins (`Self King Lost`);
-3. opponent has zero pieces -> mover wins;
-4. opponent **geometric** move count = 0 -> mover wins (`Opponent has no geometric moves`).
+1. opponent King missing → mover wins (`Royal King Captured`);
+2. mover King missing → opponent wins;
+3. opponent has zero pieces → mover wins;
+4. opponent geometric move count = 0 → mover wins under current engine contract.
 
-Evidence boundary:
-
-- capture opposing King = strongest evidence;
-- zero-move instant-win = unverified historical interpretation;
-- winReason text `Zero liberties` is software wording and should not be treated as proof it is identical to Poat/traditional `ទាល់ច្រក`.
+**Evidence note:** King capture strong/confirmed; zero-move instant-win edge case remains unverified historically.
 
 ---
 
-## 15. Draw extensions
+## 13. DRAW EXTENSIONS
 
-### Threefold repetition
+Current project extensions:
+
+### Threefold
 
 Position key includes:
 
@@ -514,62 +350,66 @@ Position key includes:
 canonical ruleset + side to move + board occupancy/type
 ```
 
-Does not include piece IDs/cosmetic metadata. Third occurrence -> draw.
+Không include piece IDs/cosmetic metadata.
+
+Third occurrence → draw.
 
 ### Lone King
 
-Default:
+Nếu một side chỉ còn King, engine có counter. Default:
 
 ```ts
 DEFAULT_LONE_KING_DRAW_LIMIT = 32
 ```
 
-Counter begins after lone-King state already exists; reaching limit -> draw.
+Khi counter đạt limit → draw.
 
-Evidence status for both: **project extensions / unsupported as traditional Rek claims**.
+**Evidence status:** both are project extensions until traditional Rek evidence is found.
 
 ---
 
-## 16. Snapshot / migration
+## 14. RULESET / SNAPSHOT MIGRATION
 
-Snapshot version remains `1`.
+`normalizeRuleSet()`:
 
-Loader accepts legacy `REK_POAT`; session normalizes to `REK_STANDARD`; serializer emits canonical value only.
+```text
+REK_POAT      -> REK_STANDARD
+REK_STANDARD  -> REK_STANDARD
+MIN_REK_CHANH -> MIN_REK_CHANH
+```
 
-Legacy repetition keys:
+`createPositionKey()` luôn dùng canonical name.
+
+Legacy `positionCounts`:
 
 ```text
 REK_POAT|... -> REK_STANDARD|...
 ```
 
-Counts are merged if canonical key already exists.
+counts được merge nếu key canonical đã tồn tại.
 
-Snapshot validation enforces:
+Snapshot version vẫn `1`:
 
-- exactly 64 board cells;
-- valid player/ruleset/status;
-- max one King per side on board;
-- unique piece IDs across board + captured arrays;
-- valid captured/player ownership;
-- nonnegative move/counter fields;
-- positive repetition counts and draw limit.
+- loader nhận `REK_POAT` cũ;
+- session normalize sang `REK_STANDARD`;
+- serializer mới chỉ emit canonical value.
 
 ---
 
-## 17. Session/API contract
+## 15. SESSION CONTRACT
 
-Canonical facade for application consumers:
+`RekGame` là facade cho UI/server/CLI:
 
 ```ts
 createGame(ruleset?)
-RekGame.getState()
-RekGame.getLegalMoves(from)
-RekGame.previewMove(from, to)
-RekGame.makeMove(from, to)
-RekGame.undo()
-RekGame.canUndo()
-RekGame.reset(ruleset?)
-RekGame.serialize()
+getState()
+getLegalMoves(from)
+previewMove(from, to)
+makeMove(from, to)
+undo()
+canUndo()
+reset(ruleset?)
+serialize()
 deserializeGame(snapshot)
 ```
 
@@ -579,112 +419,83 @@ Default:
 createGame() === createGame('REK_STANDARD')
 ```
 
-`RekGame.previewMove()` returns only **rule-legal** move result or `null`; a current-Min quiet forfeiting move is not exposed as preview-legal.
-
-`RekGame.makeMove()` delegates to `executeMove()`. A geometrically legal current-Min violation therefore can transition the game to a loss state and return `true` because state changed.
-
-### Legacy `RekEngine` wrapper
-
-`engine.ts` still exports a stateful `RekEngine` compatibility wrapper in addition to `RekGame`. New UI/server integration should prefer `RekGame`.
-
-Current audit found return-value semantics differ on Hao Rek violation between these wrappers; this is **technical debt**, not a rule decision. See `AUDIT_REK_KHMER_2026-09-06.md`.
+Session không được chứa capture logic riêng.
 
 ---
 
-## 18. AI contract
+## 16. AI CONTRACT
 
 AI:
 
-- accepts canonical `RuleSet` internally;
-- gets candidates + exact captures from `getAllMoveResults()`;
-- does not reimplement movement/Rek/Poat/Hao legality;
+- nhận board/player/ruleset;
+- lấy candidate từ `getMoveResults()`;
+- không tự viết movement/Rek/Poat;
 - Medium/Hard deterministic;
-- tournament output canonicalizes ruleset.
+- tournament result luôn canonicalize ruleset.
 
-Current search state is essentially:
+Baseline:
 
 ```text
-board + side + ruleset
+REK_STANDARD
+MIN_REK_CHANH
 ```
 
-It does **not** carry session repetition/lone-King history. Therefore threefold/lone-King draw extensions are adjudicated by session/game execution, not fully modeled inside minimax. This is documented technical debt, not a current ruleset change.
+Legacy `REK_POAT` input có thể được nhận nhưng tournament output phải là `REK_STANDARD`.
 
 ---
 
-## 19. Puzzle contract
+## 17. CORE REGRESSION CONTRACT
 
-`puzzles.ts` contains curated **engine tactical fixtures**. Their solutions must be legal under current engine SPEC.
+Các nhóm test hiện phải khóa ít nhất:
 
-Important evidence boundary:
+### Core TC
 
-- a custom puzzle King on `d1/d8` is not initial setup;
-- puzzles that depend on BFS Poat, Rek→Poat ordering or other unverified mechanics demonstrate **current engine behavior**, not automatically “traditional Khmer puzzle truth”.
+- `TC-01`: Horizontal Rek.
+- `TC-02`: vertical Rek / King geometry fixture.
+- `TC-03`: Rek primitive không bypass movement legality.
+- `TC-04`: corner Poat.
+- `TC-05`: current Min compulsory-Rek forfeit.
+- `TC-06`: connected Poat group.
 
-Future UI copy must preserve this distinction unless a puzzle has independent historical provenance.
+### Spec / movement
 
----
-
-## 20. Core regression contract
-
-At checkpoint `a783f592...`, project reports **97/97 PASS**.
-
-Required groups include:
-
-### Core
-
-- horizontal/vertical Rek;
-- geometry legality;
-- corner/connected Poat;
-- current Min compulsory forfeit.
-
-### Setup/movement/spec locks
-
-- canonical a2/h7 setup;
-- a1/h8 gaps;
-- no jump/occupied destination;
+- canonical setup a2/h7;
+- no jump / occupied destination rejected;
 - Standard optional Rek;
-- Min current filtering;
-- King ruleset difference;
-- Rek-before-Poat pipeline;
+- current Min legal filtering;
+- King difference by ruleset;
+- Rek-before-Poat current ordering;
 - immutable execution;
-- terminal/draw invariants.
+- terminal + draw state invariants.
 
-### Public API
+### Public API migration
+
+Phải có regression cho:
 
 ```text
 createGame().mode == REK_STANDARD
 createGame(REK_POAT).mode == REK_STANDARD
-legacy snapshot loads
+legacy snapshot REK_POAT loads
 legacy repetition keys migrate
 new snapshot emits REK_STANDARD
 ```
 
-### AI/tournament
-
-- engine-owned legality boundary;
-- deterministic Medium/Hard search baselines;
-- tournament illegalMoves = 0.
-
 ---
 
-## 21. Change control
+## 18. CHANGE CONTROL
 
-Traditional-rule change workflow:
+Khi research thay đổi một traditional rule:
 
 ```text
-RESEARCH evidence
-        ↓
-HUONG_DAN confidence promotion
+HUONG_DAN evidence update
         ↓
 SPEC technical decision
         ↓
-new failing regression fixture
+new failing regression
         ↓
 engine implementation
         ↓
-session/snapshot migration if state shape changes
-        ↓
-AI/tournament verification
+session/AI/tournament verification
 ```
 
-Không sửa AI/UI để giả lập rule mới trước core engine. Không thay current Min semantics chỉ vì event-trigger model hiện có evidence tốt hơn; exact trigger vẫn chưa đủ.
+Không sửa AI/UI để giả lập rule mới trước core engine.
