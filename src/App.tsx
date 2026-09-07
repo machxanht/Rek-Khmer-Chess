@@ -15,6 +15,11 @@ import type { OnlineServerMessage } from '../shared/online-protocol'
 import { getDefaultOnlineServerUrl } from './config'
 import { LANGUAGE_LABELS, UI_COPY, type UiCopy, type UiLanguage } from './i18n'
 import { RekOnlineClient } from './online'
+import {
+  clearOnlineSession,
+  loadOnlineSession,
+  saveOnlineSession,
+} from './online-session'
 import { sameReplayState } from './replay'
 import {
   loadStoredMatch,
@@ -24,7 +29,14 @@ import {
 } from './persistence'
 
 type MatchType = StoredMatchType | 'ONLINE'
-type OnlineStatus = 'idle' | 'connecting' | 'waiting' | 'connected' | 'peer-left' | 'error'
+type OnlineStatus =
+  | 'idle'
+  | 'connecting'
+  | 'waiting'
+  | 'connected'
+  | 'peer-left'
+  | 'disconnected'
+  | 'error'
 
 const RULESETS: { id: RuleSet; label: string; note: string }[] = [
   { id: 'REK_STANDARD', label: 'Rek Standard', note: 'Rek + current Poat engine contract' },
@@ -120,9 +132,12 @@ function buildReplayState(ruleset: RuleSet, moves: StoredMove[], ply: number): C
 
 
 export function App() {
+  const [savedOnlineSession] = useState(loadOnlineSession)
   const [language, setLanguage] = useState<UiLanguage>('km')
   const [ruleset, setRuleset] = useState<RuleSet>('REK_STANDARD')
-  const [matchType, setMatchType] = useState<MatchType>('LOCAL')
+  const [matchType, setMatchType] = useState<MatchType>(
+    savedOnlineSession ? 'ONLINE' : 'LOCAL',
+  )
   const [difficulty, setDifficulty] = useState<AiDifficulty>('medium')
   const [game, setGame] = useState<RekGame>(() => createGame('REK_STANDARD'))
   const [state, setState] = useState<CanonicalGameState>(() => game.getState())
@@ -134,11 +149,18 @@ export function App() {
   const [storageMessage, setStorageMessage] = useState('')
 
   const [onlineClient, setOnlineClient] = useState<RekOnlineClient | null>(null)
-  const [onlineUrl, setOnlineUrl] = useState(getDefaultOnlineServerUrl)
+  const [onlineUrl, setOnlineUrl] = useState(
+    () => savedOnlineSession?.url ?? getDefaultOnlineServerUrl(),
+  )
   const [roomInput, setRoomInput] = useState('')
-  const [roomId, setRoomId] = useState('')
+  const [roomId, setRoomId] = useState(savedOnlineSession?.roomId ?? '')
+  const [onlineResumeToken, setOnlineResumeToken] = useState(
+    savedOnlineSession?.resumeToken ?? '',
+  )
   const [onlineColor, setOnlineColor] = useState<PlayerColor | null>(null)
-  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>('idle')
+  const [onlineStatus, setOnlineStatus] = useState<OnlineStatus>(
+    savedOnlineSession ? 'disconnected' : 'idle',
+  )
   const [onlineError, setOnlineError] = useState('')
 
   const copy = UI_COPY[language]
@@ -166,7 +188,7 @@ export function App() {
   }, [language])
 
   useEffect(() => {
-    return () => onlineClient?.close()
+    return () => onlineClient?.close(true)
   }, [onlineClient])
 
   const clearSelection = () => {
@@ -180,10 +202,12 @@ export function App() {
   }
 
   const resetOnline = () => {
-    onlineClient?.close()
+    onlineClient?.close(true)
     setOnlineClient(null)
+    clearOnlineSession()
     setRoomId('')
     setRoomInput('')
+    setOnlineResumeToken('')
     setOnlineColor(null)
     setOnlineStatus('idle')
     setOnlineError('')
@@ -253,8 +277,15 @@ export function App() {
 
     if (message.type === 'room') {
       setOnlineColor(message.color)
-      setMoveLog([])
-      setOnlineStatus(message.color === 'you' ? 'waiting' : 'connected')
+      setOnlineResumeToken(message.resumeToken)
+      saveOnlineSession({
+        version: 1,
+        url: onlineUrl,
+        roomId: message.roomId,
+        resumeToken: message.resumeToken,
+      })
+      if (!message.resumed) setMoveLog([])
+      setOnlineStatus(message.peerConnected ? 'connected' : 'waiting')
       return
     }
 
@@ -262,23 +293,34 @@ export function App() {
     setOnlineStatus('connected')
   }
 
-  const openOnline = (action: 'create' | 'join') => {
-    resetOnline()
+  const connectOnline = (action: 'create' | 'join' | 'resume') => {
+    if (action !== 'resume') resetOnline()
+    else onlineClient?.close(true)
+
     setMatchType('ONLINE')
     setOnlineStatus('connecting')
+    setOnlineError('')
 
     let client: RekOnlineClient
     client = new RekOnlineClient(onlineUrl, {
       onOpen: () => {
         if (action === 'create') client.create(ruleset)
-        else client.join(roomInput)
+        else if (action === 'join') client.join(roomInput)
+        else client.resume(roomId, onlineResumeToken)
       },
       onMessage: handleOnlineMessage,
       onClose: () => {
         setOnlineClient((current) => current === client ? null : current)
+        setOnlineStatus('disconnected')
       },
     })
     setOnlineClient(client)
+  }
+
+  const openOnline = (action: 'create' | 'join') => connectOnline(action)
+  const resumeOnline = () => {
+    if (!roomId || !onlineResumeToken) return
+    connectOnline('resume')
   }
 
   const handleSquareClick = (index: number) => {
@@ -391,7 +433,9 @@ export function App() {
         ? copy.opponentConnected
         : onlineStatus === 'peer-left'
           ? copy.opponentLeft
-          : onlineStatus === 'error'
+          : onlineStatus === 'disconnected'
+            ? copy.disconnected
+            : onlineStatus === 'error'
             ? `${copy.onlineError}: ${onlineError}`
             : copy.online
 
@@ -458,6 +502,11 @@ export function App() {
               </div>
               {roomId ? <p className="online-room"><strong>{copy.roomCode}:</strong> {roomId}</p> : null}
               {onlineColor ? <p className="online-room"><strong>{copy.onlineAs}:</strong> {onlineColor === 'you' ? copy.white : copy.black}</p> : null}
+              {onlineStatus === 'disconnected' && roomId && onlineResumeToken ? (
+                <button type="button" className="action-button" onClick={resumeOnline}>
+                  {copy.reconnect}
+                </button>
+              ) : null}
               <p className="storage-note">{onlineStatusLabel}</p>
             </div>
           ) : null}
