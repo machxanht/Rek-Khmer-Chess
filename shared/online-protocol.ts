@@ -8,6 +8,7 @@ export interface OnlineMove {
 export type OnlineClientMessage =
   | { type: 'create'; ruleset: RuleSet }
   | { type: 'join'; roomId: string }
+  | { type: 'resume'; roomId: string; resumeToken: string }
   | { type: 'move'; roomId: string; from: number; to: number }
 
 export type OnlineServerMessage =
@@ -16,6 +17,9 @@ export type OnlineServerMessage =
       roomId: string
       color: PlayerColor
       snapshot: string
+      resumeToken: string
+      peerConnected: boolean
+      resumed: boolean
     }
   | {
       type: 'state'
