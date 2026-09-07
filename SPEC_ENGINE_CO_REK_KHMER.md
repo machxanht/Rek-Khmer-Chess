@@ -688,3 +688,34 @@ AI/tournament verification
 ```
 
 Không sửa AI/UI để giả lập rule mới trước core engine. Không thay current Min semantics chỉ vì event-trigger model hiện có evidence tốt hơn; exact trigger vẫn chưa đủ.
+
+---
+
+## 22. 2026-09-08 consensus clarification
+
+This section resolves stale wording from earlier research phases. The current implementation remains unchanged.
+
+### Historical evidence is not the same as the deterministic contract
+
+The implemented Hao state machine is the **v1 deterministic engine contract**:
+
+`NEW = RekOpportunities(AFTER) - RekOpportunities(BEFORE)`.
+
+Evidence supports opponent-action/event-triggered Hao and observed newly-opened responses, but does **not** establish the set-difference formula as a historical Khmer algorithm.
+
+Final classification:
+
+- H1 event-trigger: **STRONG EVIDENCE**.
+- H2 observed newly-opened response: **STRONG EVIDENCE within reconstructed cases**.
+- H3 universal set-diff: **TECHNICAL POLICY**.
+- H4 every NEW response eligible: **TECHNICAL POLICY**.
+- H5 responder chooses among multiple NEW: **UNVERIFIED / TECHNICAL POLICY**.
+- H6 pre-existing Rek cannot satisfy active Hao: **UNVERIFIED / TECHNICAL POLICY**.
+
+Accordingly, older text saying the exact trigger was still “not implemented” is **SUPERSEDED historical research state**. Conversely, implementation must not be cited as proof that H3–H6 are historical truth.
+
+The same boundary applies to stationary King in Min, Poat-in-Min, BFS zero-liberty Poat, Rek→Poat ordering, zero-geometric-move terminal and dual-axis Rek-4: these remain engine interpretations unless separately evidence-locked.
+
+Threefold and lone-King 32 remain project extensions.
+
+No code change is authorized by this clarification.
