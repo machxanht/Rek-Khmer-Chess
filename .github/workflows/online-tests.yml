@@ -1,29 +1,29 @@
-name: Rek Web Product Gate
+name: Rek Online Product Gate
 
 on:
   push:
     paths:
-      - 'src/**'
+      - 'server/**'
       - 'shared/**'
+      - 'src/online.ts'
       - 'lib/rek-engine/**'
-      - 'index.html'
+      - 'scripts/run-online-smoke.ts'
       - 'package.json'
-      - 'tsconfig.web.json'
-      - 'scripts/run-product-smoke.ts'
-      - '.github/workflows/web-build.yml'
+      - 'tsconfig.server.json'
+      - '.github/workflows/online-tests.yml'
   pull_request:
     paths:
-      - 'src/**'
+      - 'server/**'
       - 'shared/**'
+      - 'src/online.ts'
       - 'lib/rek-engine/**'
-      - 'index.html'
+      - 'scripts/run-online-smoke.ts'
       - 'package.json'
-      - 'tsconfig.web.json'
-      - 'scripts/run-product-smoke.ts'
-      - '.github/workflows/web-build.yml'
+      - 'tsconfig.server.json'
+      - '.github/workflows/online-tests.yml'
 
 jobs:
-  web-build:
+  online-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -39,11 +39,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-package-lock --ignore-scripts --no-audit --no-fund
 
-      - name: Typecheck web
-        run: npm run typecheck:web
+      - name: Typecheck server
+        run: npm run typecheck:server
 
-      - name: Product smoke
-        run: npm run test:product
-
-      - name: Build web
-        run: npm run build:web
+      - name: Online smoke
+        run: npm run test:online
