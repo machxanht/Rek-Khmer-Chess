@@ -1357,3 +1357,66 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--rk-gold-hi);out
   .rk-hero__copy p{display:none}.rk-hero h1{margin:7px 0 5px}.rk-hero__actions{margin-top:8px}.rk-mode{min-height:52px}.rk-rules-strip{padding-block:6px}
   .board-shell{width:min(100%,calc(100dvh - 165px))!important}
 }
+
+
+/* ===== Approved mockup fidelity pass ===== */
+.khmer-scene{position:absolute;inset:0;width:100%;height:100%;display:block}
+.khmer-scene__cloud{fill:#c58b48;opacity:.08}.khmer-scene__forest{fill:#07110d;opacity:.88}.khmer-scene__temple{fill:#090b09;stroke:#8d6230;stroke-width:.8;opacity:.94}.khmer-scene__water{fill:#0b1713;opacity:.75}
+.khmer-scene--compact{opacity:.56}
+.khmer-corner{position:absolute;left:10px;bottom:10px;z-index:4;color:#c99a45;opacity:.82}.khmer-corner--flip{left:auto;right:10px;transform:scaleX(-1)}
+
+.mock-home{height:100%;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto auto;gap:8px;padding:4px 2px}
+.mock-home__art{position:relative;overflow:hidden;min-height:0;border:1px solid #9a6f34;border-radius:24px;background:#0b1512;box-shadow:inset 0 0 0 1px rgba(255,205,114,.06),0 18px 42px rgba(0,0,0,.4)}
+.mock-home__art::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(2,7,5,.18) 60%,#08100d 100%);pointer-events:none}
+.mock-home__title{position:absolute;z-index:5;left:0;right:0;bottom:14%;display:grid;place-items:center;text-align:center;text-shadow:0 3px 18px #000}
+.mock-home__title span{font-family:"Noto Sans Khmer",sans-serif;font-size:clamp(2.6rem,8vw,5.8rem);line-height:.88;color:#f2c869;font-weight:800}
+.mock-home__title strong{margin-top:9px;color:#e8c47c;font-size:.78rem;letter-spacing:.34em}
+.mock-home__title small{margin-top:8px;color:#c9b994;font-size:.58rem;letter-spacing:.05em}
+.mock-home__modes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.mock-home__modes button,.mock-mode-list button{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;min-width:0;border:1px solid rgba(209,161,78,.28);border-radius:16px;padding:10px;color:#eadcc1;background:linear-gradient(145deg,rgba(21,29,24,.96),rgba(9,14,12,.98));box-shadow:inset 0 0 20px rgba(196,146,60,.035);text-align:left;cursor:pointer}
+.mock-home__modes button:hover,.mock-mode-list button:hover{border-color:#c99745;box-shadow:0 0 22px rgba(201,151,69,.08)}
+.mock-home__modes strong,.mock-mode-list strong{display:block;font-size:.72rem}.mock-home__modes small,.mock-mode-list small{display:block;margin-top:2px;color:#92846f;font-size:.54rem}.mock-home__modes b,.mock-mode-list b{color:#e0b154;font-size:1.2rem}
+.mock-portrait{width:34px;height:34px;display:grid;place-items:center;border-radius:50%;color:#deb05e;background:radial-gradient(circle at 35% 30%,#4c3520,#161b17 68%);border:1px solid #916a35;box-shadow:inset 0 0 12px rgba(232,185,95,.12)}
+.mock-portrait--king{color:#f2cb76}
+.mock-home__heritage{display:flex;justify-content:center;gap:7px;align-items:center;padding:1px 0 0;color:#826e52;font-size:.47rem;text-transform:uppercase;letter-spacing:.13em}.mock-home__heritage strong{color:#b9924e}
+
+.mock-modes{position:relative;height:100%;min-height:0;overflow:hidden;padding:10px;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:linear-gradient(180deg,#0d1714,#07100d);border:1px solid #7b592f;border-radius:24px}
+.mock-modes>.khmer-scene{z-index:0;opacity:.36}.mock-modes::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,12,10,.2),rgba(5,9,8,.9));pointer-events:none}
+.mock-screen-heading{position:relative;z-index:3;text-align:center}.mock-screen-heading h2{margin:3px 0;color:#e8bf69;font-family:"Noto Sans Khmer",sans-serif;font-size:1.18rem}.mock-screen-heading span{color:#a68756;font-size:.52rem}
+.mock-mode-list{position:relative;z-index:3;align-self:center;display:grid;gap:8px;width:min(100%,620px);margin:auto}.mock-mode-list button{min-height:92px;padding:12px}.mock-mode-list em{display:inline-flex;width:max-content;margin-top:7px;padding:4px 8px;border-radius:999px;color:#d8b263;background:rgba(197,149,63,.1);font-style:normal;font-size:.5rem}
+.mock-quote{position:relative;z-index:3;margin:4px 0 0;text-align:center;color:#c39b58;font-size:.56rem;font-style:italic}
+
+.mock-map{position:relative;height:100%;overflow:hidden;border:1px solid #8a6431;border-radius:24px;background:#0b1512}
+.mock-map>.khmer-scene{opacity:.8}.mock-map::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,12,10,.03),rgba(4,10,8,.35));pointer-events:none}
+.mock-screen-heading--overlay{position:absolute;z-index:5;top:12px;left:0;right:0}
+.mock-map__path{position:absolute;z-index:3;left:50%;top:20%;bottom:11%;width:58%;transform:translateX(-50%) rotate(-7deg);border:2px dashed rgba(255,198,81,.65);border-left-color:transparent;border-bottom-color:transparent;border-radius:50%;filter:drop-shadow(0 0 8px rgba(255,186,52,.42))}
+.mock-map-node{position:absolute;z-index:6;width:min(46%,260px);display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(208,158,72,.34);border-radius:14px;color:#efe0c2;background:rgba(8,17,13,.88);text-align:left;cursor:pointer;box-shadow:0 10px 24px rgba(0,0,0,.28)}
+.mock-map-node--1{top:17%;left:8%}.mock-map-node--2{top:39%;right:5%}.mock-map-node--3{bottom:28%;left:9%}.mock-map-node--4{bottom:8%;right:8%}
+.mock-map-node__icon{width:32px;height:32px;display:grid;place-items:center;border-radius:50%;color:#f0c46c;background:#1a251e;border:1px solid #a57837}.mock-map-node small{color:#c99745;font-size:.46rem}.mock-map-node strong{display:block;font-size:.64rem}.mock-map-node em{display:block;color:#847964;font-size:.49rem;font-style:normal}
+.mock-quote--map{position:absolute;bottom:8px;left:0;right:0;color:#cfa65d}
+
+.mock-victory{position:absolute;z-index:40;inset:8px;display:grid;align-content:center;gap:8px;padding:22px;border:1px solid #b1843d;border-radius:20px;text-align:center;background:radial-gradient(circle at 50% 18%,rgba(225,169,64,.22),transparent 24%),linear-gradient(180deg,rgba(13,24,20,.98),rgba(6,12,10,.99));box-shadow:0 18px 60px rgba(0,0,0,.55)}
+.mock-victory__halo{width:84px;height:84px;margin:0 auto;display:grid;place-items:center;border-radius:50%;color:#ffd777;background:radial-gradient(circle,#704819,#1a231c 70%);border:1px solid #c79743;box-shadow:0 0 36px rgba(224,168,69,.28)}
+.mock-victory h2{margin:3px 0 0;color:#f0c368;font-size:1.55rem}.mock-victory p{margin:0 0 4px;color:#d9bb82;font-size:.68rem}.mock-victory>div:not(.mock-victory__halo){display:flex;justify-content:space-between;gap:12px;padding:8px 10px;border:1px solid rgba(203,156,69,.16);border-radius:10px;color:#8d816f;font-size:.56rem}.mock-victory strong{color:#e3cfac}.mock-victory button{width:100%}
+
+/* Play closer to mockup */
+.ouk-play{position:relative!important}
+.ouk-player-strip{background:linear-gradient(180deg,#102019,#0a1310)!important;border-color:#7e5d33!important}
+.ouk-player-strip.you{background:linear-gradient(180deg,#182018,#0f1511)!important}
+.ouk-board-card{border-color:#9e7134!important;background:linear-gradient(145deg,#3d2817,#17140e)!important}
+.board{border:2px solid #7f592f!important;box-shadow:inset 0 0 0 2px #1f160e,0 0 20px rgba(204,153,65,.08)!important}
+.square{border:1px solid rgba(58,38,20,.24)!important}
+.board-wrap::before,.board-wrap::after{content:"✥";position:absolute;z-index:8;color:#c99a45;font-size:14px;opacity:.7;pointer-events:none}.board-wrap::before{left:3px;top:3px}.board-wrap::after{right:3px;bottom:3px}
+.ouk-game-actions button{background:#0b1612!important;border-color:#385245!important;color:#d6b66e!important}
+
+@media(max-width:620px){
+  .mock-home{grid-template-rows:minmax(0,1fr) auto auto}
+  .mock-home__art{border-radius:18px}.mock-home__modes{grid-template-columns:1fr}.mock-home__modes button{min-height:52px;padding:7px}.mock-home__modes small{display:none}
+  .mock-home__title span{font-size:clamp(2.4rem,14vw,4.2rem)}.mock-home__title strong{font-size:.62rem}
+  .mock-mode-list button{min-height:74px}
+  .mock-map-node{width:58%}.mock-map-node--1{left:5%}.mock-map-node--2{right:3%}.mock-map-node--3{left:5%}.mock-map-node--4{right:4%}
+}
+@media(max-height:690px){
+  .mock-home__title{bottom:10%}.mock-home__title small{display:none}.mock-home__modes button{min-height:48px}
+  .mock-mode-list button{min-height:68px}.mock-mode-list small{display:none}
+}
