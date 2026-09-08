@@ -195,23 +195,6 @@ function Board({ state, selected, legalMoves, disabled, copy, onSquareClick }: B
   )
 }
 
-function HomeBoardPreview() {
-  const preview = createGame('REK_STANDARD').getState()
-  return (
-    <div className="home-board-preview" aria-hidden="true">
-      <div className="home-board-grid">
-        {preview.board.map((piece, index) => (
-          <span key={index} className="home-board-cell">
-            {piece ? <PieceView piece={piece} /> : null}
-          </span>
-        ))}
-      </div>
-      <span className="home-board-glow home-board-glow--a" />
-      <span className="home-board-glow home-board-glow--b" />
-    </div>
-  )
-}
-
 function pieceCounts(board: Cell[]) {
   let you = 0
   let opp = 0
