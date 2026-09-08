@@ -1,28 +1,85 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
-<defs>
-<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#10251f"/><stop offset=".38" stop-color="#7a4927"/><stop offset=".68" stop-color="#1d2d23"/><stop offset="1" stop-color="#07100d"/></linearGradient>
-<radialGradient id="sun"><stop stop-color="#ffd887" stop-opacity=".95"/><stop offset=".35" stop-color="#d48c34" stop-opacity=".55"/><stop offset="1" stop-color="#d48c34" stop-opacity="0"/></radialGradient>
-<linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#30251a"/><stop offset=".5" stop-color="#111612"/><stop offset="1" stop-color="#060a08"/></linearGradient>
-<filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
-</defs>
-<rect width="800" height="1000" fill="url(#sky)"/>
-<circle cx="560" cy="225" r="190" fill="url(#sun)"/>
-<circle cx="560" cy="225" r="105" fill="#d8953f" opacity=".14" filter="url(#glow)"/>
-<path d="M0 390c90-80 170-70 255 0 70-64 145-58 205 4 72-76 152-64 238 7 39-20 70-26 102-14v613H0Z" fill="#09110e"/>
-<g fill="#07100d" stroke="#7e5a2c" stroke-width="2">
-<path d="M94 690V532h58v158m32 0V454h74v236m42 0V342h116v348m44 0V454h74v236m32 0V532h58v158"/>
-<path d="m123 532 29-62 29 62m41-78 36-78 36 78m64-112 58-125 58 125m80 112 36-78 36 78m41 78 29-62 29 62"/>
-<path d="M54 690h692v44H54z"/>
-</g>
-<g fill="#0a120f" opacity=".95">
-<path d="M0 610c48-42 75-6 111-45 26-29 60-16 89 15 25-35 64-36 96 9v155H0Z"/>
-<path d="M800 583c-56-38-92 3-128-30-42-38-73-13-97 20-32-27-67-26-96 11v160h321Z"/>
-</g>
-<g stroke="#8c672f" fill="none" opacity=".65">
-<path d="M24 905c36-86 76-132 126-144M776 905c-36-86-76-132-126-144"/>
-<path d="M24 905c30-21 56-24 86-5-13-42-4-78 25-110 14 39 10 77-10 111 42-17 76-8 103 25-59-3-99 10-124 46"/>
-<path d="M776 905c-30-21-56-24-86-5 13-42 4-78-25-110-14 39-10 77 10 111-42-17-76-8-103 25 59-3 99 10 124 46"/>
-</g>
-<rect y="735" width="800" height="265" fill="url(#stone)" opacity=".82"/>
-<path d="M0 770c150-28 252 20 410 2 128-15 256-7 390 12v216H0Z" fill="#07100d" opacity=".7"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-label="Stylized Angkor heritage landscape">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#12291f"/>
+      <stop offset="0.52" stop-color="#0b1a14"/>
+      <stop offset="1" stop-color="#050a08"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#f6dc9b" stop-opacity=".95"/>
+      <stop offset=".35" stop-color="#e4b860" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#d29b3e" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="stone" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8a6a3c"/>
+      <stop offset=".42" stop-color="#4d4e38"/>
+      <stop offset="1" stop-color="#23362b"/>
+    </linearGradient>
+    <linearGradient id="stone2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ad8450"/>
+      <stop offset=".45" stop-color="#66705a"/>
+      <stop offset="1" stop-color="#24372c"/>
+    </linearGradient>
+    <pattern id="krama" width="42" height="42" patternUnits="userSpaceOnUse">
+      <path d="M0 10H42M0 31H42M10 0V42M31 0V42" stroke="#d9ae62" stroke-opacity=".075" stroke-width="2"/>
+      <path d="M0 21H42M21 0V42" stroke="#7b3f2d" stroke-opacity=".08" stroke-width="1"/>
+    </pattern>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".46"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="900" fill="url(#sky)"/>
+  <rect width="1200" height="900" fill="url(#krama)" opacity=".8"/>
+
+  <circle cx="880" cy="220" r="175" fill="url(#sun)" filter="url(#glow)"/>
+  <circle cx="880" cy="220" r="58" fill="#f0cc7c" opacity=".46"/>
+
+  <path d="M0 520L145 430 245 474 355 390 480 462 590 365 700 448 805 382 935 458 1060 374 1200 456V900H0Z" fill="#1c3328" opacity=".55"/>
+  <path d="M0 610L120 555 238 590 360 520 495 585 620 510 738 574 860 535 1010 592 1200 525V900H0Z" fill="#102219" opacity=".82"/>
+
+  <g transform="translate(570 215)" filter="url(#shadow)">
+    <g fill="url(#stone)" stroke="#c59a54" stroke-opacity=".26" stroke-width="2">
+      <path d="M0 470V355H58V312H100V240H141V188H184V135L212 91 240 135V188H283V240H324V312H366V355H424V470Z"/>
+      <path d="M155 470V294H185V246H239V294H269V470Z" fill="url(#stone2)"/>
+      <path d="M40 470V392H88V358L112 320 136 358V392H184V470Z" fill="url(#stone2)"/>
+      <path d="M240 470V392H288V358L312 320 336 358V392H384V470Z" fill="url(#stone2)"/>
+      <path d="M175 246L212 202 249 246Z" fill="#7b5e36"/>
+      <path d="M186 188L212 151 238 188Z" fill="#8c693a"/>
+      <path d="M198 135L212 108 226 135Z" fill="#a27942"/>
+    </g>
+
+    <g fill="#0a1510" opacity=".78">
+      <rect x="193" y="334" width="38" height="136" rx="18"/>
+      <rect x="69" y="417" width="25" height="53" rx="12"/>
+      <rect x="330" y="417" width="25" height="53" rx="12"/>
+    </g>
+
+    <g fill="none" stroke="#e0b15a" stroke-opacity=".22" stroke-width="3">
+      <path d="M20 373H404"/>
+      <path d="M44 326H380"/>
+      <path d="M91 276H333"/>
+      <path d="M164 226H260"/>
+      <path d="M192 173H232"/>
+    </g>
+  </g>
+
+  <g opacity=".65" fill="#d7a84d">
+    <path d="M973 610c-30-34-33-73 0-118 33 45 30 84 0 118Z"/>
+    <path d="M973 620c-47-19-77-3-102 38 46 6 82-4 102-38Z"/>
+    <path d="M973 620c47-19 77-3 102 38-46 6-82-4-102-38Z"/>
+  </g>
+
+  <path d="M0 725c180-48 278-9 415 8 145 18 258-42 394-29 151 15 229 66 391 28V900H0Z" fill="#07110d" opacity=".88"/>
+  <path d="M0 777c190-24 302 29 468 13 184-18 276-42 408-18 128 23 211 36 324 14V900H0Z" fill="#040706"/>
+
+  <g fill="none" stroke="#d6aa58" stroke-opacity=".34" stroke-width="2">
+    <path d="M1010 58c35 12 62 39 75 74-35-12-62-39-75-74Z"/>
+    <path d="M1090 38c-8 36 4 73 31 99 8-36-4-73-31-99Z"/>
+    <path d="M1060 92c27-12 58-9 83 8-27 12-58 9-83-8Z"/>
+  </g>
 </svg>
