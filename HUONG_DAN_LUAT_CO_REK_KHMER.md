@@ -532,3 +532,47 @@ AI/tournament consume core behavior
 ```
 
 Research v1 đã đủ để thay board-global Hao bằng transition-owned context và hiện đã triển khai. Active rule research được freeze; xem `RESEARCH_FINAL_V1_FREEZE.md`.
+
+---
+
+## 15. 2026-09-08 canonical evidence reconciliation
+
+For current rule interpretation, this guide follows `RESEARCH_FINAL_V1_FREEZE.md`. Older research-stage wording is retained for provenance but does not override this section.
+
+### Hao Rek: evidence-backed layer vs engine contract
+
+**Evidence-backed:**
+- H1 opponent-action/event-triggered Hao: **STRONG EVIDENCE**.
+- H2 newly opened Rek responses in the geometries actually reconstructed from M1: **STRONG EVIDENCE within observed cases**.
+- blocker-leaves and mover-enters are both observed real-board opening geometries.
+- Hao-chain existence has **STRONG EVIDENCE candidate + SECONDARY text**.
+- ignore required Hao => loss remains **SECONDARY** historical evidence.
+
+**Technical policy / not historical truth:**
+- `NEW = AFTER - BEFORE` as a universal algorithm;
+- every member of `NEW` being eligible;
+- responder choosing when multiple NEW responses exist;
+- excluding pre-existing Rek from satisfying an active Hao;
+- exact software forfeit representation.
+
+The last two historical questions remain explicitly **UNVERIFIED**. Current engine behavior is retained for deterministic v1 operation, not promoted to historical truth.
+
+### Other engine interpretations kept without historical promotion
+
+- stationary King in Min;
+- Poat-in-Min;
+- BFS/zero-liberty Poat;
+- Rek-before-Poat ordering;
+- zero-geometric-move instant win;
+- dual-axis Rek-4.
+
+Threefold repetition and lone-King 32 are **PROJECT EXTENSIONS**.
+
+### Open historical questions
+
+1. multiple Hao targets: who chooses?
+2. can a pre-existing Rek satisfy a new Hao?
+3. exact King mobility in Min?
+4. exact Poat relationship to Min?
+
+No engine/gameplay change follows from this documentation reconciliation.

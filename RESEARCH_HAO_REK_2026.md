@@ -672,3 +672,38 @@ Các điểm chưa được historical-confirmed vẫn giữ dưới technical p
 - Poat-in-Min unchanged pending stronger evidence.
 
 Active Hao research đóng ở v1. Xem `RESEARCH_FINAL_V1_FREEZE.md` để biết matrix cuối và điều kiện reopen.
+
+---
+
+## Final consensus addendum — 2026-09-08
+
+This addendum is authoritative over earlier candidate wording in this research note.
+
+### What M1 supports
+
+- H1 opponent-action/event-triggered Hao: **STRONG EVIDENCE**.
+- H2 responder answering a newly opened Rek opportunity in reconstructed M1 events: **STRONG EVIDENCE within observed geometries**.
+- blocker-leaves: observed real-board behavior / **STRONG EVIDENCE candidate**.
+- mover-enters: observed real-board behavior / **STRONG EVIDENCE candidate**.
+- Hao-chain existence: **STRONG EVIDENCE candidate**, additionally supported by SECONDARY text.
+
+### What M1 does not prove
+
+M1 does not establish a universal historical algorithm equivalent to `NEW = AFTER - BEFORE`.
+
+It also does not establish:
+- what happens when `|NEW| > 1`;
+- that responder historically owns the choice among multiple NEW targets;
+- that a pre-existing Rek is illegal as a response to a new Hao;
+- a mandatory verbal-call state;
+- exact universal chain termination beyond observed cases.
+
+Therefore:
+- set-difference = **TECHNICAL POLICY**;
+- all-NEW eligibility = **TECHNICAL POLICY**;
+- responder choice for multiple NEW = **UNVERIFIED / TECHNICAL POLICY**;
+- pre-existing Rek exclusion = **UNVERIFIED / TECHNICAL POLICY**.
+
+Observation that a player chose the newly opened Rek in M1 must not be converted into proof that choosing an older Rek would have been illegal.
+
+Current engine behavior stays unchanged pending materially stronger evidence.
