@@ -552,7 +552,7 @@ export function App() {
           <span><strong>រែកខ្មែរ</strong><small>REK KHMER</small></span>
         </button>
         <div className="ouk-page-title">{pageTitle}</div>
-        <div className="ouk-online-dot"><i /> {matchType === 'ONLINE' ? onlineStatusLabel : 'Dark Khmer UI'}</div>
+        <div className="ouk-online-dot"><i /> {matchType === 'ONLINE' ? onlineStatusLabel : 'BRUTAL / DARK'}</div>
       </header>
 
       <section className="ouk-page">
@@ -560,8 +560,8 @@ export function App() {
           <div className="ouk-home">
             <section className="ouk-hero-card kbach-frame">
               <div className="ouk-hero-copy">
-                <p className="eyebrow">ល្បែងរែក · REK KHMER</p>
-                <h1>រែកខ្មែរ</h1>
+                <p className="eyebrow">KHMER STRATEGY / 8×8 / TWO-SIDED CAPTURE</p>
+                <h1><span>REK</span><em>រែកខ្មែរ</em></h1>
                 <p>{copy.subtitle}</p>
               </div>
               <button type="button" className="ouk-primary-cta" onClick={() => { setMatchType('ONLINE'); setView('online') }}>
@@ -595,7 +595,7 @@ export function App() {
 
             <section className="ouk-wisdom-card">
               <span className="ouk-card-icon"><UiIcon name="lotus" size={24} /></span>
-              <div><small>Khmer heritage</small><strong>Rek · Poat · Hao Rek</strong><p>Traditional identity, evidence-labeled rules, canonical Rek engine.</p></div>
+              <div><small>RULE SYSTEM / 01</small><strong>REK · POAT · HAO</strong><p>Canonical Khmer strategy engine. Evidence-backed rules, deterministic play.</p></div>
             </section>
           </div>
         ) : null}
