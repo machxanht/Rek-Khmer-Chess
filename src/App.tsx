@@ -195,6 +195,23 @@ function Board({ state, selected, legalMoves, disabled, copy, onSquareClick }: B
   )
 }
 
+function HomeBoardPreview() {
+  const preview = createGame('REK_STANDARD').getState()
+  return (
+    <div className="home-board-preview" aria-hidden="true">
+      <div className="home-board-grid">
+        {preview.board.map((piece, index) => (
+          <span key={index} className="home-board-cell">
+            {piece ? <PieceView piece={piece} /> : null}
+          </span>
+        ))}
+      </div>
+      <span className="home-board-glow home-board-glow--a" />
+      <span className="home-board-glow home-board-glow--b" />
+    </div>
+  )
+}
+
 function pieceCounts(board: Cell[]) {
   let you = 0
   let opp = 0
@@ -592,26 +609,49 @@ export function App() {
       <section className="ouk-page">
 
         {view === 'home' ? (
-          <div className="mock-home">
-            <section className="mock-home__art">
-              <HeritageScene />
-              <KhmerCorner /><KhmerCorner flip />
-              <div className="mock-home__title">
-                <span>ល្បែងរែក</span>
-                <strong>REK KHMER</strong>
-                <small>A timeless game · A stronger tomorrow</small>
+          <div className="premium-home">
+            <section className="premium-home__hero">
+              <div className="premium-home__copy">
+                <span className="premium-home__eyebrow">Cambodian strategy heritage</span>
+                <h1><span>ល្បែងរែក</span><small>REK KHMER</small></h1>
+                <p>Master a traditional Khmer strategy game through Rek, Poat and Hao Rek.</p>
+                <button type="button" className="premium-home__cta" onClick={() => openPlay('VS_AI')}>
+                  <UiIcon name="crown" size={19}/>
+                  <span><strong>Play now</strong><small>VS AI · Medium</small></span>
+                  <b>›</b>
+                </button>
               </div>
+              <div className="premium-home__visual">
+                <HomeBoardPreview />
+                <div className="premium-angkor" aria-hidden="true"><i/><i/><i/><i/><i/></div>
+              </div>
+              <span className="premium-ornament premium-ornament--l"><UiIcon name="lotus" size={17}/></span>
+              <span className="premium-ornament premium-ornament--r"><UiIcon name="lotus" size={17}/></span>
             </section>
-            <section className="mock-home__modes">
-              <button type="button" onClick={() => openPlay('VS_AI')}><span className="mock-portrait mock-portrait--king"><UiIcon name="crown" size={28}/></span><span><strong>Play vs AI</strong><small>Train your mind</small></span><b>›</b></button>
-              <button type="button" onClick={() => openPlay('LOCAL')}><span className="mock-portrait"><UiIcon name="local" size={25}/></span><span><strong>Local Play</strong><small>Play with a friend</small></span><b>›</b></button>
-              <button type="button" onClick={() => setView('online')}><span className="mock-portrait"><UiIcon name="online" size={25}/></span><span><strong>Online</strong><small>Challenge the world</small></span><b>›</b></button>
+
+            <section className="premium-home__modes">
+              <button type="button" onClick={() => openPlay('VS_AI')}>
+                <span className="premium-mode-icon"><UiIcon name="ai" size={20}/></span>
+                <span><strong>Play vs AI</strong><small>Easy · Medium · Hard</small></span><b>›</b>
+              </button>
+              <button type="button" onClick={() => openPlay('LOCAL')}>
+                <span className="premium-mode-icon"><UiIcon name="local" size={20}/></span>
+                <span><strong>Local Play</strong><small>Pass & play</small></span><b>›</b>
+              </button>
+              <button type="button" onClick={() => setView('online')}>
+                <span className="premium-mode-icon"><UiIcon name="online" size={20}/></span>
+                <span><strong>Online</strong><small>Create or join a room</small></span><b>›</b>
+              </button>
             </section>
-            <footer className="mock-home__heritage"><span>Cambodian Heritage</span><strong>GLOBAL MINDS</strong></footer>
+
+            <section className="premium-home__footer">
+              <button type="button" onClick={() => setView('map')}><UiIcon name="map" size={14}/> Heritage Journey</button>
+              <span>Khmer heritage · modern strategy</span>
+            </section>
           </div>
         ) : null}
 
-        {view === 'modes' ? (
+                {view === 'modes' ? (
           <div className="mock-modes">
             <div className="mock-screen-heading"><span>Choose your journey</span><h2>Game Mode</h2></div>
             <HeritageScene compact />
