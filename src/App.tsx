@@ -29,7 +29,7 @@ import {
 } from './persistence'
 
 type MatchType = StoredMatchType | 'ONLINE'
-type AppView = 'home' | 'play' | 'map' | 'online' | 'history' | 'settings'
+type AppView = 'home' | 'modes' | 'play' | 'map' | 'online' | 'history' | 'settings'
 type OnlineStatus =
   | 'idle'
   | 'connecting'
@@ -97,6 +97,40 @@ function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
   if (name === 'map') return <svg {...common}><path d="M4 18 9 6l6 12 5-10"/><circle cx="4" cy="18" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="18" r="1.5"/><circle cx="20" cy="8" r="1.5"/></svg>
   if (name === 'spark') return <svg {...common}><path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
   return <svg {...common}><path d="m4 9 4 3 4-7 4 7 4-3-2 10H6L4 9Z"/><path d="M7 19h10"/></svg>
+}
+
+
+function HeritageScene({ compact = false }: { compact?: boolean }) {
+  return (
+    <svg className={compact ? 'khmer-scene khmer-scene--compact' : 'khmer-scene'} viewBox="0 0 420 220" aria-hidden="true">
+      <defs>
+        <linearGradient id="rk-sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1b3d36" />
+          <stop offset=".5" stopColor="#5d3a22" />
+          <stop offset="1" stopColor="#0d1713" />
+        </linearGradient>
+        <radialGradient id="rk-sun" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stopColor="#ffd77d" stopOpacity=".95" />
+          <stop offset=".45" stopColor="#c77f2f" stopOpacity=".58" />
+          <stop offset="1" stopColor="#c77f2f" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <rect width="420" height="220" fill="url(#rk-sky)" />
+      <circle cx="275" cy="54" r="88" fill="url(#rk-sun)" />
+      <path className="khmer-scene__cloud" d="M0 62C70 42 116 70 174 55c61-16 108-2 151 11 33 10 61 7 95-7v43H0Z" />
+      <path className="khmer-scene__forest" d="M0 145c26-34 45-16 65-36 22-23 41-5 65 17 28-38 49-36 81-5 22-32 48-21 70 5 24-40 50-40 77-10 22-22 37-25 62 3v101H0Z" />
+      <g className="khmer-scene__temple">
+        <path d="M92 190V132h24v58m20 0v-79h30v79m23 0v-114h42v114m24 0v-79h30v79m20 0v-58h24v58" />
+        <path d="m104 132 12-24 12 24m23-21 15-30 15 30m29-35 21-42 21 42m38 35 15-30 15 30m23 21 12-24 12 24" />
+        <path d="M72 190h276v16H72z" />
+      </g>
+      <path className="khmer-scene__water" d="M0 194c76-12 135 8 207-2 74-10 141-4 213 5v23H0Z" />
+    </svg>
+  )
+}
+
+function KhmerCorner({ flip = false }: { flip?: boolean }) {
+  return <span className={flip ? 'khmer-corner khmer-corner--flip' : 'khmer-corner'} aria-hidden="true"><UiIcon name="lotus" size={18} /></span>
 }
 
 function PieceView({ piece }: { piece: NonNullable<Cell> }) {
@@ -546,10 +580,10 @@ export function App() {
 
   const navItems: { id: AppView; icon: IconName; label: string }[] = [
     { id: 'home', icon: 'home', label: 'Home' },
-    { id: 'play', icon: 'local', label: 'Play' },
-    { id: 'map', icon: 'map', label: 'Journey' },
-    { id: 'online', icon: 'online', label: copy.online },
-    { id: 'settings', icon: 'settings', label: copy.language },
+    { id: 'modes', icon: 'local', label: 'Play' },
+    { id: 'map', icon: 'map', label: 'Map' },
+    { id: 'history', icon: 'replay', label: 'History' },
+    { id: 'settings', icon: 'settings', label: 'Settings' },
   ]
 
   const openPlay = (nextMatch: MatchType, nextRuleset = ruleset) => {
@@ -559,6 +593,7 @@ export function App() {
 
   const pageTitle =
     view === 'home' ? 'រែកខ្មែរ' :
+    view === 'modes' ? 'Game Mode' :
     view === 'play' ? (ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh') :
     view === 'map' ? 'Journey Through Cambodia' :
     view === 'online' ? copy.online :
@@ -580,56 +615,53 @@ export function App() {
       </header>
 
       <section className="ouk-page">
+
         {view === 'home' ? (
-          <div className="rk-home">
-            <section className="rk-hero">
-              <div className="rk-hero__copy">
-                <span className="rk-kicker">Cambodian Heritage Strategy</span>
-                <h1><span>រែកខ្មែរ</span><small>REK KHMER</small></h1>
-                <p>Carry the line. Read the space. Discover a traditional Khmer strategy game through a modern digital board.</p>
-                <div className="rk-hero__actions">
-                  <button type="button" className="rk-primary" onClick={() => openPlay('VS_AI')}><UiIcon name="ai" />Play vs AI</button>
-                  <button type="button" className="rk-ghost" onClick={() => setView('map')}><UiIcon name="map" />Heritage Journey</button>
-                </div>
-              </div>
-              <div className="rk-hero__board" aria-hidden="true">
-                <div className="rk-mini-board">
-                  {Array.from({ length: 64 }, (_, i) => <span key={i} className={(Math.floor(i/8)+i)%2 ? 'dark' : 'light'} />)}
-                  <i className="rk-mini-piece rk-mini-piece--king" />
-                  <i className="rk-mini-piece rk-mini-piece--man a" />
-                  <i className="rk-mini-piece rk-mini-piece--man b" />
-                </div>
-                <div className="rk-angkor-line"><span /><span /><span /><span /><span /></div>
+          <div className="mock-home">
+            <section className="mock-home__art">
+              <HeritageScene />
+              <KhmerCorner /><KhmerCorner flip />
+              <div className="mock-home__title">
+                <span>ល្បែងរែក</span>
+                <strong>REK KHMER</strong>
+                <small>A timeless game · A stronger tomorrow</small>
               </div>
             </section>
-
-            <section className="rk-mode-row">
-              <button type="button" className="rk-mode" onClick={() => openPlay('VS_AI')}><span><UiIcon name="ai" /></span><b>VS AI</b><small>{copy.easy} · {copy.medium} · {copy.hard}</small></button>
-              <button type="button" className="rk-mode" onClick={() => openPlay('LOCAL')}><span><UiIcon name="local" /></span><b>Local</b><small>Pass & play</small></button>
-              <button type="button" className="rk-mode" onClick={() => { setMatchType('ONLINE'); setView('online') }}><span><UiIcon name="online" /></span><b>Online</b><small>Create or join room</small></button>
+            <section className="mock-home__modes">
+              <button type="button" onClick={() => openPlay('VS_AI')}><span className="mock-portrait mock-portrait--king"><UiIcon name="crown" size={28}/></span><span><strong>Play vs AI</strong><small>Train your mind</small></span><b>›</b></button>
+              <button type="button" onClick={() => openPlay('LOCAL')}><span className="mock-portrait"><UiIcon name="local" size={25}/></span><span><strong>Local Play</strong><small>Play with a friend</small></span><b>›</b></button>
+              <button type="button" onClick={() => setView('online')}><span className="mock-portrait"><UiIcon name="online" size={25}/></span><span><strong>Online</strong><small>Challenge the world</small></span><b>›</b></button>
             </section>
-
-            <section className="rk-rules-strip">
-              <div><span className="rk-label">Ruleset</span><strong>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</strong></div>
-              <div className="rk-rule-buttons">
-                {RULESETS.map((item) => <button key={item.id} type="button" className={ruleset===item.id?'active':''} onClick={() => setRuleset(item.id)}>{item.id==='REK_STANDARD'?'Standard':'Min Rek Chanh'}</button>)}
-              </div>
-            </section>
+            <footer className="mock-home__heritage"><span>Cambodian Heritage</span><strong>GLOBAL MINDS</strong></footer>
           </div>
         ) : null}
 
-        {view === 'map' ? (
-          <div className="rk-map">
-            <header className="rk-map__header"><span className="rk-kicker">Play · Learn · Explore</span><h2>Journey Through Cambodia</h2><p>Three cultural milestones, one Rek journey.</p></header>
-            <div className="rk-path">
-              {[
-                ['01','Textile Village','Learn the basics','lotus'],
-                ['02','Ancient Pagoda Yard','Sharpen your tactics','temple'],
-                ['03','Angkor Imperial Citadel','Master Rek strategy','crown'],
-              ].map((item,index)=><button key={item[0]} type="button" className={`rk-node rk-node--${index+1}`} onClick={() => openPlay(index===0?'LOCAL':'VS_AI')}><span className="rk-node__icon"><UiIcon name={item[3] as IconName} /></span><span><small>{item[0]}</small><strong>{item[1]}</strong><em>{item[2]}</em></span></button>)}
-              <span className="rk-pathline" />
+        {view === 'modes' ? (
+          <div className="mock-modes">
+            <div className="mock-screen-heading"><span>Choose your journey</span><h2>Game Mode</h2></div>
+            <HeritageScene compact />
+            <div className="mock-mode-list">
+              <button onClick={() => openPlay('VS_AI')}><span className="mock-portrait mock-portrait--king"><UiIcon name="crown" size={30}/></span><span><strong>Play vs AI</strong><small>Three difficulty levels to match your skill</small><em>{copy.easy} · {copy.medium} · {copy.hard}</em></span><b>›</b></button>
+              <button onClick={() => openPlay('LOCAL')}><span className="mock-portrait"><UiIcon name="local" size={28}/></span><span><strong>Local Play</strong><small>Play with a friend on the same device</small></span><b>›</b></button>
+              <button onClick={() => setView('online')}><span className="mock-portrait"><UiIcon name="online" size={28}/></span><span><strong>Online</strong><small>Join rooms, play with players worldwide</small></span><b>›</b></button>
             </div>
-            <div className="rk-guardian"><UiIcon name="naga" size={28}/><span><small>Guardian motif</small><strong>Krud & Hanuman-inspired journey markers</strong></span></div>
+            <p className="mock-quote">“More than a game, a bridge to your roots.”</p>
+          </div>
+        ) : null}
+
+
+        {view === 'map' ? (
+          <div className="mock-map">
+            <HeritageScene />
+            <div className="mock-screen-heading mock-screen-heading--overlay"><span>Play · Learn · Explore</span><h2>Journey Through Cambodia</h2></div>
+            <div className="mock-map__path" aria-hidden="true" />
+            {[
+              ['01','Textile Village','Learn the basics','lotus'],
+              ['02','Pagoda Yard','Sharpen your skills','temple'],
+              ['03','Angkor Citadel','Master the art','crown'],
+              ['04','Royal Challenge','For true strategists','naga'],
+            ].map((item,index)=><button key={item[0]} className={`mock-map-node mock-map-node--${index+1}`} onClick={() => openPlay(index===0?'LOCAL':'VS_AI')}><span className="mock-map-node__icon"><UiIcon name={item[3] as IconName}/></span><span><small>{item[0]}</small><strong>{item[1]}</strong><em>{item[2]}</em></span></button>)}
+            <p className="mock-quote mock-quote--map">“Every move tells a story.”</p>
           </div>
         ) : null}
 
@@ -753,14 +785,27 @@ export function App() {
             </section>
 
             {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
+            {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
             {state.winReason && !isReplaying ? <p className="result-note">{state.winReason}</p> : null}
+            {state.status !== 'playing' && !isReplaying ? (
+              <div className="mock-victory">
+                <div className="mock-victory__halo"><UiIcon name="crown" size={58}/></div>
+                <small>REK KHMER</small>
+                <h2>{state.status === 'draw' ? copy.draw : 'VICTORY'}</h2>
+                <p>{state.status === 'draw' ? 'A balanced battle.' : 'Well played!'}</p>
+                <div><span>Game Mode</span><strong>{matchType === 'VS_AI' ? `vs AI (${difficultyLabel})` : matchType}</strong></div>
+                <div><span>Moves</span><strong>{state.moveCount}</strong></div>
+                <button className="rk-primary" onClick={() => startFreshGame()}>Play Again</button>
+                <button className="rk-ghost" onClick={() => setView('home')}>Back to Home</button>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
 
       <nav className="ouk-bottom-nav" aria-label="Primary navigation">
         {navItems.map((item) => (
-          <button type="button" key={item.id} className={view === item.id ? 'ouk-nav-item ouk-nav-item--active' : 'ouk-nav-item'} onClick={() => setView(item.id)}>
+          <button type="button" key={item.id} className={(view === item.id || (item.id === 'modes' && view === 'play')) ? 'ouk-nav-item ouk-nav-item--active' : 'ouk-nav-item'} onClick={() => setView(item.id)}>
             <UiIcon name={item.icon} /><span>{item.label}</span>
           </button>
         ))}
