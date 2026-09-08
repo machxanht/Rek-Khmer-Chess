@@ -29,7 +29,7 @@ import {
 } from './persistence'
 
 type MatchType = StoredMatchType | 'ONLINE'
-type AppView = 'home' | 'play' | 'online' | 'history' | 'settings'
+type AppView = 'home' | 'play' | 'map' | 'online' | 'history' | 'settings'
 type OnlineStatus =
   | 'idle'
   | 'connecting'
@@ -64,6 +64,7 @@ type IconName =
   | 'crown'
   | 'home'
   | 'settings'
+  | 'map'
 
 function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
   const common = {
@@ -93,6 +94,7 @@ function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
   if (name === 'replay') return <svg {...common}><path d="M4 11a8 8 0 1 1 2 6"/><path d="M4 5v6h6"/><path d="m10 9 6 3-6 3Z"/></svg>
   if (name === 'home') return <svg {...common}><path d="m3 11 9-8 9 8"/><path d="M5 10v11h14V10M9 21v-7h6v7"/></svg>
   if (name === 'settings') return <svg {...common}><circle cx="12" cy="12" r="3"/><path d="M4 12a8 8 0 1 0 16 0 8 8 0 1 0-16 0M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+  if (name === 'map') return <svg {...common}><path d="M4 18 9 6l6 12 5-10"/><circle cx="4" cy="18" r="1.5"/><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="18" r="1.5"/><circle cx="20" cy="8" r="1.5"/></svg>
   if (name === 'spark') return <svg {...common}><path d="m12 2 1.5 5L18 9l-4.5 2L12 16l-1.5-5L6 9l4.5-2L12 2Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>
   return <svg {...common}><path d="m4 9 4 3 4-7 4 7 4-3-2 10H6L4 9Z"/><path d="M7 19h10"/></svg>
 }
@@ -158,6 +160,27 @@ function Board({ state, selected, legalMoves, disabled, copy, onSquareClick }: B
             )
           })}
         </div>
+        {state.lastRek && state.lastMove ? (() => {
+          const landing = state.lastMove.to
+          const row = Math.floor(landing / 8)
+          const col = landing % 8
+          const aligned = state.lastCaptured.filter((idx) => Math.floor(idx / 8) === row || idx % 8 === col)
+          const horizontal = aligned.filter((idx) => Math.floor(idx / 8) === row)
+          const vertical = aligned.filter((idx) => idx % 8 === col)
+          if (horizontal.length >= 2) {
+            const cols = horizontal.map((idx) => idx % 8)
+            const min = Math.min(...cols, col)
+            const max = Math.max(...cols, col)
+            return <span className="rek-ray rek-ray--h" style={{ left: `${(min + .5) * 12.5}%`, top: `${(row + .5) * 12.5}%`, width: `${(max - min) * 12.5}%` }} />
+          }
+          if (vertical.length >= 2) {
+            const rows = vertical.map((idx) => Math.floor(idx / 8))
+            const min = Math.min(...rows, row)
+            const max = Math.max(...rows, row)
+            return <span className="rek-ray rek-ray--v" style={{ top: `${(min + .5) * 12.5}%`, left: `${(col + .5) * 12.5}%`, height: `${(max - min) * 12.5}%` }} />
+          }
+          return null
+        })() : null}
       </div>
     </div>
   )
@@ -524,8 +547,8 @@ export function App() {
   const navItems: { id: AppView; icon: IconName; label: string }[] = [
     { id: 'home', icon: 'home', label: 'Home' },
     { id: 'play', icon: 'local', label: 'Play' },
+    { id: 'map', icon: 'map', label: 'Journey' },
     { id: 'online', icon: 'online', label: copy.online },
-    { id: 'history', icon: 'replay', label: copy.history },
     { id: 'settings', icon: 'settings', label: copy.language },
   ]
 
@@ -537,6 +560,7 @@ export function App() {
   const pageTitle =
     view === 'home' ? 'រែកខ្មែរ' :
     view === 'play' ? (ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh') :
+    view === 'map' ? 'Journey Through Cambodia' :
     view === 'online' ? copy.online :
     view === 'history' ? copy.history :
     copy.language
@@ -557,46 +581,55 @@ export function App() {
 
       <section className="ouk-page">
         {view === 'home' ? (
-          <div className="ouk-home">
-            <section className="ouk-hero-card kbach-frame">
-              <div className="ouk-hero-copy">
-                <p className="eyebrow">KHMER STRATEGY / 8×8 / TWO-SIDED CAPTURE</p>
-                <h1><span>REK</span><em>រែកខ្មែរ</em></h1>
-                <p>{copy.subtitle}</p>
+          <div className="rk-home">
+            <section className="rk-hero">
+              <div className="rk-hero__copy">
+                <span className="rk-kicker">Cambodian Heritage Strategy</span>
+                <h1><span>រែកខ្មែរ</span><small>REK KHMER</small></h1>
+                <p>Carry the line. Read the space. Discover a traditional Khmer strategy game through a modern digital board.</p>
+                <div className="rk-hero__actions">
+                  <button type="button" className="rk-primary" onClick={() => openPlay('VS_AI')}><UiIcon name="ai" />Play vs AI</button>
+                  <button type="button" className="rk-ghost" onClick={() => setView('map')}><UiIcon name="map" />Heritage Journey</button>
+                </div>
               </div>
-              <button type="button" className="ouk-primary-cta" onClick={() => { setMatchType('ONLINE'); setView('online') }}>
-                <span className="cta-icon"><UiIcon name="online" size={24} /></span>
-                <span><strong>{copy.online}</strong><small>{copy.createRoom} / {copy.joinRoom}</small></span>
-                <span>›</span>
-              </button>
+              <div className="rk-hero__board" aria-hidden="true">
+                <div className="rk-mini-board">
+                  {Array.from({ length: 64 }, (_, i) => <span key={i} className={(Math.floor(i/8)+i)%2 ? 'dark' : 'light'} />)}
+                  <i className="rk-mini-piece rk-mini-piece--king" />
+                  <i className="rk-mini-piece rk-mini-piece--man a" />
+                  <i className="rk-mini-piece rk-mini-piece--man b" />
+                </div>
+                <div className="rk-angkor-line"><span /><span /><span /><span /><span /></div>
+              </div>
             </section>
 
-            <div className="ouk-section-head"><span><UiIcon name="spark" size={15} /> Game modes</span></div>
-            <div className="ouk-mode-grid">
-              <button type="button" className="ouk-mode-card" onClick={() => openPlay('VS_AI')}>
-                <span className="ouk-card-icon"><UiIcon name="ai" size={22} /></span>
-                <span><strong>{copy.vsAi}</strong><small>{copy.easy} · {copy.medium} · {copy.hard}</small></span>
-              </button>
-              <button type="button" className="ouk-mode-card" onClick={() => openPlay('LOCAL')}>
-                <span className="ouk-card-icon"><UiIcon name="local" size={22} /></span>
-                <span><strong>{copy.local}</strong><small>{copy.localHint}</small></span>
-              </button>
-            </div>
-
-            <div className="ouk-section-head"><span><UiIcon name="rules" size={15} /> {copy.ruleset}</span></div>
-            <div className="ouk-rules-grid">
-              {RULESETS.map((item) => (
-                <button key={item.id} type="button" className={`ouk-rule-card ${ruleset === item.id ? 'is-selected' : ''}`} onClick={() => { setRuleset(item.id); openPlay(matchType === 'ONLINE' ? 'LOCAL' : matchType, item.id) }}>
-                  <span className="ouk-card-icon"><UiIcon name={item.id === 'REK_STANDARD' ? 'temple' : 'naga'} size={22} /></span>
-                  <span><strong>{item.label}</strong><small>{item.note}</small></span>
-                </button>
-              ))}
-            </div>
-
-            <section className="ouk-wisdom-card">
-              <span className="ouk-card-icon"><UiIcon name="lotus" size={24} /></span>
-              <div><small>RULE SYSTEM / 01</small><strong>REK · POAT · HAO</strong><p>Canonical Khmer strategy engine. Evidence-backed rules, deterministic play.</p></div>
+            <section className="rk-mode-row">
+              <button type="button" className="rk-mode" onClick={() => openPlay('VS_AI')}><span><UiIcon name="ai" /></span><b>VS AI</b><small>{copy.easy} · {copy.medium} · {copy.hard}</small></button>
+              <button type="button" className="rk-mode" onClick={() => openPlay('LOCAL')}><span><UiIcon name="local" /></span><b>Local</b><small>Pass & play</small></button>
+              <button type="button" className="rk-mode" onClick={() => { setMatchType('ONLINE'); setView('online') }}><span><UiIcon name="online" /></span><b>Online</b><small>Create or join room</small></button>
             </section>
+
+            <section className="rk-rules-strip">
+              <div><span className="rk-label">Ruleset</span><strong>{ruleset === 'REK_STANDARD' ? 'Rek Standard' : 'Min Rek Chanh'}</strong></div>
+              <div className="rk-rule-buttons">
+                {RULESETS.map((item) => <button key={item.id} type="button" className={ruleset===item.id?'active':''} onClick={() => setRuleset(item.id)}>{item.id==='REK_STANDARD'?'Standard':'Min Rek Chanh'}</button>)}
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {view === 'map' ? (
+          <div className="rk-map">
+            <header className="rk-map__header"><span className="rk-kicker">Play · Learn · Explore</span><h2>Journey Through Cambodia</h2><p>Three cultural milestones, one Rek journey.</p></header>
+            <div className="rk-path">
+              {[
+                ['01','Textile Village','Learn the basics','lotus'],
+                ['02','Ancient Pagoda Yard','Sharpen your tactics','temple'],
+                ['03','Angkor Imperial Citadel','Master Rek strategy','crown'],
+              ].map((item,index)=><button key={item[0]} type="button" className={`rk-node rk-node--${index+1}`} onClick={() => openPlay(index===0?'LOCAL':'VS_AI')}><span className="rk-node__icon"><UiIcon name={item[3] as IconName} /></span><span><small>{item[0]}</small><strong>{item[1]}</strong><em>{item[2]}</em></span></button>)}
+              <span className="rk-pathline" />
+            </div>
+            <div className="rk-guardian"><UiIcon name="naga" size={28}/><span><small>Guardian motif</small><strong>Krud & Hanuman-inspired journey markers</strong></span></div>
           </div>
         ) : null}
 
