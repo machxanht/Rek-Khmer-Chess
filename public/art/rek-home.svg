@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000">
+<defs>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#10251f"/><stop offset=".38" stop-color="#7a4927"/><stop offset=".68" stop-color="#1d2d23"/><stop offset="1" stop-color="#07100d"/></linearGradient>
+<radialGradient id="sun"><stop stop-color="#ffd887" stop-opacity=".95"/><stop offset=".35" stop-color="#d48c34" stop-opacity=".55"/><stop offset="1" stop-color="#d48c34" stop-opacity="0"/></radialGradient>
+<linearGradient id="stone" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#30251a"/><stop offset=".5" stop-color="#111612"/><stop offset="1" stop-color="#060a08"/></linearGradient>
+<filter id="glow"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="800" height="1000" fill="url(#sky)"/>
+<circle cx="560" cy="225" r="190" fill="url(#sun)"/>
+<circle cx="560" cy="225" r="105" fill="#d8953f" opacity=".14" filter="url(#glow)"/>
+<path d="M0 390c90-80 170-70 255 0 70-64 145-58 205 4 72-76 152-64 238 7 39-20 70-26 102-14v613H0Z" fill="#09110e"/>
+<g fill="#07100d" stroke="#7e5a2c" stroke-width="2">
+<path d="M94 690V532h58v158m32 0V454h74v236m42 0V342h116v348m44 0V454h74v236m32 0V532h58v158"/>
+<path d="m123 532 29-62 29 62m41-78 36-78 36 78m64-112 58-125 58 125m80 112 36-78 36 78m41 78 29-62 29 62"/>
+<path d="M54 690h692v44H54z"/>
+</g>
+<g fill="#0a120f" opacity=".95">
+<path d="M0 610c48-42 75-6 111-45 26-29 60-16 89 15 25-35 64-36 96 9v155H0Z"/>
+<path d="M800 583c-56-38-92 3-128-30-42-38-73-13-97 20-32-27-67-26-96 11v160h321Z"/>
+</g>
+<g stroke="#8c672f" fill="none" opacity=".65">
+<path d="M24 905c36-86 76-132 126-144M776 905c-36-86-76-132-126-144"/>
+<path d="M24 905c30-21 56-24 86-5-13-42-4-78 25-110 14 39 10 77-10 111 42-17 76-8 103 25-59-3-99 10-124 46"/>
+<path d="M776 905c-30-21-56-24-86-5 13-42 4-78-25-110-14 39-10 77 10 111-42-17-76-8-103 25 59-3 99 10 124 46"/>
+</g>
+<rect y="735" width="800" height="265" fill="url(#stone)" opacity=".82"/>
+<path d="M0 770c150-28 252 20 410 2 128-15 256-7 390 12v216H0Z" fill="#07100d" opacity=".7"/>
+</svg>

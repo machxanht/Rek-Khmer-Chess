@@ -101,32 +101,7 @@ function UiIcon({ name, size = 18 }: { name: IconName; size?: number }) {
 
 
 function HeritageScene({ compact = false }: { compact?: boolean }) {
-  return (
-    <svg className={compact ? 'khmer-scene khmer-scene--compact' : 'khmer-scene'} viewBox="0 0 420 220" aria-hidden="true">
-      <defs>
-        <linearGradient id="rk-sky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1b3d36" />
-          <stop offset=".5" stopColor="#5d3a22" />
-          <stop offset="1" stopColor="#0d1713" />
-        </linearGradient>
-        <radialGradient id="rk-sun" cx="50%" cy="50%" r="50%">
-          <stop offset="0" stopColor="#ffd77d" stopOpacity=".95" />
-          <stop offset=".45" stopColor="#c77f2f" stopOpacity=".58" />
-          <stop offset="1" stopColor="#c77f2f" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="420" height="220" fill="url(#rk-sky)" />
-      <circle cx="275" cy="54" r="88" fill="url(#rk-sun)" />
-      <path className="khmer-scene__cloud" d="M0 62C70 42 116 70 174 55c61-16 108-2 151 11 33 10 61 7 95-7v43H0Z" />
-      <path className="khmer-scene__forest" d="M0 145c26-34 45-16 65-36 22-23 41-5 65 17 28-38 49-36 81-5 22-32 48-21 70 5 24-40 50-40 77-10 22-22 37-25 62 3v101H0Z" />
-      <g className="khmer-scene__temple">
-        <path d="M92 190V132h24v58m20 0v-79h30v79m23 0v-114h42v114m24 0v-79h30v79m20 0v-58h24v58" />
-        <path d="m104 132 12-24 12 24m23-21 15-30 15 30m29-35 21-42 21 42m38 35 15-30 15 30m23 21 12-24 12 24" />
-        <path d="M72 190h276v16H72z" />
-      </g>
-      <path className="khmer-scene__water" d="M0 194c76-12 135 8 207-2 74-10 141-4 213 5v23H0Z" />
-    </svg>
-  )
+  return <img className={compact ? 'khmer-scene khmer-scene--compact' : 'khmer-scene'} src={compact ? '/art/rek-relief.svg' : '/art/rek-home.svg'} alt="" aria-hidden="true" />
 }
 
 function KhmerCorner({ flip = false }: { flip?: boolean }) {
@@ -652,7 +627,6 @@ export function App() {
 
         {view === 'map' ? (
           <div className="mock-map">
-            <HeritageScene />
             <div className="mock-screen-heading mock-screen-heading--overlay"><span>Play · Learn · Explore</span><h2>Journey Through Cambodia</h2></div>
             <div className="mock-map__path" aria-hidden="true" />
             {[
@@ -784,7 +758,6 @@ export function App() {
               {matchType !== 'ONLINE' ? <button type="button" onClick={loadMatch}><UiIcon name="load" />{copy.load}</button> : null}
             </section>
 
-            {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
             {storageMessage ? <p className="storage-note">{storageMessage}</p> : null}
             {state.winReason && !isReplaying ? <p className="result-note">{state.winReason}</p> : null}
             {state.status !== 'playing' && !isReplaying ? (
