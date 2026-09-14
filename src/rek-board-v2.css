@@ -1,0 +1,381 @@
+/* Rek Board V2
+   Board-first mobile presentation layer.
+   UI only: no engine, rules, move generation, AI, or online semantics. */
+
+/* ----- Play layout contract ----- */
+.ouk-play {
+  grid-template-rows: 46px minmax(0, 1fr) 46px 36px !important;
+  gap: 6px !important;
+  padding-top: 0 !important;
+}
+
+/* Do not display fake evaluation UI when the app has no evaluation value. */
+.ouk-play::before {
+  content: none !important;
+  display: none !important;
+}
+
+.ouk-player-strip {
+  min-height: 46px !important;
+  padding: 6px 8px !important;
+  border-radius: 13px !important;
+  border-color: rgba(224,177,88,.24) !important;
+  background:
+    radial-gradient(circle at 88% 18%, rgba(216,170,82,.06), transparent 26%),
+    linear-gradient(180deg, rgba(18,33,26,.96), rgba(8,16,12,.98)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 8px 20px rgba(0,0,0,.20) !important;
+}
+
+.ouk-player-strip.you {
+  background:
+    radial-gradient(circle at 12% 82%, rgba(224,190,116,.055), transparent 28%),
+    linear-gradient(180deg, rgba(21,35,27,.98), rgba(9,17,13,.98)) !important;
+}
+
+.ouk-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(233,193,113,.42) !important;
+  background:
+    radial-gradient(circle at 38% 28%, rgba(246,220,161,.16), transparent 35%),
+    linear-gradient(145deg, #3e2c1d, #14231b) !important;
+}
+
+.ouk-player-strip small {
+  color: #8e826e !important;
+  font-size: .37rem !important;
+  letter-spacing: .09em !important;
+}
+
+.ouk-player-strip strong {
+  color: #eadfc8 !important;
+  font-size: .56rem !important;
+  font-weight: 800 !important;
+}
+
+.ouk-turn-badge {
+  min-width: 84px !important;
+  padding: 5px 8px 5px 20px !important;
+  border-radius: 999px !important;
+  font-size: .38rem !important;
+  background: rgba(4,10,7,.54) !important;
+}
+
+.ouk-turn-badge::before {
+  content: "•" !important;
+  left: 9px !important;
+  color: #746b5c !important;
+  font-size: .9rem !important;
+  line-height: 1 !important;
+}
+
+.ouk-turn-badge.active::before {
+  color: #f0c875 !important;
+  text-shadow: 0 0 8px rgba(240,200,117,.65);
+}
+
+/* ----- Board frame ----- */
+.ouk-board-card {
+  min-height: 0 !important;
+  width: 100% !important;
+  padding: 6px !important;
+  border-radius: 16px !important;
+  border-color: rgba(226,178,88,.40) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(232,188,104,.07), transparent 36%),
+    linear-gradient(145deg, #1a120d 0%, #09110d 44%, #060c09 100%) !important;
+  box-shadow:
+    0 18px 38px rgba(0,0,0,.46),
+    inset 0 0 0 1px rgba(244,213,147,.02) !important;
+}
+
+.ouk-board-card::after {
+  inset: 4px !important;
+  border-radius: 13px !important;
+  border-color: rgba(230,181,90,.08) !important;
+}
+
+.board-shell {
+  width: min(100%, calc(100dvh - 205px)) !important;
+  max-width: 398px !important;
+  margin: auto !important;
+  padding: 15px 13px 13px 18px !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(135deg, rgba(246,216,154,.09), transparent 18% 82%, rgba(246,216,154,.05)),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.018) 0 1px, transparent 1px 7px),
+    linear-gradient(145deg, #6f4b2c 0%, #422a19 36%, #24170f 68%, #160f0b 100%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(245,210,144,.16),
+    inset 0 0 0 3px rgba(25,15,9,.22),
+    inset 0 0 24px rgba(0,0,0,.34),
+    0 12px 28px rgba(0,0,0,.30) !important;
+}
+
+.board-shell::before,
+.board-shell::after,
+.board-wrap::before,
+.board-wrap::after {
+  content: "◆" !important;
+  width: 12px !important;
+  height: 12px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: rgba(232,190,109,.48) !important;
+  background: transparent !important;
+  font-size: .38rem !important;
+}
+
+.board-shell::before { left: 3px !important; top: 3px !important; }
+.board-shell::after { right: 3px !important; top: 3px !important; }
+.board-wrap::before { left: -14px !important; bottom: -10px !important; }
+.board-wrap::after { right: -5px !important; bottom: -10px !important; }
+
+.file-labels,
+.rank-labels {
+  color: #8f7b5f !important;
+  font-size: .34rem !important;
+  font-weight: 800 !important;
+  letter-spacing: .03em !important;
+}
+
+.board {
+  border: 2px solid #b88343 !important;
+  border-radius: 7px !important;
+  background: #b78c55 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(30,18,10,.74),
+    inset 0 0 18px rgba(0,0,0,.16),
+    0 0 0 1px rgba(246,213,145,.08),
+    0 10px 22px rgba(0,0,0,.28) !important;
+}
+
+.board::before {
+  opacity: .12 !important;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 10px, rgba(74,38,24,.24) 10px 11px),
+    repeating-linear-gradient(90deg, transparent 0 10px, rgba(249,226,178,.10) 10px 11px) !important;
+}
+
+.board::after {
+  opacity: .045 !important;
+  background:
+    radial-gradient(circle at 22% 18%, #fff1bf 0 1px, transparent 1.5px),
+    radial-gradient(circle at 76% 68%, #5a2d1d 0 1px, transparent 1.5px) !important;
+  background-size: 23px 19px, 27px 31px !important;
+  mix-blend-mode: overlay !important;
+}
+
+/* ----- Squares and interaction states ----- */
+.square:nth-child(16n+1), .square:nth-child(16n+3), .square:nth-child(16n+5), .square:nth-child(16n+7),
+.square:nth-child(16n+10), .square:nth-child(16n+12), .square:nth-child(16n+14), .square:nth-child(16n+16) {
+  background:
+    linear-gradient(135deg, rgba(255,244,211,.045), transparent 50%),
+    linear-gradient(145deg, #d2ad70, #ba8d54) !important;
+}
+
+.square:nth-child(16n+2), .square:nth-child(16n+4), .square:nth-child(16n+6), .square:nth-child(16n+8),
+.square:nth-child(16n+9), .square:nth-child(16n+11), .square:nth-child(16n+13), .square:nth-child(16n+15) {
+  background:
+    linear-gradient(135deg, rgba(235,207,149,.04), transparent 48%),
+    linear-gradient(145deg, #435e4c, #2f4939) !important;
+}
+
+.square::after {
+  inset: 1px !important;
+  border: 1px solid rgba(255,255,255,.016) !important;
+}
+
+.square--last {
+  box-shadow: inset 0 0 0 999px rgba(135,67,44,.18) !important;
+}
+
+.square--selected {
+  box-shadow:
+    inset 0 0 0 3px #f1cb78,
+    inset 0 0 20px rgba(241,203,120,.22),
+    0 0 10px rgba(241,203,120,.18) !important;
+}
+
+.square--legal::before {
+  inset: 30% !important;
+  border: 1px solid rgba(250,225,167,.78) !important;
+  border-radius: 50% !important;
+  background: rgba(245,211,137,.10) !important;
+  box-shadow: 0 0 10px rgba(245,211,137,.24) !important;
+}
+
+.legal-dot {
+  width: 6px !important;
+  height: 6px !important;
+  background: #f5d58f !important;
+  box-shadow: 0 0 10px rgba(245,213,143,.72) !important;
+}
+
+/* ----- Khmer carved-token piece language ----- */
+.piece,
+.piece--king {
+  width: 72% !important;
+  height: 72% !important;
+  border-radius: 50% !important;
+  clip-path: none !important;
+  overflow: visible !important;
+  transform: translateZ(0) !important;
+  transition: transform .14s ease, filter .14s ease !important;
+}
+
+.square:not(:disabled):hover .piece {
+  transform: translateY(-1px) scale(1.035) !important;
+}
+
+.piece::before,
+.piece--king::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 15% !important;
+  border: 1px solid currentColor !important;
+  border-radius: 50% !important;
+  clip-path: none !important;
+  opacity: .35 !important;
+}
+
+.piece::after,
+.piece--king::after {
+  content: "◆" !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  width: auto !important;
+  height: auto !important;
+  transform: translate(-50%, -52%) rotate(45deg) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: currentColor !important;
+  font-size: .34rem !important;
+  line-height: 1 !important;
+  opacity: .40 !important;
+}
+
+.piece--white {
+  color: #8d642f !important;
+  border: 1px solid #f6e4bd !important;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255,255,255,.72), transparent 18%),
+    radial-gradient(circle at 50% 50%, #f3e3c3 0 58%, #c7a36a 76%, #8e6534 100%) !important;
+  box-shadow:
+    0 4px 8px rgba(30,18,8,.34),
+    inset 0 0 0 2px rgba(255,250,232,.28),
+    inset -3px -4px 7px rgba(83,52,22,.22) !important;
+}
+
+.piece--black {
+  color: #e8b966 !important;
+  border: 1px solid #d6a354 !important;
+  background:
+    radial-gradient(circle at 34% 25%, rgba(237,184,99,.20), transparent 20%),
+    radial-gradient(circle at 50% 48%, #5e3c26 0 55%, #35241a 73%, #17130f 100%) !important;
+  box-shadow:
+    0 5px 9px rgba(0,0,0,.48),
+    inset 0 0 0 2px rgba(241,193,106,.08),
+    inset -3px -4px 8px rgba(0,0,0,.34) !important;
+}
+
+.piece--king {
+  width: 78% !important;
+  height: 78% !important;
+  font-family: Georgia, "Times New Roman", serif !important;
+  font-size: clamp(.58rem, 2.8vw, .82rem) !important;
+  font-weight: 700 !important;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,.30)) !important;
+}
+
+.piece--king::before {
+  inset: 12% !important;
+  border-width: 2px !important;
+  opacity: .48 !important;
+}
+
+.piece--king::after {
+  content: "" !important;
+  width: 5px !important;
+  height: 5px !important;
+  top: 18% !important;
+  left: 50% !important;
+  border-radius: 50% !important;
+  transform: translateX(-50%) !important;
+  background: currentColor !important;
+  box-shadow: -8px 4px 0 -1px currentColor, 8px 4px 0 -1px currentColor !important;
+  opacity: .60 !important;
+}
+
+/* ----- Rek capture feedback ----- */
+.rek-ray {
+  z-index: 20 !important;
+  opacity: .94 !important;
+  box-shadow:
+    0 0 4px #fff0bb,
+    0 0 10px #efb64d,
+    0 0 18px rgba(238,170,62,.62) !important;
+}
+
+.rek-ray--h { height: 3px !important; }
+.rek-ray--v { width: 3px !important; }
+
+/* ----- Actions ----- */
+.ouk-game-actions {
+  gap: 5px !important;
+}
+
+.ouk-game-actions button {
+  min-height: 36px !important;
+  padding-inline: 5px !important;
+  border-radius: 10px !important;
+  color: #bda16d !important;
+  font-size: .38rem !important;
+}
+
+.ouk-game-actions button svg {
+  width: 14px !important;
+  height: 14px !important;
+}
+
+@media (max-height: 760px) {
+  .ouk-play {
+    grid-template-rows: 42px minmax(0, 1fr) 42px 33px !important;
+    gap: 5px !important;
+  }
+
+  .ouk-player-strip { min-height: 42px !important; padding: 5px 7px !important; }
+  .ouk-avatar { width: 29px !important; height: 29px !important; }
+  .board-shell { width: min(100%, calc(100dvh - 190px)) !important; padding: 12px 11px 11px 16px !important; }
+  .ouk-game-actions button { min-height: 33px !important; }
+}
+
+@media (max-height: 680px) {
+  .ouk-play {
+    grid-template-rows: 38px minmax(0, 1fr) 38px 30px !important;
+    gap: 4px !important;
+  }
+
+  .ouk-player-strip { min-height: 38px !important; padding: 4px 6px !important; }
+  .ouk-avatar { width: 27px !important; height: 27px !important; }
+  .ouk-player-strip strong { font-size: .51rem !important; }
+  .ouk-player-strip small { font-size: .34rem !important; }
+  .ouk-turn-badge { min-width: 72px !important; padding-block: 4px !important; }
+  .board-shell { width: min(100%, calc(100dvh - 168px)) !important; padding: 10px 9px 9px 14px !important; }
+  .ouk-game-actions button { min-height: 30px !important; }
+}
+
+@media (max-width: 370px) {
+  .ouk-turn-badge { min-width: 70px !important; }
+  .board-shell { padding: 11px 10px 10px 15px !important; }
+  .piece,
+  .piece--king { width: 74% !important; height: 74% !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece { transition: none !important; }
+}
